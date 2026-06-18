@@ -181,13 +181,14 @@ export default function App() {
       <Header kpis={payload.kpis} onSearchPick={onSearchPick}
         snapshot={snapshot} lastSync={lastSync} onSync={refreshSnapshot}
         onAbout={() => setShowAbout(true)} onTour={() => setShowTour(true)}
-        auth={auth} scopeName={scopeName} onLogout={doLogout}
+        auth={auth} scopeName={scopeName}
         onMenu={() => setNavOpen(true)} />
       <div className="body">
         <SideNav views={VIEWS} view={view} onSelect={go}
           collapsed={collapsed} onToggleCollapse={() => setCollapsed((c) => !c)}
           mobileOpen={navOpen} onCloseMobile={() => setNavOpen(false)}
-          role={auth.role} scopeName={scopeName} onSearchPick={onSearchPick} />
+          role={auth.role} scopeName={scopeName} onSearchPick={onSearchPick}
+          onLogout={doLogout} />
         <div className="content">
           <div className={"metrics" + (metricsOpen ? " open" : "")}>
             <button className="metrics-toggle" onClick={() => setMetricsOpen((o) => !o)}>

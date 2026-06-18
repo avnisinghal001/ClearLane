@@ -13,7 +13,7 @@ function syncLabel(ts) {
 }
 
 export default function Header({ kpis, onSearchPick, snapshot, lastSync,
-                                onSync, onAbout, onTour, auth, scopeName, onLogout, onMenu }) {
+                                onSync, onAbout, onTour, auth, scopeName, onMenu }) {
   const [clock, setClock] = useState(nowIST());
   const [, setTick] = useState(0);
 
@@ -61,9 +61,6 @@ export default function Header({ kpis, onSearchPick, snapshot, lastSync,
       <span className={"badge " + (isLive() ? "live" : "demo")}>
         <span className="live-dot" /> {isLive() ? "LIVE" : "DEMO"}
       </span>
-      {auth && <button className="icon-btn" onClick={onLogout} title="sign out">
-        <Icon name="logout" size={16} />
-      </button>}
     </header>
   );
 }

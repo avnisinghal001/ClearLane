@@ -5,7 +5,7 @@ import SearchBox from "./SearchBox.jsx";
 // mobile (toggled by the header hamburger). The collapse control sits top-right.
 // On mobile the search lives at the top of this drawer.
 export default function SideNav({ views, view, onSelect, collapsed, onToggleCollapse,
-                                 mobileOpen, onCloseMobile, role, scopeName, onSearchPick }) {
+                                 mobileOpen, onCloseMobile, role, scopeName, onSearchPick, onLogout }) {
   const pick = (k) => { onSelect(k); onCloseMobile?.(); };
   const roleName = role === "govt" ? "Government" : (scopeName || "Force");
   return (
@@ -45,6 +45,11 @@ export default function SideNav({ views, view, onSelect, collapsed, onToggleColl
             </button>
           ))}
         </nav>
+
+        <button className="sidenav-logout" onClick={onLogout} title="Sign out">
+          <span className="sidenav-ic"><Icon name="logout" size={18} /></span>
+          <span className="sidenav-label">Logout</span>
+        </button>
       </aside>
     </>
   );

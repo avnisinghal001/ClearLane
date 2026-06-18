@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MapContainer, TileLayer, CircleMarker, Tooltip, useMap, useMapEvents } from "react-leaflet";
+import { MapContainer, TileLayer, CircleMarker, Polyline, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import { api, opSnapshot, opComplaint, seedOpZones } from "../lib/api.js";
 import { mapsUrl } from "../lib/format.js";
 import { slugify } from "../lib/auth.js";
 import { Icon } from "./icons.jsx";
-import { obsLevel, patrolsOnDuty, routeAdvisory, istHour } from "../lib/citizen.js";
+import { obsLevel, patrolsOnDuty, fetchRankedRoutes, istHour } from "../lib/citizen.js";
 
 const CENTER = [12.9716, 77.5946];
 const DARK = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
+const ROUTE_BLUE = "#3AA0FF";
 const HELPLINE = "103"; // Bengaluru Traffic Police helpline
 const VEHICLES = ["CAR", "SCOOTER", "MOTOR CYCLE", "PASSENGER AUTO", "LGV", "PRIVATE BUS", "GOODS AUTO"];
 
@@ -18,6 +19,13 @@ function FlyTo({ pos }) {
 }
 function ClickCatcher({ active, onPick }) {
   useMapEvents({ click(e) { if (active) onPick([e.latlng.lat, e.latlng.lng]); } });
+  return null;
+}
+function FitRoute({ coords }) {
+  const map = useMap();
+  useEffect(() => {
+    if (coords?.length > 1) map.fitBounds(coords, { padding: [50, 50], maxZoom: 15 });
+  }, [coords]);
   return null;
 }
 
@@ -32,6 +40,9 @@ export default function CitizenApp() {
   const [form, setForm] = useState({ description: "", vehicle_type: "CAR" });
   const [toast, setToast] = useState(null);
   const [trip, setTrip] = useState({ from: null, to: null });
+  const [routes, setRoutes] = useState([]);
+  const [routeSel, setRouteSel] = useState(0);
+  const [routeLoading, setRouteLoading] = useState(false);
   const hour = istHour();
 
   useEffect(() => {
@@ -55,9 +66,18 @@ export default function CitizenApp() {
     return { name: z.station, ...patrolsOnDuty(slugify(z.station), st, hour) };
   }, [selected, stationMeta, hour]);
 
-  const advisory = useMemo(
-    () => (trip.from && trip.to ? routeAdvisory(trip.from, trip.to, zones) : null),
-    [trip, zones]);
+  // compute ranked road routes whenever both endpoints are set
+  useEffect(() => {
+    if (!(trip.from && trip.to) || !zones.length) { setRoutes([]); return; }
+    let alive = true;
+    setRouteLoading(true);
+    fetchRankedRoutes(trip.from, trip.to, zones).then((rs) => {
+      if (!alive) return;
+      setRoutes(rs); setRouteSel(0); setRouteLoading(false);
+    });
+    return () => { alive = false; };
+  }, [trip, zones]);
+  const sel = routes[routeSel] || null;
 
   function pickZone(z) { setSelected(z); setTab("map"); setFlyTo([z.lat, z.lon]); }
 
@@ -82,7 +102,7 @@ export default function CitizenApp() {
     <div className="citizen">
       <header className="citizen-head">
         <div className="wordmark">
-          <span className="brand-mark hdr-mark"><Icon name="lane" size={17} strokeWidth={2} /></span>
+          <span className="brand-mark hdr-mark"><Icon name="lane" size={28} strokeWidth={2} /></span>
           Clear<span className="lane">Lane</span> <span className="citizen-tag">Citizen</span>
         </div>
         <div className="spacer" />
@@ -111,17 +131,36 @@ export default function CitizenApp() {
             );
           })}
 
+          {/* alternate routes (dimmed) */}
+          {routes.map((rt, i) => i === routeSel ? null : (
+            <Polyline key={"alt" + i} positions={rt.coords}
+              pathOptions={{ color: "#7b879b", weight: 3, opacity: 0.45, dashArray: rt.straight ? "8" : "1 8", lineCap: "round" }}
+              eventHandlers={{ click: () => setRouteSel(i) }} />
+          ))}
+          {/* selected route — blue glowing line */}
+          {sel && <>
+            <Polyline positions={sel.coords}
+              pathOptions={{ color: ROUTE_BLUE, weight: 16, opacity: 0.18, lineCap: "round" }} />
+            <Polyline positions={sel.coords} className="route-glow"
+              pathOptions={{ color: ROUTE_BLUE, weight: 6, opacity: 1, lineCap: "round",
+                dashArray: sel.straight ? "10" : null }} />
+            <FitRoute coords={sel.coords} />
+          </>}
+          {/* worst spots on the chosen route */}
+          {sel?.worst?.map((z) => (
+            <CircleMarker key={"w" + z.id} center={[z.lat, z.lon]} radius={9}
+              pathOptions={{ color: "#EF9F27", weight: 2, fill: false, dashArray: "4" }}
+              eventHandlers={{ click: () => pickZone(z) }}>
+              <Tooltip>{z.name} — watch out</Tooltip>
+            </CircleMarker>
+          ))}
           {/* trip endpoints */}
           {trip.from && <CircleMarker center={[trip.from.lat, trip.from.lon]} radius={8}
-            pathOptions={{ color: "#fff", weight: 2, fillColor: "#6FE3A6", fillOpacity: 1 }}>
+            pathOptions={{ color: "#0b0e14", weight: 3, fillColor: "#6FE3A6", fillOpacity: 1 }}>
             <Tooltip permanent direction="top">Start</Tooltip></CircleMarker>}
           {trip.to && <CircleMarker center={[trip.to.lat, trip.to.lon]} radius={8}
-            pathOptions={{ color: "#fff", weight: 2, fillColor: "#E24B4A", fillOpacity: 1 }}>
+            pathOptions={{ color: "#0b0e14", weight: 3, fillColor: "#E24B4A", fillOpacity: 1 }}>
             <Tooltip permanent direction="top">End</Tooltip></CircleMarker>}
-          {advisory?.worst?.map((z) => (
-            <CircleMarker key={"w" + z.id} center={[z.lat, z.lon]} radius={9}
-              pathOptions={{ color: "#EF9F27", weight: 2, fill: false, dashArray: "4" }} />
-          ))}
 
           {/* live citizen reports */}
           {complaints.map((c) => (
@@ -193,17 +232,31 @@ export default function CitizenApp() {
             onPick={(z) => setTrip((t) => ({ ...t, from: z }))} onLoc={() => useMyLocation("from")} />
           <ZoneSearch label="To" zones={zones} value={trip.to}
             onPick={(z) => setTrip((t) => ({ ...t, to: z }))} />
-          {advisory && (
+          {routeLoading && <div className="muted" style={{ fontSize: 12, padding: "8px 0" }}>Finding the cleanest route…</div>}
+
+          {sel && (
             <div className="trip-result">
-              <div className="trip-risk" style={{ borderColor: advisory.level.color }}>
-                <span className="trip-risk-dot" style={{ background: advisory.level.color }} />
-                Route risk: <b style={{ color: advisory.level.color }}>{advisory.level.label}</b>
-                <span className="muted"> ({advisory.risk}/100)</span>
+              <div className="route-cards">
+                {routes.map((rt, i) => (
+                  <button key={i} className={"route-card" + (i === routeSel ? " active" : "")}
+                    onClick={() => setRouteSel(i)} style={{ "--rc": rt.level.color }}>
+                    <span className="route-card-dot" style={{ background: rt.level.color }} />
+                    <span className="route-card-main">
+                      <b>{rt.avoids ? "Avoids hotspots" : i === 0 ? "Best route" : `Option ${i + 1}`}</b>
+                      {rt.avoids && <span className="route-avoid-tag">detour</span>}
+                      <span className="muted"> · {rt.level.label}</span>
+                    </span>
+                    <span className="route-card-meta mono">
+                      {rt.km != null ? `${rt.km} km` : "direct"}{rt.min != null ? ` · ${rt.min} min` : ""}
+                    </span>
+                  </button>
+                ))}
               </div>
-              {advisory.worst.length > 0 && (
+
+              {sel.worst?.length > 0 && (
                 <>
-                  <div className="muted" style={{ fontSize: 11, margin: "8px 0 4px" }}>Watch out around:</div>
-                  {advisory.worst.map((z) => (
+                  <div className="muted" style={{ fontSize: 11, margin: "10px 0 4px" }}>Watch out around:</div>
+                  {sel.worst.slice(0, 4).map((z) => (
                     <button key={z.id} className="trip-zone" onClick={() => pickZone(z)}>
                       <span className="dot" style={{ background: obsLevel(z.pressure).color }} />
                       <span className="trip-zone-name">{z.name}</span>
@@ -214,7 +267,10 @@ export default function CitizenApp() {
               )}
               <a className="btn accent big block" style={{ marginTop: 10 }}
                 href={`https://www.google.com/maps/dir/?api=1&origin=${trip.from.lat},${trip.from.lon}&destination=${trip.to.lat},${trip.to.lon}`}
-                target="_blank" rel="noreferrer"><Icon name="navigate" size={14} /> Navigate in Google Maps</a>
+                target="_blank" rel="noreferrer"><Icon name="navigate" size={14} /> Start navigation</a>
+              <div className="muted" style={{ fontSize: 10, marginTop: 8 }}>
+                Roads from OpenStreetMap, ranked by parking-obstruction risk — not live traffic.
+              </div>
             </div>
           )}
         </div>
