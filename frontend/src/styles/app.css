@@ -412,13 +412,27 @@ span.dot.op-pulse { display: inline-block; }
 .off-confirm { background: #1f3a2a; color: var(--good); border: 1px solid #2c6b46;
   border-radius: var(--radius); padding: 10px 12px; margin-bottom: 10px; font-size: 14px; }
 
-/* Global Time Lens bar */
+/* Global Date Lens bar */
 .timelens { display: flex; align-items: center; gap: 10px 12px; flex-wrap: wrap;
-  padding: 8px 16px; background: rgba(13,17,26,.4); border-bottom: 1px solid var(--line); }
-.timelens-chips { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+  padding: 9px 16px; background: rgba(13,17,26,.4); border-bottom: 1px solid var(--line); }
+.timelens-title { display: inline-flex; align-items: center; gap: 6px; color: var(--muted);
+  font-size: 12px; font-weight: 600; white-space: nowrap; }
+.timelens-title svg { color: var(--accent); }
+/* segmented control */
+.seg-group { display: inline-flex; background: var(--panel2); border: 1px solid var(--line);
+  border-radius: 99px; padding: 3px; gap: 2px; }
+.seg { border: none; background: none; color: var(--muted); padding: 5px 13px; border-radius: 99px;
+  font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap;
+  transition: background .14s ease, color .14s ease; }
+.seg:hover { color: var(--txt); }
+.seg.active { background: linear-gradient(180deg, var(--accent), #2f82d8); color: #fff;
+  box-shadow: 0 2px 10px rgba(62,151,240,.32); }
 .timelens-ctrl { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.timelens-label { margin-left: auto; font-size: 12px; color: var(--muted); }
-.timelens-label.on { color: var(--accent); font-weight: 600; }
+.timelens-ctrl .seg { border: 1px solid var(--line); }
+.timelens-status { margin-left: auto; font-size: 12px; color: var(--muted); white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; }
+.timelens-status.on { color: var(--accent); font-weight: 600; }
+input[type=date], input[type=date].searchbox { color-scheme: dark; }
 
 /* =====================  RESPONSIVE  ===================== */
 /* Narrow desktop: drop secondary header text so the bar never wraps. */
@@ -457,8 +471,9 @@ span.dot.op-pulse { display: inline-block; }
 
   .drawer { width: 100%; max-width: 100%; border-left: none; padding: 16px; }
 
-  .timelens { padding: 7px 12px; }
-  .timelens-label { margin-left: 0; width: 100%; }
+  .timelens { padding: 8px 12px; }
+  .timelens-status { margin-left: 0; width: 100%; white-space: normal; }
+  .seg-group { flex-wrap: wrap; }
 
   .hide-md { display: none !important; }
   .cmd-grid, .govt-grid { grid-template-columns: 1fr; }   /* stack map + roster */
@@ -506,6 +521,84 @@ span.dot.op-pulse { display: inline-block; }
   .kpi .v { font-size: 18px; }
   .scroll { max-height: 70vh; }
   .cmd-grid, .govt-grid { grid-template-columns: 1fr !important; }
+}
+
+/* =====================  CITIZEN APP  ===================== */
+.citizen { display: grid; grid-template-rows: auto 1fr auto; height: 100vh; height: 100dvh;
+  background: var(--bg); }
+.citizen-head { display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+  background: linear-gradient(180deg, rgba(17,22,33,.96), rgba(13,17,26,.92));
+  border-bottom: 1px solid var(--line); z-index: 20; }
+.citizen-head .spacer { flex: 1; }
+.citizen-tag { font-size: 11px; font-weight: 700; color: var(--accent-2); border: 1px solid rgba(56,225,200,.4);
+  background: rgba(56,225,200,.08); border-radius: 99px; padding: 1px 8px; margin-left: 4px; }
+.citizen-map { position: relative; min-height: 0; }
+.citizen-legend { position: absolute; left: 12px; bottom: 12px; z-index: 600; display: flex; gap: 10px;
+  flex-wrap: wrap; background: var(--glass-strong); border: 1px solid var(--glass-line); border-radius: 99px;
+  padding: 6px 12px; font-size: 11px; backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur); box-shadow: var(--shadow); }
+.citizen-legend span { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); }
+.citizen-legend i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.citizen-hint { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 600;
+  background: var(--glass-strong); border: 1px solid var(--accent); border-radius: 99px; padding: 7px 14px;
+  font-size: 12px; backdrop-filter: var(--blur); box-shadow: var(--shadow); white-space: nowrap; }
+.citizen-toast { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 700;
+  background: var(--glass-strong); border: 1px solid var(--good); color: var(--good); border-radius: var(--radius);
+  padding: 9px 14px; font-size: 13px; max-width: 90vw; text-align: center; backdrop-filter: var(--blur); box-shadow: var(--shadow); }
+
+/* bottom info panel */
+.citizen-panel { background: linear-gradient(180deg, rgba(20,26,39,.96), rgba(13,17,26,.98));
+  border-top: 1px solid var(--line); border-radius: 18px 18px 0 0; padding: 8px 16px 14px;
+  max-height: 46vh; overflow: auto; box-shadow: 0 -12px 40px rgba(0,0,0,.4); }
+.citizen-panel > b { font-size: 15px; }
+.cp-grip { width: 40px; height: 4px; border-radius: 99px; background: var(--line); margin: 2px auto 10px; }
+.cp-empty { text-align: center; padding: 6px 10px 10px; }
+.cp-empty b { font-size: 15px; }
+.cp-empty p { font-size: 13px; margin: 6px 0 0; }
+
+/* area detail */
+.ad-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.ad-name { font-size: 17px; font-weight: 800; line-height: 1.2; }
+.ad-badge { color: #0b0e14; font-weight: 800; font-size: 11px; padding: 3px 10px; border-radius: 99px; white-space: nowrap; }
+.ad-desc { font-size: 13.5px; line-height: 1.45; margin: 10px 0; }
+.ad-patrol { display: flex; align-items: center; gap: 8px; background: var(--panel2); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 9px 12px; font-size: 13px; }
+.ad-patrol svg { color: var(--accent); flex: none; }
+.ad-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.ad-actions .btn { flex: 1; justify-content: center; min-width: 96px; }
+
+/* trip planner */
+.zone-search { position: relative; display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.zs-label { width: 42px; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; }
+.zone-search .searchbox { flex: 1; }
+.zs-loc { display: grid; place-items: center; width: 34px; height: 32px; flex: none; background: var(--panel2);
+  border: 1px solid var(--line); border-radius: var(--radius-sm); color: var(--accent); cursor: pointer; }
+.zs-results { position: absolute; top: 38px; left: 50px; right: 0; z-index: 20; padding: 6px 10px; }
+.zs-results .kv { cursor: pointer; }
+.trip-result { margin-top: 10px; }
+.trip-risk { display: flex; align-items: center; gap: 7px; border: 1px solid var(--line); border-left-width: 3px;
+  border-radius: var(--radius-sm); padding: 8px 12px; font-size: 13px; }
+.trip-risk-dot { width: 9px; height: 9px; border-radius: 50%; }
+.trip-zone { display: flex; align-items: center; gap: 8px; width: 100%; background: var(--panel2);
+  border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 7px 10px; margin-bottom: 5px;
+  cursor: pointer; color: var(--txt); font-size: 13px; }
+.trip-zone:hover { border-color: var(--accent); }
+.trip-zone-name { flex: 1; text-align: left; }
+
+/* bottom tab bar */
+.citizen-tabs { display: grid; grid-template-columns: repeat(3, 1fr);
+  background: var(--panel); border-top: 1px solid var(--line);
+  padding-bottom: env(safe-area-inset-bottom); }
+.ctab { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 9px 4px;
+  background: none; border: none; color: var(--muted); cursor: pointer; font-size: 11px; font-weight: 600;
+  border-top: 2px solid transparent; transition: color .14s ease; }
+.ctab.active { color: var(--accent); border-top-color: var(--accent); background: var(--accent-soft); }
+
+.login-citizen { display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 12px; }
+
+/* desktop: center the citizen panel content for readability */
+@media (min-width: 901px) {
+  .citizen-panel { padding-left: max(16px, calc(50vw - 360px)); padding-right: max(16px, calc(50vw - 360px)); }
 }
 
 /* ---- Force Command: login ---- */

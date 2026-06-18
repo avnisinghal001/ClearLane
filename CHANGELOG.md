@@ -61,9 +61,30 @@ operational / force layers never modify the historical ML scores.
   the viewport and scroll internally).
 - **Search** relocated into the nav drawer on mobile.
 
+### Added — Citizen (public) app
+- A separate, **login-free** experience at `#/citizen` (linked from the login page),
+  mobile-first with a Google-Maps-style bottom panel + tab bar.
+- **Area check** — tap any spot to see its **parking-obstruction risk** (clear /
+  some / heavy), the police station covering it, and **patrol units on duty now**
+  (reuses the deployment simulation).
+- **Report a problem** — tap the map to file a complaint (same closed loop as the
+  police side); live citizen reports pulse on the map.
+- **Plan a trip** — pick start/end (search or "use my location"); we flag the
+  highest-obstruction areas along the corridor, give a route-risk rating, and hand
+  off to Google Maps for turn-by-turn.
+- **Contact patrol** — one-tap call to the traffic-police helpline (103).
+- Honesty kept plain-language: risk is from **parking-violation patterns, not live
+  traffic sensors**, and patrol positions are a simulation.
+
+### Changed — Date lens
+- Simplified to a clean **segmented control**: **All data · Today · Tomorrow ·
+  Pick a date** (with an optional hour). Removed the confusing "Date range" mode.
+  Clear status line distinguishes **recorded** (in-window dates) vs **projected**
+  (future dates) — never congestion.
+
 ### Changed — Routing & persistence
 - **Hash-based routing** (`#/<view>`): every page is in the URL, so a refresh
-  restores the same screen; deep-linkable.
+  restores the same screen; deep-linkable. Public citizen app at `#/citizen`.
 
 ### Notes
 - Backend re-seeds the force DB on startup from `stations.json`; `clearlane.db` is

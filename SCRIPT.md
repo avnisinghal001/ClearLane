@@ -59,10 +59,21 @@ cd frontend && npm install && npm run dev      # http://localhost:5173
 - **On Duty**: current shift, live units with **dispatch**, on-duty officers, and
   area-only jobs & citizen reports.
 
-## 6 · Close (20s)
+## 6 · Citizen app (60s) — closes the loop with the public
+- From the login, tap **"Open the Citizen app"** (or go to `#/citizen`) — no login.
+- **Area**: tap a spot → plain risk (clear / some / heavy), the **station covering
+  it**, and **patrols on duty now** (same simulation). 
+  > "Risk is from parking-violation patterns — not live traffic sensors."
+- **Report**: tap the map → file a complaint → it appears live for patrols (this is
+  the *same* closed loop the police side consumes).
+- **Plan a trip**: set start + end → we flag the worst-obstruction areas on the way
+  and rate the route, then hand off to Google Maps.
+- One-tap **call traffic police (103)**.
+
+## 7 · Close (20s)
 - Refresh the page mid-view → it stays put (hash routing) → "deep-linkable, demo-safe."
-- Recap: **bias-corrected intelligence + validated forecast + role-based command +
-  troop simulation — and intellectually honest about what the data is.**
+- Recap: **citizens report → bias-corrected intelligence ranks → role-based command
+  deploys patrols → validated forecast — one honest closed loop.**
 
 ---
 

@@ -6,6 +6,7 @@ import GovtConsole from "./components/GovtConsole.jsx";
 import CommandCenter from "./components/CommandCenter.jsx";
 import SideNav from "./components/SideNav.jsx";
 import Header from "./components/Header.jsx";
+import CitizenApp from "./components/CitizenApp.jsx";
 import { Icon } from "./components/icons.jsx";
 import { num } from "./lib/format.js";
 import KpiStrip from "./components/KpiStrip.jsx";
@@ -141,7 +142,10 @@ export default function App() {
     go("command"); openZone(id, true); setNavOpen(false);
   }, [go, openZone]);
 
-  // RBAC gate (hooks above all run unconditionally)
+  // Public citizen app — no login required (hooks above all run unconditionally)
+  if (hash.startsWith("#/citizen")) return <CitizenApp />;
+
+  // RBAC gate
   if (!auth) return <Login onAuthed={(a) => { setAuth(a); go("force"); setView("force"); }} />;
   const doLogout = async () => { await authLogout(); setAuth(null); };
 

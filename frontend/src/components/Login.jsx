@@ -57,6 +57,12 @@ export default function Login({ onAuthed }) {
           Troop positions shown after login are a deployment <b>simulation</b> for
           planning — not real GPS or measured traffic.
         </div>
+
+        <div className="login-citizen">
+          <span className="muted">Not police?</span>
+          <a className="btn" href="#/citizen" onClick={() => { window.location.hash = "#/citizen"; }}>
+            Open the Citizen app →</a>
+        </div>
       </form>
     </div>
   );

@@ -43,7 +43,7 @@ export default function Header({ kpis, onSearchPick, snapshot, lastSync,
       )}
       <button className="icon-btn hide-md" onClick={onSync}
         title={`refresh operational data · sync ${syncLabel(lastSync)}`}>
-        <Icon name="sync" size={24} />
+        <Icon name="sync" size={18} />
       </button>
       <button className="btn hide-md" onClick={() => { window.location.hash = "#/officer"; }}>
         <Icon name="location" size={14} /> On Duty</button>
