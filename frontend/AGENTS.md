@@ -48,8 +48,9 @@ is a judging-safety requirement.
   - `#/dispatch/{id}` → standalone mobile `Dispatch` screen;
   - `#/officer` (or any phone-width screen unless `#/dashboard`) → `OfficerView`;
   - otherwise the full dashboard with the nav `VIEWS`.
-- `VIEWS` = Command Map, Priority Queue, Operations Loop, Timing Gap,
-  Coverage/ROI, Forecast, Typology, Station Command, Methodology & Validation.
+- `VIEWS` = Command Map, Today / Emergency, Priority Queue, Flow Impact,
+  Repeat Offenders, Operations Loop, Timing Gap, Coverage/ROI, Forecast, Typology,
+  Station Command, Methodology & Validation.
 
 ## Components (`src/components/`)
 
@@ -59,6 +60,9 @@ is a judging-safety requirement.
 | `KpiStrip.jsx` | headline KPIs + quick-filters (P1, chronic, blind-spot, emerging, rising) + live-ops counts |
 | `LiveMap.jsx` | leaflet command map; Simple-view toggle, hour-of-day slider, historical replay timeline, click-to-complaint |
 | `PriorityTable.jsx` | ranked queue (shows operational priority when live) |
+| `FlowImpactView.jsx` | Carriageway Impact lens — ranked by modeled flow-impact proxy; highlights movers vs strategic rank |
+| `TodayBoard.jsx` | live weekday+hour-aware emergency board (expected activity = priority + forecast + day/hour pattern + live reports); auto-refreshes, dispatch inline. **Expected enforcement-demand, not congestion.** |
+| `OffendersView.jsx` | repeat-vehicle tracing — searchable vehicle list + per-vehicle time-wise log, top zones, mini-map. Anonymized IDs only. |
 | `OperationsConsole.jsx` | the live closed-loop console (complaints/dispatches) |
 | `ZoneDrawer.jsx` | per-zone detail; bias raw→adjusted rank story; shows the 3 numbers |
 | `TimingGap.jsx` | enforcement-timing gap + evening blind spots |

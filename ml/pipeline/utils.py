@@ -156,6 +156,49 @@ def haversine_m(lat1, lon1, lat2, lon2) -> float:
     return 2 * R * math.asin(math.sqrt(a))
 
 
+def nearest_anchor_m(lat, lon, anchors) -> float:
+    """Metres from (lat,lon) to the nearest (name,lat,lon) anchor; inf if none."""
+    best = float("inf")
+    for _, alat, alon in anchors:
+        d = haversine_m(lat, lon, alat, alon)
+        if d < best:
+            best = d
+    return best
+
+
+# --------------------------------------------------------------------------- #
+# Carriageway Impact Index helpers (stage 04) — static road context, NOT flow.
+# --------------------------------------------------------------------------- #
+def classify_road(segment) -> str:
+    """Map a zone's modal address segment to a carriageway class.
+
+    Pure substring match against config.ROAD_CLASS_KEYWORDS (first hit wins).
+    Returns 'unknown' when nothing matches or the segment is empty.
+    """
+    if segment is None or (isinstance(segment, float) and math.isnan(segment)):
+        return "unknown"
+    s = str(segment).lower()
+    for kw, cls in C.ROAD_CLASS_KEYWORDS:
+        if kw in s:
+            return cls
+    return "unknown"
+
+
+def demand_proximity(dist_m) -> float:
+    """Linear decay of demand-generator proximity to [0,1].
+
+    1.0 within DEMAND_NEAR_M, 0.0 beyond DEMAND_FAR_M, linear in between.
+    """
+    if dist_m is None or dist_m == float("inf") or (isinstance(dist_m, float) and math.isnan(dist_m)):
+        return 0.0
+    near, far = C.DEMAND_NEAR_M, C.DEMAND_FAR_M
+    if dist_m <= near:
+        return 1.0
+    if dist_m >= far:
+        return 0.0
+    return float((far - dist_m) / (far - near))
+
+
 # --------------------------------------------------------------------------- #
 # Normalization
 # --------------------------------------------------------------------------- #

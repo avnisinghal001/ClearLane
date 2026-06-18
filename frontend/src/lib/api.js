@@ -13,6 +13,7 @@ const DEMO = {
   "/api/validation": "/demo/validation.json",
   "/api/evidence-points": "/demo/evidence_points.json",
   "/api/replay-frames": "/demo/replay_frames.json",
+  "/api/offenders": "/demo/offenders.json",
 };
 
 let LIVE = !!BASE;
@@ -47,6 +48,11 @@ export async function api(path) {
   if (path.startsWith("/api/priority/queue")) {
     const p = await getJSON("/demo/map_payload.json");
     return [...p.zones].sort((a, b) => a.rank - b.rank);
+  }
+  if (path.startsWith("/api/flow-impact")) {
+    const p = await getJSON("/demo/map_payload.json");
+    return [...p.zones].sort(
+      (a, b) => (a.flow_impact_rank ?? 1e9) - (b.flow_impact_rank ?? 1e9));
   }
   if (path === "/api/timing-gap") {
     const t = await getJSON("/demo/timing_gap.json");

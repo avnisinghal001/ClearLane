@@ -54,6 +54,7 @@ demo bundle (the pipeline's `_bundle_demo` handles the latter).
 | `GET /health` | status, demo_mode, which artifacts are present |
 | `GET /api/map/payload` | lean per-zone records + KPIs (the command map) |
 | `GET /api/priority/queue` | sorted by rank; filter by `station`, `tier`, `limit` |
+| `GET /api/flow-impact` | Carriageway Impact lens — zones sorted by `flow_impact_rank` (modeled proxy; rides on map_payload) |
 | `GET /api/zone/{zone_id}` | full zone detail (404 if missing) |
 | `GET /api/timing-gap` | timing histogram + evening blind-spot zones |
 | `GET /api/coverage-curve` | cumulative pressure captured by top-K |
@@ -66,6 +67,7 @@ demo bundle (the pipeline's `_bundle_demo` handles the latter).
 | `GET /api/search` | substring search over the search index (cap 25) |
 | `GET /api/briefings` | per-station deterministic briefings |
 | `GET /api/replay-frames` | per-zone monthly counts (historical replay) |
+| `GET /api/offenders` | repeat-vehicle traces + time-wise logs (anonymized vehicle IDs only) |
 
 All responses go through `ok()` → `_scrub()`. Use that wrapper for new routes.
 

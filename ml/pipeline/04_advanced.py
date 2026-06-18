@@ -117,6 +117,60 @@ def _sprawl_and_anchor(ev, z):
     return z
 
 
+def _carriageway_impact(ev, z):
+    """7.6 Carriageway Impact Index — a MODELED flow-impact proxy from static road
+    context (junction criticality, road class, demand-generator proximity).
+
+    NOT a congestion measurement: the data has no flow/speed signal. We estimate
+    how disruptive an illegal park here would be from physical context, then scale
+    obstruction pressure by a transparent, bounded multiplier."""
+    import anchors  # static public coords (metro + commercial); audited reference
+
+    # --- J: junction criticality --------------------------------------------- #
+    jname = ev["junction_name"].astype("string").fillna("")
+    is_jct = ((jname.str.len() > 0)
+              & ~jname.str.contains("No Junction", case=False, na=False)
+              & (jname.str.upper() != "NULL")).to_numpy(dtype=bool)
+    is_jct = pd.Series(is_jct, index=ev.index)
+    jshare = is_jct.groupby(ev["superzone_id"], observed=True).mean().rename("junction_share")
+    njct = (jname[is_jct].groupby(ev["superzone_id"][is_jct], observed=True)
+            .nunique().rename("n_junctions"))
+    z = z.join(jshare, on="superzone_id").join(njct, on="superzone_id")
+    z["junction_share"] = z["junction_share"].fillna(0.0)
+    z["n_junctions"] = z["n_junctions"].fillna(0).astype(int)
+    multi = 1 + C.JUNCTION_MULTI_BOOST * np.clip(z["n_junctions"] - 1, 0, C.JUNCTION_MULTI_CAP)
+    z["cii_junction"] = (z["junction_share"] * multi).clip(0, 1)
+
+    # --- R: road class (from the zone's modal address segment) --------------- #
+    seg = ev.assign(_seg=ev["location"].astype("string").str.split(",").str[0].str.strip())
+    top_seg = (seg.groupby("superzone_id", observed=True)["_seg"]
+               .agg(lambda s: s.dropna().mode().iloc[0] if len(s.dropna()) else None))
+    z["road_segment"] = z["superzone_id"].map(top_seg)
+    z["road_class"] = z["road_segment"].map(U.classify_road)
+    z["cii_road"] = (z["road_class"].map(C.ROAD_CLASS_WEIGHTS)
+                     .fillna(C.ROAD_CLASS_WEIGHTS["unknown"]))
+
+    # --- D: proximity to a public metro / commercial demand generator -------- #
+    z["dist_metro_m"] = [U.nearest_anchor_m(la, lo, anchors.METRO)
+                         for la, lo in zip(z["lat"], z["lon"])]
+    z["dist_commercial_m"] = [U.nearest_anchor_m(la, lo, anchors.COMMERCIAL)
+                              for la, lo in zip(z["lat"], z["lon"])]
+    z["cii_demand"] = np.maximum(z["dist_metro_m"].map(U.demand_proximity),
+                                 z["dist_commercial_m"].map(U.demand_proximity))
+
+    # --- combine into a bounded context multiplier -> flow-impact ------------ #
+    w = C.CII_WEIGHTS
+    m = (w["junction"] * z["cii_junction"] + w["road_class"] * z["cii_road"]
+         + w["demand"] * z["cii_demand"])
+    lo, hi = C.CII_CLIP
+    z["context_multiplier"] = (lo + m * (hi - lo)).clip(lo, hi)
+    z["flow_impact_raw"] = z["pressure_raw"] * z["context_multiplier"]
+    z["flow_impact_score"] = U.percentile_norm(z["flow_impact_raw"])
+    z["flow_impact_rank"] = (z["flow_impact_raw"].rank(ascending=False, method="min")
+                             .astype(int))
+    return z
+
+
 def _typology(ev, z):
     """7.5 cluster zones on temporal+composition fingerprint; pick k by silhouette."""
     g = ev.groupby("superzone_id", observed=True)
@@ -235,7 +289,11 @@ def run():
               "bias_adjusted_rank", "rank_divergence", "under_recognized",
               "repeat_share", "habitual", "trend_slope", "responsiveness",
               "n_points", "sprawl", "junction_anchored", "cluster", "typology",
-              "intervention"]
+              "intervention",
+              "junction_share", "n_junctions", "cii_junction", "road_segment",
+              "road_class", "cii_road", "dist_metro_m", "dist_commercial_m",
+              "cii_demand", "context_multiplier", "flow_impact_raw",
+              "flow_impact_score", "flow_impact_rank"]
     z = z.drop(columns=[c for c in _added if c in z.columns])
 
     # heavy-vehicle mix flag per zone (mean footprint high)
@@ -247,6 +305,7 @@ def run():
     z, city_stat = _offenders(ev, z)
     z = _responsiveness(ev, z)
     z = _sprawl_and_anchor(ev, z)
+    z = _carriageway_impact(ev, z)
     z, fingerprints, typ_meta = _typology(ev, z)
     z = _intervention(z)
 
@@ -264,6 +323,12 @@ def run():
           f"{city_stat['pct_repeat_vehicles']}% of vehicles")
     print(f"[04_advanced] typology k={typ_meta['k']} "
           f"silhouette={typ_meta['silhouette']} -> {typ_meta['counts']}")
+    _cii_top = set(z.sort_values("flow_impact_raw", ascending=False).head(20)["superzone_id"])
+    _pr_top = set(z.sort_values("priority", ascending=False).head(20)["superzone_id"])
+    print(f"[04_advanced] carriageway-impact: multiplier "
+          f"{z['context_multiplier'].min():.2f}–{z['context_multiplier'].max():.2f}, "
+          f"road-class {z['road_class'].value_counts().to_dict()}, "
+          f"flow-impact top-20 shares {len(_cii_top & _pr_top)}/20 with priority")
     return z
 
 

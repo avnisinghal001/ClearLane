@@ -169,6 +169,11 @@ REPEAT_GLOBAL_MIN = 3    # vehicle ticketed >= this many times anywhere
 REPEAT_ZONE_MIN = 2      # or >= this many times in the same zone
 HABITUAL_SHARE_THRESHOLD = 0.30   # zone repeat-share above this -> "habitual"
 
+# 7.2b repeat-vehicle tracing (offenders.json). Vehicle-level ONLY — vehicle_number
+# is anonymized & stable; no real identities, and we never profile officers.
+OFFENDER_TOP_N = 200            # most-ticketed repeat vehicles to log
+OFFENDER_TIMELINE_CAP = 60      # most-recent tickets kept per vehicle timeline
+
 # 7.3 responsiveness — monthly trend over Nov->Mar
 RESPONSIVENESS_MONTHS = ["2023-11", "2023-12", "2024-01", "2024-02", "2024-03"]
 RESPONDING_SLOPE = -0.05   # normalized monthly slope below -> "responding"
@@ -177,6 +182,39 @@ RESISTANT_SLOPE = 0.02     # above -> "resistant", else "stable"
 # 7.5 typology clustering
 TYPOLOGY_K_RANGE = range(4, 9)   # pick k by silhouette
 TYPOLOGY_RANDOM_STATE = 42
+
+# 7.6 Carriageway Impact Index (CII) — a MODELED flow-impact proxy from STATIC
+# road context. This is NOT a measurement of congestion (the data has no flow/
+# speed/delay signal). It estimates how much an illegal park in a zone would
+# disrupt movement, from three physical determinants, each in [0,1]:
+#   J  junction criticality  — share of a zone's tickets at named BTP junctions
+#   R  road class            — arterial / ring-road / commercial / local
+#   D  demand proximity      — distance to nearest public metro / commercial hub
+# context_multiplier = clip( lo + (wJ·J + wR·R + wD·D)·(hi-lo) , lo, hi )
+# flow_impact = percentile_norm( pressure_raw × context_multiplier ).
+CII_WEIGHTS = {"junction": 0.30, "road_class": 0.40, "demand": 0.30}  # sum = 1.0
+CII_CLIP = (0.8, 1.5)            # multiplier bounds (neutral context ≈ 1.15)
+
+# Modal zone address-segment substring → carriageway class (first hit wins).
+ROAD_CLASS_KEYWORDS = [
+    ("outer ring", "ring_road"), ("ring road", "ring_road"), ("nice road", "ring_road"),
+    ("flyover", "arterial"), ("underpass", "arterial"),
+    ("market", "commercial"), ("mall", "commercial"), ("bazaar", "commercial"),
+    ("main road", "main_road"),
+    ("circle", "arterial"), ("junction", "arterial"),
+    ("cross", "local"), ("layout", "local"), ("colony", "local"),
+]
+# Carriageway-class weight (0–1): wider/through roads disrupt more when blocked.
+ROAD_CLASS_WEIGHTS = {"ring_road": 1.0, "arterial": 0.9, "main_road": 0.8,
+                      "commercial": 0.7, "local": 0.3, "unknown": 0.5}
+
+# Demand-proximity linear decay: full weight ≤ NEAR_M, zero ≥ FAR_M.
+DEMAND_NEAR_M = 250.0
+DEMAND_FAR_M = 1500.0
+# A zone touching multiple distinct junctions is a corridor of intersections, not
+# one point — modest per-extra-junction boost on J, capped.
+JUNCTION_MULTI_BOOST = 0.15
+JUNCTION_MULTI_CAP = 3
 
 # --------------------------------------------------------------------------- #
 # TIMING GAP  (§8) — congestion windows are ASSUMPTIONS from domain knowledge,

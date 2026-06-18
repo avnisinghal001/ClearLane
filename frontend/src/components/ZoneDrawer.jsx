@@ -2,6 +2,12 @@ import { useEffect, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { api, opDispatch, opFeedback } from "../lib/api.js";
 import { tierColor, mapsUrl, MONTHS, MONTH_LABEL } from "../lib/format.js";
+import { km } from "../lib/plain.js";
+
+const ROAD_CLASS_LABEL = {
+  ring_road: "Ring road", arterial: "Arterial / junction", main_road: "Main road",
+  commercial: "Commercial core", local: "Local street", unknown: "Unclassified",
+};
 
 function Bars({ items }) {
   const max = Math.max(1, ...items.map((i) => i.count));
@@ -143,6 +149,32 @@ export default function ZoneDrawer({ id, onClose, op, onChange }) {
               <b>▸ {z.intervention}</b><br />
               <span className="muted">Window: {z.recommended_window}</span>
             </div>
+
+            {/* Carriageway Impact Index — modeled flow-impact proxy (§7.6) */}
+            {z.flow_impact && (
+              <div style={{ margin: "12px 0" }}>
+                <h3 style={{ marginBottom: 6 }}>Carriageway impact (flow-impact proxy)</h3>
+                <div className="opnums">
+                  <div className="opnum"><div className="v" style={{ color: "var(--accent)" }}>{z.flow_impact.score}</div><div className="l">Flow impact</div></div>
+                  <div className="opnum"><div className="v">×{z.flow_impact.multiplier}</div><div className="l">Context mult.</div></div>
+                  <div className="opnum"><div className="v">#{z.flow_impact.rank}</div><div className="l">Flow rank</div></div>
+                </div>
+                <div className="kv"><span className="k">Junction criticality</span>
+                  <span className="mono">{Math.round(z.flow_impact.junction * 100)}%
+                    {z.flow_impact.n_junctions > 0 ? ` · ${z.flow_impact.n_junctions} junction${z.flow_impact.n_junctions > 1 ? "s" : ""}` : ""}</span></div>
+                <div className="kv"><span className="k">Road class</span>
+                  <span className="mono">{ROAD_CLASS_LABEL[z.flow_impact.road_class] || z.flow_impact.road_class} ({z.flow_impact.road_weight})</span></div>
+                <div className="kv"><span className="k">Nearest metro</span>
+                  <span className="mono">{z.flow_impact.dist_metro_m != null ? km(z.flow_impact.dist_metro_m) : "—"}</span></div>
+                <div className="kv"><span className="k">Nearest commercial hub</span>
+                  <span className="mono">{z.flow_impact.dist_commercial_m != null ? km(z.flow_impact.dist_commercial_m) : "—"}</span></div>
+                <p className="muted" style={{ fontSize: 11, marginTop: 4 }}>
+                  Obstruction pressure scaled by static road context (junction tag, road class,
+                  metro/commercial proximity). A <b>modeled proxy for movement disruption — not a
+                  measurement of congestion</b> (the data has no flow/speed signal).
+                </p>
+              </div>
+            )}
 
             <div style={{ margin: "10px 0" }}>
               <span className={"tag " + (z.habitual ? "hab" : "tran")}>

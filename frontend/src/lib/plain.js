@@ -25,6 +25,7 @@ export function plainPhrases(z) {
     out.push("tickets aren't fixing it — needs a barrier or No-Parking board");
   else if (z.responsiveness === "responding") out.push("enforcement is working here");
   if (z.habitual) out.push("the same vehicles park here daily");
+  if (z.flow_impact >= 80) out.push("sits on a main road / junction where a block hurts traffic most");
   if (z.evening_blind_spot) out.push("never checked in the evening rush (5–9pm), when it's worst");
   if (z.forecast_rising) out.push("and it's getting worse");
   if (z.under_recognized) out.push("patrols keep missing this, but it's serious");

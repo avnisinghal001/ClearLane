@@ -4,6 +4,9 @@ import Header from "./components/Header.jsx";
 import KpiStrip from "./components/KpiStrip.jsx";
 import LiveMap from "./components/LiveMap.jsx";
 import PriorityTable from "./components/PriorityTable.jsx";
+import FlowImpactView from "./components/FlowImpactView.jsx";
+import TodayBoard from "./components/TodayBoard.jsx";
+import OffendersView from "./components/OffendersView.jsx";
 import ZoneDrawer from "./components/ZoneDrawer.jsx";
 import TimingGap from "./components/TimingGap.jsx";
 import CoverageSimulator from "./components/CoverageSimulator.jsx";
@@ -19,7 +22,10 @@ import OfficerView from "./components/OfficerView.jsx";
 
 const VIEWS = [
   ["command", "Command Map"],
+  ["today", "Today / Emergency"],
   ["queue", "Priority Queue"],
+  ["flow_impact", "Flow Impact"],
+  ["offenders", "Repeat Offenders"],
   ["operations", "Operations Loop"],
   ["timing", "Timing Gap"],
   ["coverage", "Coverage / ROI"],
@@ -128,6 +134,16 @@ export default function App() {
             )}
             {view === "queue" && (
               <PriorityTable zones={filtered} onSelect={(id) => openZone(id, true)} opByZone={opByZone} />
+            )}
+            {view === "flow_impact" && (
+              <FlowImpactView onSelect={(id) => openZone(id, true)} />
+            )}
+            {view === "today" && (
+              <TodayBoard zones={zones} opByZone={opByZone}
+                onSelect={(id) => openZone(id, true)} onChange={refreshSnapshot} />
+            )}
+            {view === "offenders" && (
+              <OffendersView onSelect={(id) => openZone(id, true)} />
             )}
             {view === "operations" && (
               <OperationsConsole snapshot={snapshot} onChange={refreshSnapshot}

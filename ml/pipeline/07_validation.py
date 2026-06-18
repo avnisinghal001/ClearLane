@@ -80,6 +80,51 @@ def _sensitivity(ev, z):
     }
 
 
+def _cii_sensitivity(z):
+    """Stress the Carriageway Impact Index: perturb the J/R/D blend ±20% and report
+    top-20 stability, plus how much the flow-impact lens *diverges* from strategic
+    priority (the divergence is the point — a lens that just echoes priority adds
+    nothing). The flow-impact components are precomputed per zone in stage 04."""
+    base_raw = z.set_index("superzone_id")["flow_impact_raw"]
+    base_sorted = base_raw.sort_values(ascending=False)
+    base_top20 = set(base_sorted.head(20).index)
+    base_rank = base_raw.rank(ascending=False)
+    top50 = list(base_sorted.head(50).index)
+    comp = z.set_index("superzone_id")[["cii_junction", "cii_road", "cii_demand",
+                                        "pressure_raw"]]
+    lo, hi = C.CII_CLIP
+    p = C.SENSITIVITY_PERTURB
+
+    overlaps, rhos = [], []
+    for _ in range(C.SENSITIVITY_N_CONFIGS):
+        wj = C.CII_WEIGHTS["junction"] * (1 + rng.uniform(-p, p))
+        wr = C.CII_WEIGHTS["road_class"] * (1 + rng.uniform(-p, p))
+        wd = C.CII_WEIGHTS["demand"] * (1 + rng.uniform(-p, p))
+        s = wj + wr + wd
+        wj, wr, wd = wj / s, wr / s, wd / s
+        m = (wj * comp["cii_junction"] + wr * comp["cii_road"] + wd * comp["cii_demand"])
+        mult = (lo + m * (hi - lo)).clip(lo, hi)
+        raw = (comp["pressure_raw"] * mult).sort_values(ascending=False)
+        overlaps.append(len(set(raw.head(20).index) & base_top20) / 20)
+        rho = spearmanr(base_rank.loc[top50],
+                        raw.rank(ascending=False).loc[top50]).statistic
+        rhos.append(float(rho))
+
+    pr_top50 = set(z.sort_values("priority", ascending=False).head(50)["superzone_id"])
+    cii_top50 = set(base_sorted.head(50).index)
+    return {
+        "n_configs": C.SENSITIVITY_N_CONFIGS,
+        "perturbation": p,
+        "top20_overlap_min": round(float(np.min(overlaps)) * 100, 1),
+        "top20_overlap_mean": round(float(np.mean(overlaps)) * 100, 1),
+        "top50_spearman_mean": round(float(np.mean(rhos)), 3),
+        "divergence_vs_priority_top50": len(cii_top50 - pr_top50),
+        "note": ("Flow-Impact is a MODELED proxy from static road context "
+                 "(junction tag, road class, metro/commercial proximity) — "
+                 "NOT a measurement of congestion."),
+    }
+
+
 def _persistence(ev):
     tr = (ev[ev["month_ist"].isin(C.BACKTEST_TRAIN_MONTHS)]
           .groupby("superzone_id", observed=True)["event_weight"].sum())
@@ -107,6 +152,7 @@ def run():
     z = pd.read_parquet(C.DATA_PROC / "zone_scores.parquet")
 
     sens = _sensitivity(ev, z)
+    cii = _cii_sensitivity(z)
     pers = _persistence(ev)
     try:
         import json
@@ -114,12 +160,14 @@ def run():
     except Exception:
         fc = {}
 
-    out = {"sensitivity": sens, "persistence": pers, "forecaster": fc}
+    out = {"sensitivity": sens, "cii": cii, "persistence": pers, "forecaster": fc}
     U.write_json(C.DATA_PROC / "validation.json", out)
 
     lines = ["ClearLane — validation report (stage 07)", "=" * 48, "",
              "SENSITIVITY (±20% on blend + severity/vehicle tables):"]
     lines += [f"  {k}: {v}" for k, v in sens.items()]
+    lines += ["", "CARRIAGEWAY IMPACT INDEX (±20% on J/R/D blend; modeled proxy):"]
+    lines += [f"  {k}: {v}" for k, v in cii.items()]
     lines += ["", "PERSISTENCE BACKTEST (train Nov–Jan, test Feb–Apr):"]
     lines += [f"  {k}: {v}" for k, v in pers.items()]
     lines += ["", "FORECASTER (held-out, real future-pressure target):"]
@@ -129,6 +177,8 @@ def run():
     print(f"[07_validation] sensitivity top-20 overlap "
           f"{sens['top20_overlap_min']}–{sens['top20_overlap_max']}% "
           f"(expect 80–96%) · top-50 Spearman {sens['top50_spearman_mean']} (expect ≥0.89)")
+    print(f"[07_validation] CII top-20 stability {cii['top20_overlap_mean']}% · "
+          f"{cii['divergence_vs_priority_top50']}/50 flow-impact zones diverge from priority")
     print(f"[07_validation] persistence Spearman {pers['spearman']} "
           f"(target {C.SELF_CHECK_TARGETS['backtest_spearman']}) · "
           f"top-quartile persist {pers['top_quartile_persistence_pct']}%")

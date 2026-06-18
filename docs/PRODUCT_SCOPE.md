@@ -15,11 +15,13 @@ into prioritized, explainable, deployable operational intelligence.
 | Theme challenge | ClearLane response | Where in the app |
 |---|---|---|
 | Enforcement is patrol-based & reactive | Proactive ranked enforcement queue + exposure **bias correction** (raw rank → bias-adjusted rank) | Priority Queue, Zone drawer |
-| No heatmap of violations vs. likely impact | Bias-corrected **obstruction-pressure** map (severity × vehicle footprint × confidence) | Command Map |
+| No heatmap of violations vs. likely impact | Bias-corrected **obstruction-pressure** map (severity × vehicle footprint × confidence) **+ Carriageway Impact Index** — a modeled flow-impact proxy (pressure × junction/road-class/metro-proximity context), labelled *not measured congestion* | Command Map, Flow Impact |
 | Hard to prioritize zones | Explainable **Operational Priority** = 0.5·A + 0.3·B + 0.2·C, with a live sensitivity proof | Priority Queue, Validation |
 | Commercial / metro / event spillover | **Zone typology** + recurring-location + **repeat-offender** (habitual vs transient) analysis | Typology, Zone drawer |
 | Limited field resources | **Coverage / allocation** simulator (top-K priority zones → % weighted evidence covered) | Coverage / ROI |
 | No closed operational loop | **Complaint → verify → dispatch → clear** workflow (separate operational layer) | Command Map, Operations Loop, Mobile dispatch |
+| Need to deploy *now*, fast | **Today's emergency board** — live weekday + hour-aware ranking (priority + forecast + historical day/hour pattern + live citizen reports), dispatch top-down. Expected enforcement-demand, *not* a congestion prediction. | Today / Emergency |
+| Same vehicles re-offend | **Repeat-vehicle tracing** — most-ticketed anonymized vehicles with a time-wise log, top zones, mini-map (single-zone repeaters → infrastructure fix). | Repeat Offenders |
 
 ## Honesty guardrails (non-negotiable, enforced in code)
 - No fabricated congestion / speed / delay / queue / travel-time values anywhere.

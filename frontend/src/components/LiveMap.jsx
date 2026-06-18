@@ -74,10 +74,19 @@ export default function LiveMap({ zones, flyTo, onSelect, opByZone = {}, snapsho
 
   const typoList = useMemo(
     () => [...new Set(zones.map((z) => z.typology))].filter(Boolean), [zones]);
+  // flow-impact gradient: accent-blue (low) → red (high). v in 0..100.
+  const flowColor = (v) => {
+    const t = Math.max(0, Math.min(1, (v ?? 0) / 100));
+    const a = [55, 138, 221], b = [226, 75, 74];
+    const c = a.map((x, i) => Math.round(x + (b[i] - x) * t));
+    return `rgb(${c[0]},${c[1]},${c[2]})`;
+  };
   const colorOf = (z) =>
     colorMode === "typology"
       ? TYPO_COLORS[typoList.indexOf(z.typology) % TYPO_COLORS.length]
-      : tierColor(z.tier);
+      : colorMode === "flow_impact"
+        ? flowColor(z.flow_impact)
+        : tierColor(z.tier);
 
   // Simple view → only P1/P2. Hour filter → only zones active in that hour.
   const display = useMemo(() => {
@@ -130,9 +139,13 @@ export default function LiveMap({ zones, flyTo, onSelect, opByZone = {}, snapsho
             onChange={(e) => setShowRings(e.target.checked)} /> Evening blind-spot rings</label>
           <label className="toggle"><input type="checkbox" checked={showEvidence}
             onChange={(e) => setShowEvidence(e.target.checked)} /> Evidence points</label>
-          <label className="toggle"><input type="checkbox"
-            checked={colorMode === "typology"}
-            onChange={(e) => setColorMode(e.target.checked ? "typology" : "tier")} /> Color by typology</label>
+          <label className="toggle">Color:
+            <select value={colorMode} onChange={(e) => setColorMode(e.target.value)}
+              style={{ marginLeft: 4, background: "transparent", color: "inherit", border: "none" }}>
+              <option value="tier">tier</option>
+              <option value="typology">typology</option>
+              <option value="flow_impact">flow impact</option>
+            </select></label>
           <label className="toggle"><input type="checkbox" checked={replayOn}
             onChange={(e) => { setReplayOn(e.target.checked); setPlaying(e.target.checked); }} /> ▶ Historical replay</label>
         </>}
@@ -214,11 +227,20 @@ export default function LiveMap({ zones, flyTo, onSelect, opByZone = {}, snapsho
       )}
 
       <div className="map-overlay legend">
-        {colorMode === "tier"
-          ? ["P1", "P2", "P3", "P4"].map((t) => (
-              <div className="row" key={t}><span className="dot" style={{ background: tierColor(t) }} /> {t}</div>))
-          : typoList.slice(0, 8).map((t, i) => (
-              <div className="row" key={t}><span className="dot" style={{ background: TYPO_COLORS[i % 8] }} /> {t}</div>))}
+        {colorMode === "tier" &&
+          ["P1", "P2", "P3", "P4"].map((t) => (
+            <div className="row" key={t}><span className="dot" style={{ background: tierColor(t) }} /> {t}</div>))}
+        {colorMode === "typology" &&
+          typoList.slice(0, 8).map((t, i) => (
+            <div className="row" key={t}><span className="dot" style={{ background: TYPO_COLORS[i % 8] }} /> {t}</div>))}
+        {colorMode === "flow_impact" && (
+          <>
+            <div className="row"><span className="dot" style={{ background: flowColor(15) }} /> low flow-impact</div>
+            <div className="row"><span className="dot" style={{ background: flowColor(60) }} /> medium</div>
+            <div className="row"><span className="dot" style={{ background: flowColor(95) }} /> high (junction / arterial)</div>
+            <div className="row muted" style={{ fontSize: 10 }}>modeled proxy · not measured congestion</div>
+          </>
+        )}
         {liveZones.length > 0 && <div className="row" style={{ marginTop: 4 }}><span className="dot op-pulse" style={{ background: "#4aa3ff" }} /> live complaint / ops</div>}
         <div className="row muted" style={{ marginTop: 6, fontSize: 10 }}>size = obstruction pressure</div>
       </div>

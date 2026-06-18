@@ -84,6 +84,19 @@ These are never defended by assertion — see §7 (sensitivity).
   no-parking infrastructure / corridor patrol / fixed board / evening sweep).
 - **7.5 Typology.** KMeans on each zone's temporal × composition fingerprint
   (k chosen by silhouette), labelled interpretably; plus a weekday×hour fingerprint.
+- **7.6 Carriageway Impact Index (CII).** A **modeled flow-impact proxy** that
+  answers "quantify the impact on traffic flow" *without* claiming to measure
+  congestion. `flow_impact = percentile(pressure × context_multiplier)`, where the
+  bounded multiplier (clip 0.8–1.5) blends three **static, auditable** road-context
+  signals: **junction criticality** (share of a zone's tickets at named BTP
+  junctions — 45% of tickets carry one), **road class** (ring-road/arterial/
+  main-road/commercial/local, parsed from the address), and **demand proximity**
+  (distance to public Namma Metro / commercial-hub coordinates in
+  `ml/pipeline/anchors.py`). Validated like everything else — under ±20% on the
+  J/R/D blend the top-20 is **99.6%** stable, yet **22/50** flow-impact zones
+  diverge from the pure-pressure ranking (e.g. Elite Junction: strategic #37 →
+  flow-impact #1). It is a proxy for *how much a block here disrupts movement*,
+  built from physical context — **never** a measurement of speed/delay/congestion.
 
 ## 6. Forecaster (`05_forecaster.py`)
 
@@ -118,6 +131,20 @@ as assumptions, never measured.
 covers ≈**16.8%** of all weighted obstruction evidence (top-50 ≈40%). We rank by
 deployment priority and measure *evidence-coverage* — never a counterfactual
 "clearing this cuts congestion by X%".
+
+## 8b. Operational serving features (deterministic, additive)
+
+- **Today's emergency board.** A live, weekday + hour-aware ranking computed at
+  request time from each zone's historical day/hour enforcement pattern
+  (`map_payload` `dow` + `hourly`), the next-month forecast, the strategic priority,
+  and any live citizen reports. It tells officers *where to go now, top-down*. It is
+  **expected enforcement-demand, NOT a congestion prediction** — the underlying
+  activity is recorded ticket times (officer shifts), labelled as such in the UI.
+- **Repeat-vehicle tracing** (`offenders.json`). The most-ticketed vehicles, each
+  with a time-wise log (timeline, peak hour, zones, mini-map). `vehicle_number` is
+  anonymized and stable, so this is **vehicle-level only — no real identities** (and,
+  as everywhere, never officer-level). Single-zone repeaters are surfaced as a
+  structural-demand signal (needs infrastructure, not just repeat tickets).
 
 ## 9. Limitations (stated plainly)
 

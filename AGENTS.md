@@ -88,8 +88,7 @@ Backend source of truth: `backend/app/operational.py` (SQLite). Offline mirror:
 
 | Path | What |
 |------|------|
-| `ml/pipeline/` | **canonical** 8-stage pipeline + `config.py` + `run_all.py`. See `ml/AGENTS.md`. |
-| `ml/legacy_scripts/` | superseded old scripts (wrong framing) — do not use or revive. |
+| `ml/pipeline/` | **canonical** 8-stage pipeline + `config.py` + `utils.py` + `run_all.py`. See `ml/AGENTS.md`. |
 | `data/raw/` | raw CSV (gitignored) + `sample_500.csv`. |
 | `data/processed/` | pipeline outputs (parquet + JSON artifacts). |
 | `backend/app/` | FastAPI: `main.py` (read APIs) + `operational.py` (live loop). See `backend/AGENTS.md`. |

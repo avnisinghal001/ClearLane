@@ -10,6 +10,15 @@ SENSITIVITY (±20% on blend + severity/vehicle tables):
   top50_spearman_mean: 0.958
   top50_spearman_min: 0.854
 
+CARRIAGEWAY IMPACT INDEX (±20% on J/R/D blend; modeled proxy):
+  n_configs: 40
+  perturbation: 0.2
+  top20_overlap_min: 95.0
+  top20_overlap_mean: 99.6
+  top50_spearman_mean: 0.999
+  divergence_vs_priority_top50: 22
+  note: Flow-Impact is a MODELED proxy from static road context (junction tag, road class, metro/commercial proximity) — NOT a measurement of congestion.
+
 PERSISTENCE BACKTEST (train Nov–Jan, test Feb–Apr):
   train_months: ['2023-11', '2023-12', '2024-01']
   test_months: ['2024-02', '2024-03', '2024-04']

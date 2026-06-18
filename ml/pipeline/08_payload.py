@@ -73,6 +73,52 @@ def _display_name(r):
     return f"Zone {r['superzone_id']}"
 
 
+def _offenders_log(ev, name_by_sid):
+    """Repeat-vehicle tracing: the most-ticketed vehicles + a time-wise log each.
+
+    Vehicle-level ONLY — `vehicle_number` is anonymized and stable (no real
+    identity). This is the 'which vehicle keeps offending, and where/when' view."""
+    vc = ev.groupby("vehicle_number", observed=True)["id"].count().sort_values(ascending=False)
+    top = vc[vc >= C.REPEAT_GLOBAL_MIN].head(C.OFFENDER_TOP_N)
+    sub = ev[ev["vehicle_number"].isin(set(top.index))].sort_values("created_ist")
+
+    vehicles = []
+    for veh, g in sub.groupby("vehicle_number", observed=True):
+        zct = g["superzone_id"].value_counts()
+        top_zones = [{"id": str(s), "name": name_by_sid.get(str(s), str(s)), "n": int(n)}
+                     for s, n in zct.head(5).items()]
+        vmode = g["vehicle_type"].dropna()
+        first, last = g["created_ist"].min(), g["created_ist"].max()
+        timeline = [{
+            "t": (r["created_ist"].isoformat() if pd.notna(r["created_ist"]) else None),
+            "h": int(r["hour_ist"]),
+            "z": str(r["superzone_id"]),
+            "zn": name_by_sid.get(str(r["superzone_id"]), str(r["superzone_id"])),
+            "lat": round(float(r["latitude"]), 4), "lon": round(float(r["longitude"]), 4),
+            "v": r["primary_violation"],
+        } for _, r in g.tail(C.OFFENDER_TIMELINE_CAP).iterrows()]
+        vehicles.append({
+            "vehicle": str(veh),
+            "vehicle_type": (str(vmode.mode().iloc[0]) if len(vmode) else None),
+            "n_tickets": int(len(g)),
+            "n_zones": int(g["superzone_id"].nunique()),
+            "first": (first.isoformat() if pd.notna(first) else None),
+            "last": (last.isoformat() if pd.notna(last) else None),
+            "peak_hour": (int(g["hour_ist"].mode().iloc[0]) if len(g) else None),
+            "top_zones": top_zones,
+            "timeline": timeline,
+        })
+    vehicles.sort(key=lambda d: -d["n_tickets"])
+    try:
+        summary = json.loads((C.DATA_PROC / "offender_stat.json").read_text())
+    except Exception:
+        summary = {}
+    U.write_json(C.DATA_PROC / "offenders.json",
+                 {"summary": summary, "count": len(vehicles),
+                  "timeline_cap": C.OFFENDER_TIMELINE_CAP, "vehicles": vehicles})
+    return len(vehicles)
+
+
 def run():
     ev = pd.read_parquet(C.DATA_PROC / "events_clean.parquet")
     z = pd.read_parquet(C.DATA_PROC / "zone_scores.parquet")
@@ -88,6 +134,15 @@ def run():
         if m not in monthly.columns:
             monthly[m] = 0
     monthly = monthly[_MONTH_ORDER]
+
+    # per-zone weekday histogram (0=Mon … 6=Sun, pandas dayofweek) for the
+    # "Today" board — recorded enforcement activity by weekday, NOT live traffic.
+    dow = (ev.groupby(["superzone_id", "dow_ist"], observed=True)["id"].count()
+             .unstack(fill_value=0))
+    for d in range(7):
+        if d not in dow.columns:
+            dow[d] = 0
+    dow = dow[sorted(dow.columns)]
 
     # most common road/area label per zone (first address segment) for naming
     seg = ev.assign(_seg=ev["location"].astype("string").str.split(",").str[0].str.strip())
@@ -131,10 +186,19 @@ def run():
             "responsiveness": r["responsiveness"], "intervention": r["intervention"],
             "station": (None if pd.isna(r["police_station"]) else str(r["police_station"])),
             "n_tickets": int(r["n_tickets"]),
-            # compact hour-of-day histogram (recorded enforcement activity, not traffic)
+            # carriageway impact (modeled flow-impact proxy, NOT measured congestion)
+            "flow_impact": round(float(r["flow_impact_score"]), 1),
+            "flow_impact_rank": int(r["flow_impact_rank"]),
+            "context_multiplier": round(float(r["context_multiplier"]), 2),
+            "forecast_score": round(float(r["forecast_score"]), 1),
+            # compact hour-of-day + weekday histograms (recorded enforcement
+            # activity, NOT traffic). Used by the "Today" emergency board.
             "hourly": [int(v) for v in hourly.get(r["superzone_id"], [0] * 24)],
+            "dow": ([int(dow.loc[r["superzone_id"], d]) for d in range(7)]
+                    if r["superzone_id"] in dow.index else [0] * 7),
         })
     U.write_json(C.DATA_PROC / "map_payload.json", {"kpis": kpis, "zones": map_rows})
+    name_by_sid = {row["id"]: row["name"] for row in map_rows}
 
     # ---- precompute per-zone mixes once (avoid re-scanning events) ------- #
     def _by_group(col, n):
@@ -174,6 +238,21 @@ def run():
             "forecast": {"pressure": round(float(r["forecast_pressure"]), 2),
                          "score": round(float(r["forecast_score"]), 1),
                          "rising": bool(r["forecast_rising"])},
+            # carriageway impact — auditable breakdown of the flow-impact proxy
+            "flow_impact": {
+                "score": round(float(r["flow_impact_score"]), 1),
+                "rank": int(r["flow_impact_rank"]),
+                "multiplier": round(float(r["context_multiplier"]), 2),
+                "junction": round(float(r["cii_junction"]), 2),
+                "n_junctions": int(r["n_junctions"]),
+                "road_class": r["road_class"],
+                "road_weight": round(float(r["cii_road"]), 2),
+                "demand": round(float(r["cii_demand"]), 2),
+                "dist_metro_m": (None if not np.isfinite(r["dist_metro_m"])
+                                 else int(r["dist_metro_m"])),
+                "dist_commercial_m": (None if not np.isfinite(r["dist_commercial_m"])
+                                      else int(r["dist_commercial_m"])),
+            },
             "violation_mix": viol_mix.get(zid, []),
             "vehicle_mix": veh_mix.get(zid, []),
             "top_streets": street_mix.get(zid, []),
@@ -254,11 +333,15 @@ def run():
     }
     U.write_json(C.DATA_PROC / "replay_frames.json", replay)
 
+    # ---- repeat-vehicle tracing (offenders + time-wise log) -------------- #
+    n_off = _offenders_log(ev, name_by_sid)
+
     # ---- optional LLM briefings (deterministic fallback always present) -- #
     _maybe_llm_briefings(z)
 
     print(f"[08_payload] map_payload ({len(map_rows)} zones), zones_detail, "
-          f"{len(evidence)} evidence points, {len(emerging)} emerging")
+          f"{len(evidence)} evidence points, {len(emerging)} emerging, "
+          f"{n_off} repeat-vehicle logs")
     return kpis
 
 

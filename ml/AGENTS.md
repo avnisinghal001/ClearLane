@@ -13,10 +13,9 @@ cd ml/pipeline && python run_all.py            # full run + self-check + demo bu
 cd ml/pipeline && python run_all.py --no-demo  # skip copying into frontend/public/demo
 ```
 
-`ml/legacy_scripts/` (formerly `ml/scripts/`) is **superseded and contains wrong
-framing**. Do not import from, run, or revive it. If you find logic there that's
-missing from `pipeline/`, port it carefully under the honesty rules — don't copy
-blindly.
+The old `ml/scripts/` (a.k.a. `legacy_scripts/`) carried **wrong framing** and has
+been **removed**. Do not recreate it. If you ever resurrect old logic from git
+history, port it carefully under the honesty rules — don't copy blindly.
 
 ## Design principles
 
@@ -48,11 +47,11 @@ prints a self-check table and bundles the demo artifacts.
 | 01 | `01_clean.py` | load → IST-convert → parse violations → filter (drop rejected/duplicate + non-parking) → geo-bucket. Logs every filter step. | `events_clean.parquet/.csv`, `cleaning_summary.txt` |
 | 02 | `02_superzones.py` | cluster occupied 100m buckets into ~500m operational superzones via deterministic grid-merge (snap to 0.0045° cell). | `superzones.parquet` |
 | 03 | `03_scores.py` | the three pillars + Operational Priority + tiers. | `zone_scores.parquet` |
-| 04 | `04_advanced.py` | bias correction, habitual offenders, responsiveness, intervention recs, typology (KMeans) + fingerprints. | adds cols + `typology*.json`, `fingerprints.json`, `offender_stat.json` |
+| 04 | `04_advanced.py` | bias correction, habitual offenders, responsiveness, intervention recs, typology (KMeans) + fingerprints, **Carriageway Impact Index** (flow-impact proxy from junction/road-class/demand context, uses `anchors.py`). | adds cols + `typology*.json`, `fingerprints.json`, `offender_stat.json` |
 | 05 | `05_forecaster.py` | next-month obstruction-pressure forecaster (LightGBM) + SHAP. | `forecast.json`, `forecaster_metrics.json/.txt` |
 | 06 | `06_timing_gap.py` | enforcement-timing gap, evening blind spots, coverage curve, station command. | `timing_gap.json`, `coverage_curve.json`, `stations.json` |
 | 07 | `07_validation.py` | sensitivity (±20%, ~40 configs) + persistence backtest. | `validation.json`, `validation.txt` |
-| 08 | `08_payload.py` | build serving payloads + KPIs + optional LLM briefings + replay/hourly data. | `map_payload.json`, `zones_detail.json`, `evidence_points.json`, `search_index.json`, `emerging.json`, `briefings.json`, `replay_frames.json` |
+| 08 | `08_payload.py` | build serving payloads + KPIs + optional LLM briefings + replay/hourly/weekday data + repeat-vehicle logs. | `map_payload.json` (now incl. `dow`, `forecast_score` for the Today board), `zones_detail.json`, `evidence_points.json`, `search_index.json`, `emerging.json`, `briefings.json`, `replay_frames.json`, `offenders.json` |
 
 ## Scoring model (stage 03) — memorize this
 
@@ -74,6 +73,13 @@ Tiers: P1 ≥ 80, P2 ≥ 60, P3 ≥ 40, else P4             (TIER_THRESHOLDS)
 - Advanced intel (stage 04): bias-corrected pressure =
   `pressure / exposure**EXPOSURE_ALPHA` (alpha 0.5), exposure = distinct officers
   × distinct active days, **zone-level only — never per-officer**.
+- **Carriageway Impact Index (stage 04):** `flow_impact = percentile(pressure_raw
+  × context_multiplier)`, multiplier = `clip(lo + (wJ·J + wR·R + wD·D)·(hi-lo))`
+  from junction criticality / road class / demand proximity (`CII_*` in config,
+  static coords in `anchors.py`). It is a **modeled proxy, NOT measured
+  congestion** — keep that label in every emitter and UI string. It rides on
+  `map_payload.json`/`zones_detail.json` (no separate artifact) and never alters
+  `priority`, tiers, or the self-check targets.
 
 ## Forecaster framing (stage 05)
 

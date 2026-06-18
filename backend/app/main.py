@@ -113,6 +113,18 @@ def priority_queue(station: str | None = None, tier: str | None = None,
     return ok(rows[:limit])
 
 
+@app.get("/api/flow-impact")
+def flow_impact(tier: str | None = None, limit: int = Query(200, le=2000)):
+    """Carriageway Impact Index lens — zones ranked by the modeled flow-impact
+    proxy (obstruction pressure × static road-context multiplier). NOT a
+    congestion measurement. Fields ride on map_payload (no separate artifact)."""
+    zones = (load("map_payload.json") or {}).get("zones", [])
+    rows = sorted(zones, key=lambda z: z.get("flow_impact_rank") or 10**9)
+    if tier:
+        rows = [z for z in rows if z["tier"] == tier.upper()]
+    return ok(rows[:limit])
+
+
 @app.get("/api/zone/{zone_id}")
 def zone_detail(zone_id: str):
     details = load("zones_detail.json") or {}
@@ -184,6 +196,13 @@ def search(q: str = Query(..., min_length=1)):
 @app.get("/api/briefings")
 def briefings():
     return ok(load("briefings.json"))
+
+
+@app.get("/api/offenders")
+def offenders():
+    """Repeat-vehicle tracing: most-ticketed anonymized vehicles + time-wise logs.
+    Vehicle-level only (stable anonymized IDs) — never officer-level."""
+    return ok(load("offenders.json"))
 
 
 @app.get("/api/replay-frames")
