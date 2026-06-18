@@ -31,6 +31,7 @@ DEMO_ARTIFACTS = [
     "emerging.json", "forecast.json", "typology.json", "timing_gap.json",
     "coverage_curve.json", "stations.json", "validation.json",
     "search_index.json", "briefings.json", "offender_stat.json",
+    "replay_frames.json",
 ]
 
 

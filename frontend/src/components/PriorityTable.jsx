@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { tierColor } from "../lib/format.js";
 
-export default function PriorityTable({ zones, onSelect }) {
+export default function PriorityTable({ zones, onSelect, opByZone = {} }) {
   const [sort, setSort] = useState("rank");
   const [dir, setDir] = useState(1);
   const [tier, setTier] = useState("");
@@ -35,7 +35,7 @@ export default function PriorityTable({ zones, onSelect }) {
         <table>
           <thead>
             <tr>
-              {head("rank", "#")}{head("tier", "Tier")}{head("priority", "Priority")}
+              {head("rank", "#")}<th>Location</th>{head("tier", "Tier")}{head("priority", "Priority")}
               {head("pressure", "Pressure")}{head("recurrence", "Recurrence")}
               {head("bias_adjusted_rank", "Bias-adj #")}<th>Flags</th>
               <th>Station</th><th>Coords</th><th>Recommended intervention</th>
@@ -45,11 +45,13 @@ export default function PriorityTable({ zones, onSelect }) {
             {rows.slice(0, 400).map((z) => (
               <tr key={z.id} onClick={() => onSelect(z.id)}>
                 <td className="mono">{z.rank}</td>
+                <td><b>{z.name}</b><span className="mono muted" style={{ fontSize: 10 }}> {z.id}</span></td>
                 <td><span className="tier-pill" style={{ background: tierColor(z.tier) }}>{z.tier}</span></td>
                 <td>{z.priority}</td><td>{z.pressure}</td><td>{z.recurrence}</td>
                 <td className="mono">{z.bias_adjusted_rank}
                   {z.under_recognized && <span title="under-recognized vs patrol exposure"> ↑</span>}</td>
                 <td>
+                  {opByZone[z.id] && <span className="flag bs" title="live operational activity">⚑ ops</span>}
                   {z.evening_blind_spot && <span className="flag bs">blind</span>}
                   {z.emerging && <span className="flag em">emerging</span>}
                   {z.forecast_rising && <span className="flag rise">rising</span>}

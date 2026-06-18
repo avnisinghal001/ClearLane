@@ -12,6 +12,7 @@ const DEMO = {
   "/api/stations": "/demo/stations.json",
   "/api/validation": "/demo/validation.json",
   "/api/evidence-points": "/demo/evidence_points.json",
+  "/api/replay-frames": "/demo/replay_frames.json",
 };
 
 let LIVE = !!BASE;
@@ -71,6 +72,53 @@ export async function api(path) {
   if (DEMO[key]) return getJSON(DEMO[key]);
   throw new Error("no demo fallback for " + path);
 }
+
+// ---- Operational loop (live backend, with an offline in-memory fallback) ---
+import * as localOps from "./localOps.js";
+
+async function postJSON(path, body) {
+  const r = await fetch(BASE + path, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) {
+    let detail = `${r.status}`;
+    try { detail = (await r.json()).detail || detail; } catch {}
+    throw new Error(detail);
+  }
+  return r.json();
+}
+
+export const opSnapshot = async () => {
+  if (BASE) { try { return await getJSON(BASE + "/api/operational/snapshot"); } catch {} }
+  return localOps.snapshot();
+};
+export const opComplaint = async (body) => {
+  if (BASE) { try { return await postJSON("/api/complaints", body); } catch (e) {
+    if (String(e.message).includes("bounding box")) throw e; } }
+  return localOps.postComplaint(body);
+};
+export const opDispatch = async (body) => {
+  if (BASE) { try { return await postJSON("/api/dispatches", body); } catch {} }
+  return localOps.postDispatch(body);
+};
+export const opFeedback = async (body) => {
+  if (BASE) { try { return await postJSON("/api/officer-feedback", body); } catch {} }
+  return localOps.postFeedback(body);
+};
+export const opPatchStatus = async (id, stateVal) => {
+  if (BASE) { try {
+    const r = await fetch(`${BASE}/api/dispatches/${id}/status`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ state: stateVal }) });
+    if (r.ok) return r.json();
+  } catch {} }
+  return localOps.patchStatus(id, stateVal);
+};
+// seed the offline fallback's zone index from the bundled map payload
+export const seedOpZones = (zones) =>
+  localOps.setZones((zones || []).map((z) => ({
+    id: z.id, name: z.name, lat: z.lat, lon: z.lon, tier: z.tier, priority: z.priority })));
 
 export async function copilot(body) {
   if (BASE) {

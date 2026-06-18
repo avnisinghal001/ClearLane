@@ -25,6 +25,8 @@ import config as C          # noqa: E402
 import utils as U           # noqa: E402
 
 _MONTH_ORDER = list(C.MONTHLY_RAW.keys())
+_MONTH_LABEL_SHORT = {"2023-11": "Nov '23", "2023-12": "Dec '23", "2024-01": "Jan '24",
+                      "2024-02": "Feb '24", "2024-03": "Mar '24", "2024-04": "Apr '24"}
 
 
 def _top_counts(series, n=6):
@@ -56,6 +58,21 @@ def _window_for(r):
     return "Sustain current coverage; add spot checks"
 
 
+def _display_name(r):
+    """Human-recognizable label: junction > street/area > police station > id.
+    Recognizable names beat internal zone IDs everywhere in the UI (§ honesty)."""
+    j = r.get("junction_mode")
+    if isinstance(j, str) and j and "No Junction" not in j:
+        return j.split(" - ")[-1].strip()         # "BTP051 - Safina Plaza" -> "Safina Plaza"
+    top = r.get("_top_street")
+    if isinstance(top, str) and top:
+        return top
+    st = r.get("police_station")
+    if isinstance(st, str) and st:
+        return f"{st} area"
+    return f"Zone {r['superzone_id']}"
+
+
 def run():
     ev = pd.read_parquet(C.DATA_PROC / "events_clean.parquet")
     z = pd.read_parquet(C.DATA_PROC / "zone_scores.parquet")
@@ -71,6 +88,12 @@ def run():
         if m not in monthly.columns:
             monthly[m] = 0
     monthly = monthly[_MONTH_ORDER]
+
+    # most common road/area label per zone (first address segment) for naming
+    seg = ev.assign(_seg=ev["location"].astype("string").str.split(",").str[0].str.strip())
+    top_seg = (seg.groupby("superzone_id", observed=True)["_seg"]
+                  .agg(lambda s: s.dropna().mode().iloc[0] if len(s.dropna()) else None))
+    z["_top_street"] = z["superzone_id"].map(top_seg)
 
     # ---- KPIs ------------------------------------------------------------ #
     kpis = {
@@ -92,7 +115,8 @@ def run():
     map_rows = []
     for _, r in z.iterrows():
         map_rows.append({
-            "id": str(r["superzone_id"]), "lat": round(float(r["lat"]), 5),
+            "id": str(r["superzone_id"]), "name": _display_name(r),
+            "lat": round(float(r["lat"]), 5),
             "lon": round(float(r["lon"]), 5), "tier": r["tier"],
             "rank": int(r["rank"]), "priority": round(float(r["priority"]), 1),
             "pressure": round(float(r["A"]), 1), "recurrence": round(float(r["B"]), 1),
@@ -107,6 +131,8 @@ def run():
             "responsiveness": r["responsiveness"], "intervention": r["intervention"],
             "station": (None if pd.isna(r["police_station"]) else str(r["police_station"])),
             "n_tickets": int(r["n_tickets"]),
+            # compact hour-of-day histogram (recorded enforcement activity, not traffic)
+            "hourly": [int(v) for v in hourly.get(r["superzone_id"], [0] * 24)],
         })
     U.write_json(C.DATA_PROC / "map_payload.json", {"kpis": kpis, "zones": map_rows})
 
@@ -126,7 +152,8 @@ def run():
         sid = str(r["superzone_id"])
         zid = r["superzone_id"]
         details[sid] = {
-            "id": sid, "lat": round(float(r["lat"]), 5), "lon": round(float(r["lon"]), 5),
+            "id": sid, "name": _display_name(r),
+            "lat": round(float(r["lat"]), 5), "lon": round(float(r["lon"]), 5),
             "tier": r["tier"], "rank": int(r["rank"]),
             "scores": {"pressure": round(float(r["A"]), 1),
                        "recurrence": round(float(r["B"]), 1),
@@ -206,10 +233,26 @@ def run():
 
     # ---- search index ---------------------------------------------------- #
     search = [{"id": d["id"], "lat": d["lat"], "lon": d["lon"], "tier": d["tier"],
-               "station": d["station"], "junction": d["junction"],
-               "label": (d["junction"] or d["station"] or d["id"])}
+               "station": d["station"], "junction": d["junction"], "name": d["name"],
+               "label": (d["name"] or d["junction"] or d["station"] or d["id"])}
               for d in details.values()]
     U.write_json(C.DATA_PROC / "search_index.json", search)
+
+    # ---- historical replay frames (compact aggregated activity) ---------- #
+    # Per-zone monthly ticket counts — NOT the raw event dump. Labelled in the
+    # UI as "Historical enforcement replay", never live traffic.
+    replay = {
+        "periods": _MONTH_ORDER,
+        "labels": [_MONTH_LABEL_SHORT.get(m, m) for m in _MONTH_ORDER],
+        "zones": [{"id": str(r["superzone_id"]), "name": _display_name(r),
+                   "lat": round(float(r["lat"]), 5), "lon": round(float(r["lon"]), 5),
+                   "tier": r["tier"],
+                   "counts": [int(monthly.loc[r["superzone_id"], m])
+                              if r["superzone_id"] in monthly.index else 0
+                              for m in _MONTH_ORDER]}
+                  for _, r in z.iterrows()],
+    }
+    U.write_json(C.DATA_PROC / "replay_frames.json", replay)
 
     # ---- optional LLM briefings (deterministic fallback always present) -- #
     _maybe_llm_briefings(z)

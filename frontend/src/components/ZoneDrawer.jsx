@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { api } from "../lib/api.js";
+import { QRCodeSVG } from "qrcode.react";
+import { api, opDispatch, opFeedback } from "../lib/api.js";
 import { tierColor, mapsUrl, MONTHS, MONTH_LABEL } from "../lib/format.js";
 
 function Bars({ items }) {
@@ -57,9 +58,15 @@ function Fingerprint({ grid }) {
   );
 }
 
-export default function ZoneDrawer({ id, onClose }) {
+export default function ZoneDrawer({ id, onClose, op, onChange }) {
   const [z, setZ] = useState(null);
+  const [busy, setBusy] = useState(false);
   useEffect(() => { setZ(null); api("/api/zone/" + encodeURIComponent(id)).then(setZ).catch(console.error); }, [id]);
+
+  const act = async (fn) => {
+    setBusy(true);
+    try { await fn(); if (onChange) await onChange(); } finally { setBusy(false); }
+  };
 
   return (
     <div className="drawer-wrap">
@@ -68,18 +75,61 @@ export default function ZoneDrawer({ id, onClose }) {
         {!z ? <div>Loading zone…</div> : (
           <>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h2>Zone {z.id} <span className="tier-pill" style={{ background: tierColor(z.tier) }}>{z.tier}</span></h2>
+              <h2>{z.name || `Zone ${z.id}`} <span className="tier-pill" style={{ background: tierColor(z.tier) }}>{z.tier}</span></h2>
               <button className="btn" onClick={onClose}>✕</button>
             </div>
-            <p className="sub mono">{z.lat.toFixed(5)}, {z.lon.toFixed(5)} · rank #{z.rank}
+            <p className="sub mono">{z.lat.toFixed(5)}, {z.lon.toFixed(5)} · rank #{z.rank} · zone {z.id}
               {z.junction && z.junction !== "No Junction" ? ` · ${z.junction}` : ""}</p>
 
             <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
               <a className="btn accent" href={mapsUrl(z.lat, z.lon)} target="_blank" rel="noreferrer">Open in Google Maps ↗</a>
               <button className="btn" onClick={() => navigator.clipboard?.writeText(`${z.lat},${z.lon}`)}>Copy coords</button>
-              <a className="btn" target="_blank" rel="noreferrer"
-                href={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(mapsUrl(z.lat, z.lon))}`}>QR ↗</a>
               <a className="btn" href={`#/dispatch/${encodeURIComponent(z.id)}`}>Dispatch ↗</a>
+            </div>
+
+            {/* bias-correction storytelling (§7.1) — legible in 2 seconds */}
+            <div className="rankstory">
+              <div><div className="l muted" style={{ fontSize: 10 }}>RAW RANK</div><div className="r">#{z.rank}</div></div>
+              <div className="arrow">→</div>
+              <div><div className="l muted" style={{ fontSize: 10 }}>BIAS-ADJUSTED</div>
+                <div className="r" style={{ color: "var(--accent)" }}>#{z.bias_adjusted_rank}</div></div>
+              <div style={{ fontSize: 11 }} className="muted">
+                {z.bias_adjusted_rank < z.rank
+                  ? "Even higher once we correct for low patrol exposure — genuinely under-recognized."
+                  : z.bias_adjusted_rank > z.rank + 50
+                    ? "High ticket count partly reflects heavy patrol exposure; still serious after correction."
+                    : "Rank is stable after correcting for enforcement exposure — robustly serious."}
+              </div>
+            </div>
+
+            {/* operational layer — three SEPARATE numbers, never merged into ML */}
+            {op && (
+              <div style={{ margin: "10px 0" }}>
+                <div className="opnums">
+                  <div className="opnum"><div className="v">{op.historical_priority}</div><div className="l">Historical</div></div>
+                  <div className="opnum"><div className="v" style={{ color: "#EF9F27" }}>+{op.live_adjustment}</div><div className="l">Live adj.</div></div>
+                  <div className="opnum"><div className="v" style={{ color: "var(--accent)" }}>{op.operational_priority}</div><div className="l">Operational</div></div>
+                </div>
+                <p className="muted" style={{ fontSize: 11, marginTop: 4 }}>
+                  Live adjustment is a transparent operational boost — it never changes the historical ML score.
+                  {op.dispatch_state ? ` Dispatch: ${op.dispatch_state}.` : ""}{op.escalated ? " Escalated to structural fix." : ""}
+                </p>
+              </div>
+            )}
+
+            {/* closed-loop actions */}
+            <div className="action-btns">
+              {!op && <button className="btn accent" disabled={busy}
+                onClick={() => act(() => opDispatch({ zone_id: z.id, state: "assigned" }))}>Dispatch team</button>}
+              <button className="btn" disabled={busy} onClick={() => act(() => opFeedback({ zone_id: z.id, kind: "verified_obstruction" }))}>Verify obstruction</button>
+              <button className="btn" disabled={busy} onClick={() => act(() => opFeedback({ zone_id: z.id, kind: "needs_towing" }))}>Needs towing</button>
+              <button className="btn" disabled={busy} onClick={() => act(() => opFeedback({ zone_id: z.id, kind: "cleared" }))}>Cleared</button>
+              <button className="btn" disabled={busy} onClick={() => act(() => opFeedback({ zone_id: z.id, kind: "structural_issue" }))}>Structural issue</button>
+            </div>
+
+            <div style={{ display: "flex", gap: 12, alignItems: "center", margin: "6px 0 12px" }}>
+              <QRCodeSVG value={mapsUrl(z.lat, z.lon)} size={84} bgColor="#11151F" fgColor="#E6EAF2" />
+              <span className="muted" style={{ fontSize: 11 }}>Scan to open this exact location in Google Maps on a phone (generated locally, no network).</span>
             </div>
 
             <div className="dials">

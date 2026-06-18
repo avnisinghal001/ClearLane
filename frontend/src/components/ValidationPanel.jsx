@@ -1,10 +1,33 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "../lib/api.js";
+
+const DEFAULT_W = { A: 50, B: 30, C: 20 };
 
 export default function ValidationPanel() {
   const [d, setD] = useState(null);
-  const [wA, setWA] = useState(50); // live sensitivity widget
-  useEffect(() => { api("/api/validation").then(setD).catch(console.error); }, []);
+  const [zones, setZones] = useState(null);
+  const [w, setW] = useState(DEFAULT_W);
+  useEffect(() => {
+    api("/api/validation").then(setD).catch(console.error);
+    api("/api/map/payload").then((p) => setZones(p.zones)).catch(() => {});
+  }, []);
+
+  // EXPLORATORY client-side re-rank from the real pillar scores (A/B/C).
+  // This is NOT the production ranking — it recomputes a temporary order so you
+  // can see how little the top-20 moves as the weights change.
+  const reweight = useMemo(() => {
+    if (!zones) return null;
+    const official = [...zones].sort((a, b) => a.rank - b.rank).slice(0, 20).map((z) => z.id);
+    const sum = (w.A + w.B + w.C) || 1;
+    const scored = zones.map((z) => ({
+      id: z.id, name: z.name,
+      p: (w.A * z.pressure + w.B * z.recurrence + w.C * z.emergence) / sum,
+    })).sort((a, b) => b.p - a.p);
+    const newTop = scored.slice(0, 20).map((z) => z.id);
+    const overlap = newTop.filter((id) => official.includes(id)).length;
+    return { overlap, isDefault: w.A === DEFAULT_W.A && w.B === DEFAULT_W.B && w.C === DEFAULT_W.C };
+  }, [zones, w]);
+
   if (!d) return <div className="panel">Loading…</div>;
 
   const v = d.validation;
@@ -36,12 +59,29 @@ export default function ValidationPanel() {
           <div className="kv"><span className="k">Top-50 Spearman (mean)</span><span className="mono">{s.top50_spearman_mean}</span></div>
           <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>Perturbing the weights barely moves the ranking — it is not arbitrary.</p>
 
-          <h3 style={{ marginTop: 16 }}>Live: re-weight pillar A</h3>
-          <input type="range" min="20" max="80" value={wA} className="slider" onChange={(e) => setWA(+e.target.value)} />
-          <div className="muted mono" style={{ fontSize: 12 }}>
-            blend A={wA}% · B/C share the rest → top-20 stays {s.top20_overlap_min}–100% stable
-            ({s.top50_spearman_mean} Spearman). The ranking is robust to your choice.
-          </div>
+          <h3 style={{ marginTop: 16 }}>Interactive re-weight <span className="flag">exploratory</span></h3>
+          {!reweight ? <p className="muted">loading zones…</p> : (
+            <>
+              {["A", "B", "C"].map((k) => (
+                <div key={k} style={{ marginBottom: 6 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+                    <span>{{ A: "Pressure (A)", B: "Recurrence (B)", C: "Emergence (C)" }[k]}</span>
+                    <span className="mono">{w[k]}%</span>
+                  </div>
+                  <input type="range" min="0" max="100" value={w[k]} className="slider"
+                    onChange={(e) => setW({ ...w, [k]: +e.target.value })} />
+                </div>
+              ))}
+              <div className="kv"><span className="k">Top-20 still in official top-20</span>
+                <span className="mono"><b>{reweight.overlap}/20</b></span></div>
+              <p className="muted" style={{ fontSize: 11 }}>
+                This recomputes a <b>temporary client-side</b> ranking from the real pillar scores —
+                <b> not the production ranking</b>. Even at extreme weights the top-20 barely moves.
+              </p>
+              {!reweight.isDefault &&
+                <button className="btn" onClick={() => setW(DEFAULT_W)}>Reset to official weights (50/30/20)</button>}
+            </>
+          )}
         </div>
 
         <div className="panel">

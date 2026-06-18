@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback } from "react";
-import { api } from "./lib/api.js";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { api, opSnapshot, opComplaint, seedOpZones } from "./lib/api.js";
 import Header from "./components/Header.jsx";
 import KpiStrip from "./components/KpiStrip.jsx";
 import LiveMap from "./components/LiveMap.jsx";
@@ -12,10 +12,15 @@ import ForecastView from "./components/ForecastView.jsx";
 import TypologyView from "./components/TypologyView.jsx";
 import StationView from "./components/StationView.jsx";
 import Dispatch from "./components/Dispatch.jsx";
+import OperationsConsole from "./components/OperationsConsole.jsx";
+import AboutModal from "./components/AboutModal.jsx";
+import JudgeTour from "./components/JudgeTour.jsx";
+import OfficerView from "./components/OfficerView.jsx";
 
 const VIEWS = [
   ["command", "Command Map"],
   ["queue", "Priority Queue"],
+  ["operations", "Operations Loop"],
   ["timing", "Timing Gap"],
   ["coverage", "Coverage / ROI"],
   ["forecast", "Forecast"],
@@ -31,34 +36,81 @@ export default function App() {
   const [selected, setSelected] = useState(null); // zone id
   const [flyTo, setFlyTo] = useState(null);
   const [hash, setHash] = useState(window.location.hash);
+  const [snapshot, setSnapshot] = useState(null); // operational layer
+  const [lastSync, setLastSync] = useState(null);
+  const [showAbout, setShowAbout] = useState(false);
+  const [showTour, setShowTour] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const payloadRef = useRef(null);
 
-  useEffect(() => {
-    api("/api/map/payload").then(setPayload).catch(console.error);
-    const onHash = () => setHash(window.location.hash);
-    window.addEventListener("hashchange", onHash);
-    return () => window.removeEventListener("hashchange", onHash);
+  const refreshSnapshot = useCallback(async () => {
+    try {
+      const s = await opSnapshot();
+      setSnapshot(s);
+      setLastSync(Date.now());
+    } catch (e) { /* operational layer optional */ }
   }, []);
 
-  if (hash.startsWith("#/dispatch/")) {
-    return <Dispatch id={decodeURIComponent(hash.replace("#/dispatch/", ""))} />;
-  }
+  useEffect(() => {
+    api("/api/map/payload").then((p) => {
+      setPayload(p);
+      payloadRef.current = p;
+      seedOpZones(p.zones);          // seed offline fallback's zone index
+      refreshSnapshot();
+    }).catch(console.error);
+    const onHash = () => setHash(window.location.hash);
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("hashchange", onHash);
+    window.addEventListener("resize", onResize);
+    // poll the operational layer so the command centre visibly updates
+    const t = setInterval(refreshSnapshot, 5000);
+    return () => {
+      window.removeEventListener("hashchange", onHash);
+      window.removeEventListener("resize", onResize);
+      clearInterval(t);
+    };
+  }, [refreshSnapshot]);
 
   const openZone = useCallback((id, fly = false) => {
     setSelected(id);
-    if (fly) {
-      const z = payload?.zones.find((x) => x.id === id);
+    const p = payloadRef.current;
+    if (fly && p) {
+      const z = p.zones.find((x) => x.id === id);
       if (z) setFlyTo([z.lat, z.lon]);
     }
-  }, [payload]);
+  }, []);
 
+  const submitComplaint = useCallback(async (body) => {
+    const r = await opComplaint(body);
+    await refreshSnapshot();
+    return r;
+  }, [refreshSnapshot]);
+
+  // mobile dispatch route (hooks above all run unconditionally)
+  if (hash.startsWith("#/dispatch/")) {
+    return <Dispatch id={decodeURIComponent(hash.replace("#/dispatch/", ""))}
+                     onChange={refreshSnapshot} />;
+  }
   if (!payload) return <div style={{ padding: 40 }}>Loading ClearLane…</div>;
 
   const zones = payload.zones;
   const filtered = applyFilter(zones, filter);
+  const opByZone = {};
+  (snapshot?.zones || []).forEach((z) => { opByZone[z.zone_id] = z; });
+
+  // Officer view: explicit #/officer, or the default on phone-width screens
+  // (unless the user explicitly switched to the full dashboard via #/dashboard).
+  const showOfficer = hash === "#/officer" || (isMobile && hash !== "#/dashboard");
+  if (showOfficer) {
+    return <OfficerView zones={zones} snapshot={snapshot} opByZone={opByZone}
+      onChange={refreshSnapshot} onExit={() => { window.location.hash = "#/dashboard"; }} />;
+  }
 
   return (
     <div className="app">
-      <Header kpis={payload.kpis} onOpenZone={openZone} setView={setView} />
+      <Header kpis={payload.kpis} onOpenZone={openZone} setView={setView}
+        snapshot={snapshot} lastSync={lastSync} onSync={refreshSnapshot}
+        onAbout={() => setShowAbout(true)} onTour={() => setShowTour(true)} />
       <div className="body">
         <nav className="nav">
           {VIEWS.map(([k, label]) => (
@@ -67,13 +119,19 @@ export default function App() {
           ))}
         </nav>
         <div style={{ display: "grid", gridTemplateRows: "auto 1fr", minHeight: 0 }}>
-          <KpiStrip kpis={payload.kpis} filter={filter} setFilter={setFilter} setView={setView} />
+          <KpiStrip kpis={payload.kpis} filter={filter} setFilter={setFilter}
+            setView={setView} snapshot={snapshot} />
           <div className={"view" + (view === "command" ? " map-view" : "")}>
             {view === "command" && (
-              <LiveMap zones={filtered} flyTo={flyTo} onSelect={(id) => openZone(id)} />
+              <LiveMap zones={filtered} flyTo={flyTo} onSelect={(id) => openZone(id)}
+                opByZone={opByZone} snapshot={snapshot} onComplaint={submitComplaint} />
             )}
             {view === "queue" && (
-              <PriorityTable zones={filtered} onSelect={(id) => openZone(id, true)} />
+              <PriorityTable zones={filtered} onSelect={(id) => openZone(id, true)} opByZone={opByZone} />
+            )}
+            {view === "operations" && (
+              <OperationsConsole snapshot={snapshot} onChange={refreshSnapshot}
+                onSelect={(id) => openZone(id, true)} />
             )}
             {view === "timing" && <TimingGap onSelect={(id) => openZone(id, true)} />}
             {view === "coverage" && <CoverageSimulator totalZones={payload.kpis.total_zones} />}
@@ -84,7 +142,15 @@ export default function App() {
           </div>
         </div>
       </div>
-      {selected && <ZoneDrawer id={selected} onClose={() => setSelected(null)} />}
+      {selected && <ZoneDrawer id={selected} onClose={() => setSelected(null)}
+        op={opByZone[selected]} onChange={refreshSnapshot} />}
+      {showAbout && <AboutModal onClose={() => setShowAbout(false)} />}
+      {showTour && (
+        <JudgeTour onExit={() => setShowTour(false)} ctx={{
+          setView, setFilter, zones,
+          openZone, closeZone: () => setSelected(null),
+        }} />
+      )}
     </div>
   );
 }

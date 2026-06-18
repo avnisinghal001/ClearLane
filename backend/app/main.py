@@ -73,9 +73,16 @@ app.add_middleware(
     CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"],
 )
 
-# in-memory stores for the labelled deployment-extension routes
-_COMPLAINTS: list[dict] = []
-_FEEDBACK: list[dict] = []
+# operational layer (additive): the live complaint -> verify -> dispatch -> clear
+# loop, persisted in SQLite. Never modifies historical ML scores.
+from . import operational  # noqa: E402
+
+app.include_router(operational.router)
+
+
+@app.on_event("startup")
+def _startup():
+    operational.init_db()
 
 
 # --------------------------------------------------------------------------- #
@@ -179,36 +186,15 @@ def briefings():
     return ok(load("briefings.json"))
 
 
+@app.get("/api/replay-frames")
+def replay_frames():
+    return ok(load("replay_frames.json"))
+
+
 # --------------------------------------------------------------------------- #
 # Deployment extensions (labelled) — not part of the core data claims.
+# The complaint / feedback / dispatch loop now lives in operational.py (SQLite).
 # --------------------------------------------------------------------------- #
-@app.post("/api/complaints")
-def post_complaint(payload: dict):
-    payload = {**payload, "id": len(_COMPLAINTS) + 1, "ts": time.time(),
-               "_extension": True}
-    _COMPLAINTS.append(payload)
-    return ok({"stored": payload, "total": len(_COMPLAINTS)})
-
-
-@app.get("/api/complaints")
-def list_complaints():
-    return ok(_COMPLAINTS)
-
-
-@app.post("/api/officer-feedback")
-def officer_feedback(payload: dict):
-    payload = {**payload, "id": len(_FEEDBACK) + 1, "ts": time.time(),
-               "_extension": True}
-    _FEEDBACK.append(payload)
-    return ok({"stored": payload, "total": len(_FEEDBACK)})
-
-
-@app.get("/api/sync/status")
-def sync_status():
-    return ok({"complaints": len(_COMPLAINTS), "feedback": len(_FEEDBACK),
-               "ts": time.time(), "_extension": True})
-
-
 @app.post("/api/copilot")
 def copilot(payload: dict):
     """Optional LLM copilot (deployment extension). Falls back to the

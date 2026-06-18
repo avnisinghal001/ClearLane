@@ -9,7 +9,8 @@ const ITEMS = [
   ["forecast_rising", "Forecast-rising", "forecast_rising"],
 ];
 
-export default function KpiStrip({ kpis, filter, setFilter, setView }) {
+export default function KpiStrip({ kpis, filter, setFilter, setView, snapshot }) {
+  const liveZones = snapshot?.counts?.live_zones ?? 0;
   return (
     <div className="kpis">
       {ITEMS.map(([key, label, f]) => (
@@ -20,6 +21,11 @@ export default function KpiStrip({ kpis, filter, setFilter, setView }) {
           <div className="l">{label}</div>
         </div>
       ))}
+      <div className="kpi" onClick={() => setView("operations")}
+        style={{ borderColor: liveZones ? "var(--amber)" : undefined }}>
+        <div className="v" style={{ color: liveZones ? "var(--amber)" : undefined }}>{num(liveZones)}</div>
+        <div className="l">Live ops</div>
+      </div>
     </div>
   );
 }
