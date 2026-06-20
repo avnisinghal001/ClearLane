@@ -5,6 +5,7 @@ import { mapsUrl } from "../lib/format.js";
 import { slugify } from "../lib/auth.js";
 import { Icon } from "./icons.jsx";
 import { obsLevel, patrolsOnDuty, fetchRankedRoutes, istHour } from "../lib/citizen.js";
+import { istToday, activityField, fmtDate } from "../lib/timeLens.js";
 
 const CENTER = [12.9716, 77.5946];
 const DARK = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
@@ -31,6 +32,7 @@ function FitRoute({ coords }) {
 
 export default function CitizenApp() {
   const [zones, setZones] = useState([]);
+  const [daily, setDaily] = useState(null);
   const [stationMeta, setStationMeta] = useState({});
   const [snapshot, setSnapshot] = useState(null);
   const [tab, setTab] = useState("map");          // map | trip | report
@@ -47,6 +49,7 @@ export default function CitizenApp() {
 
   useEffect(() => {
     api("/api/map/payload").then((p) => { setZones(p.zones || []); seedOpZones(p.zones || []); }).catch(() => {});
+    api("/api/daily").then(setDaily).catch(() => {});
     api("/api/stations").then((list) => {
       const m = {}; (list || []).forEach((s) => { m[s.station] = s; }); setStationMeta(m);
     }).catch(() => {});
@@ -59,24 +62,40 @@ export default function CitizenApp() {
   const complaints = (snapshot?.complaints || []).filter((c) => c.status !== "resolved");
   const reportMode = tab === "report";
 
+  // TODAY's predicted obstruction: project each zone onto today's weekday × hour
+  // pattern, normalised 0..100. Falls back to structural pressure if unavailable.
+  const today = istToday();
+  const todayName = fmtDate(today);
+  const zonesT = useMemo(() => {
+    const field = activityField(zones, { mode: "date", date: today, hour: null }, daily);
+    const useToday = field.max > 0;
+    return zones.map((z) => ({
+      ...z,
+      pressure: useToday ? Math.round((field.vals[z.id] / field.max) * 100) : (z.pressure || 0),
+      _allTime: z.pressure,
+    }));
+  }, [zones, daily, today]);
+
+  // keep the selected zone in sync with today's recomputed values
+  const selZone = selected ? (zonesT.find((z) => z.id === selected.id) || selected) : null;
   const stationFor = (z) => z && stationMeta[z.station];
   const patrol = useMemo(() => {
-    const z = selected; const st = stationFor(z);
+    const z = selZone; const st = stationFor(z);
     if (!z || !st) return null;
     return { name: z.station, ...patrolsOnDuty(slugify(z.station), st, hour) };
-  }, [selected, stationMeta, hour]);
+  }, [selZone, stationMeta, hour]);
 
-  // compute ranked road routes whenever both endpoints are set
+  // compute ranked road routes (scored on TODAY's predicted obstruction)
   useEffect(() => {
-    if (!(trip.from && trip.to) || !zones.length) { setRoutes([]); return; }
+    if (!(trip.from && trip.to) || !zonesT.length) { setRoutes([]); return; }
     let alive = true;
     setRouteLoading(true);
-    fetchRankedRoutes(trip.from, trip.to, zones).then((rs) => {
+    fetchRankedRoutes(trip.from, trip.to, zonesT).then((rs) => {
       if (!alive) return;
       setRoutes(rs); setRouteSel(0); setRouteLoading(false);
     });
     return () => { alive = false; };
-  }, [trip, zones]);
+  }, [trip, zonesT]);
   const sel = routes[routeSel] || null;
 
   function pickZone(z) { setSelected(z); setTab("map"); setFlyTo([z.lat, z.lon]); }
@@ -116,17 +135,17 @@ export default function CitizenApp() {
           <FlyTo pos={flyTo} />
           <ClickCatcher active={reportMode} onPick={setPending} />
 
-          {/* obstruction-risk zones */}
-          {zones.map((z) => {
+          {/* TODAY's predicted obstruction-risk zones */}
+          {zonesT.map((z) => {
             const lv = obsLevel(z.pressure);
-            const sel = selected?.id === z.id;
+            const isSel = selected?.id === z.id;
             return (
               <CircleMarker key={z.id} center={[z.lat, z.lon]}
-                radius={5 + (z.pressure / 100) * 12}
-                pathOptions={{ color: sel ? "#fff" : lv.color, weight: sel ? 2 : 1,
+                radius={4 + (z.pressure / 100) * 13}
+                pathOptions={{ color: isSel ? "#fff" : lv.color, weight: isSel ? 2 : 1,
                   fillColor: lv.color, fillOpacity: 0.5 }}
                 eventHandlers={{ click: () => pickZone(z) }}>
-                <Tooltip>{z.name} — {lv.label}</Tooltip>
+                <Tooltip>{z.name} — {lv.label} today</Tooltip>
               </CircleMarker>
             );
           })}
@@ -173,6 +192,7 @@ export default function CitizenApp() {
 
         {/* legend chip */}
         <div className="citizen-legend">
+          <span className="citizen-legend-title"><Icon name="today" size={12} /> Today</span>
           <span><i style={{ background: "#6FE3A6" }} /> clear</span>
           <span><i style={{ background: "#EF9F27" }} /> some</span>
           <span><i style={{ background: "#E24B4A" }} /> heavy</span>
@@ -208,13 +228,15 @@ export default function CitizenApp() {
       {!pending && tab === "map" && (
         <div className="citizen-panel">
           <div className="cp-grip" />
-          {!selected ? (
+          {!selZone ? (
             <div className="cp-empty">
-              <b>Check your area</b>
-              <p className="muted">Tap any spot on the map to see its parking-obstruction risk and the police station covering it.</p>
+              <b>Today's area check</b>
+              <p className="muted">Predicted parking-obstruction for <b>{todayName}</b>. Tap any spot
+                to see today's risk and the police station covering it.</p>
             </div>
           ) : (
-            <AreaDetail z={selected} patrol={patrol} onReport={() => { setTab("report"); setSelected(null); }} />
+            <AreaDetail z={selZone} patrol={patrol} todayName={todayName}
+              onReport={() => { setTab("report"); setSelected(null); }} />
           )}
         </div>
       )}
@@ -225,12 +247,12 @@ export default function CitizenApp() {
           <div className="cp-grip" />
           <b>Plan a trip</b>
           <p className="muted" style={{ fontSize: 12, margin: "2px 0 8px" }}>
-            We flag areas with high parking-obstruction risk on the way (from violation
+            Routes ranked by <b>today's predicted</b> parking-obstruction (from violation
             patterns, not live traffic).
           </p>
-          <ZoneSearch label="From" zones={zones} value={trip.from}
+          <ZoneSearch label="From" zones={zonesT} value={trip.from}
             onPick={(z) => setTrip((t) => ({ ...t, from: z }))} onLoc={() => useMyLocation("from")} />
-          <ZoneSearch label="To" zones={zones} value={trip.to}
+          <ZoneSearch label="To" zones={zonesT} value={trip.to}
             onPick={(z) => setTrip((t) => ({ ...t, to: z }))} />
           {routeLoading && <div className="muted" style={{ fontSize: 12, padding: "8px 0" }}>Finding the cleanest route…</div>}
 
@@ -300,7 +322,7 @@ export default function CitizenApp() {
   );
 }
 
-function AreaDetail({ z, patrol, onReport }) {
+function AreaDetail({ z, patrol, onReport, todayName }) {
   const lv = obsLevel(z.pressure);
   return (
     <div>
@@ -311,10 +333,11 @@ function AreaDetail({ z, patrol, onReport }) {
         </div>
         <span className="ad-badge" style={{ background: lv.color }}>{lv.label}</span>
       </div>
+      <div className="ad-today"><Icon name="today" size={12} /> Predicted for {todayName}</div>
       <p className="ad-desc">
-        {lv.key === "heavy" ? "Vehicles frequently block the carriageway here — expect parking chaos and slow movement."
-          : lv.key === "moderate" ? "Some recurring parking obstruction here — usually passable."
-            : "Low parking-obstruction risk based on records."}
+        {lv.key === "heavy" ? "Expect heavy parking obstruction here today — vehicles frequently block the carriageway."
+          : lv.key === "moderate" ? "Some parking obstruction likely here today — usually passable."
+            : "Low parking-obstruction risk expected here today."}
         {z.evening_blind_spot ? " Often under-patrolled in the evening." : ""}
       </p>
       {patrol && (
@@ -330,7 +353,7 @@ function AreaDetail({ z, patrol, onReport }) {
         <a className="btn big" href={mapsUrl(z.lat, z.lon)} target="_blank" rel="noreferrer">Navigate</a>
       </div>
       <div className="muted" style={{ fontSize: 10, marginTop: 8 }}>
-        Risk from parking-violation records — not live traffic sensors.
+        Today's risk projected from this area's weekday × hour violation pattern — not live traffic sensors.
       </div>
     </div>
   );

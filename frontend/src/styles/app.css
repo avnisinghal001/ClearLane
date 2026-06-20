@@ -546,6 +546,12 @@ input[type=date], input[type=date].searchbox { color-scheme: dark; }
   padding: 6px 12px; font-size: 11px; backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur); box-shadow: var(--shadow); }
 .citizen-legend span { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); }
 .citizen-legend i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.citizen-legend-title { color: var(--txt) !important; font-weight: 700; border-right: 1px solid var(--line);
+  padding-right: 9px; margin-right: 2px; }
+.citizen-legend-title svg { color: var(--accent); }
+.ad-today { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600;
+  color: var(--accent); background: var(--accent-soft); border: 1px solid rgba(62,151,240,.3);
+  border-radius: 99px; padding: 2px 9px; margin: 8px 0 2px; }
 .citizen-hint { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 600;
   background: var(--glass-strong); border: 1px solid var(--accent); border-radius: 99px; padding: 7px 14px;
   font-size: 12px; backdrop-filter: var(--blur); box-shadow: var(--shadow); white-space: nowrap; }
