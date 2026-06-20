@@ -4,7 +4,7 @@ import {
   ShieldCheck, Map, Siren, ListOrdered, Activity, Users, Car, Workflow,
   Clock, TrendingUp, LineChart, LayoutGrid, Building2, BadgeCheck,
   Menu, X, Search, RefreshCw, LogOut, Layers, SlidersHorizontal,
-  ChevronRight, MapPin, Shield, Zap, Route, Navigation,
+  ChevronRight, MapPin, Shield, Zap, Route, Navigation, Maximize2,
 } from "lucide-react";
 
 const MAP = {
@@ -38,6 +38,7 @@ const MAP = {
   building: Building2,
   pulse: Zap,
   navigate: Navigation,
+  expand: Maximize2,
   lane: Route,       // product mark
 };
 

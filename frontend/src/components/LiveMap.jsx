@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { MapContainer, TileLayer, CircleMarker, Popup, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import { api } from "../lib/api.js";
+import { HeatLayer, HeatToggle, HEAT_METRICS, heatPoints as buildHeatPoints } from "./HeatLayer.jsx";
 import { tierColor, mapsUrl } from "../lib/format.js";
 import { reasonSentence } from "../lib/plain.js";
 import { isActive, activityField, lensLabel } from "../lib/timeLens.js";
@@ -32,6 +33,8 @@ function ClickToComplain({ active, onPick }) {
   return null;
 }
 
+// heatmap layer + metrics now live in ./HeatLayer.jsx (shared across all maps)
+
 export default function LiveMap({ zones, flyTo, onSelect, opByZone = {}, snapshot,
                                  onComplaint, defaultSimple = false,
                                  lens = { mode: "all" }, daily = null }) {
@@ -53,6 +56,8 @@ export default function LiveMap({ zones, flyTo, onSelect, opByZone = {}, snapsho
   const [rIdx, setRIdx] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(900); // ms per period
+  const [showHeat, setShowHeat] = useState(false);   // points view by default; toggle to heatmap
+  const [heatMetric, setHeatMetric] = useState("pressure");
   const wide = typeof window !== "undefined" && window.innerWidth > 900;
   const [statsOpen, setStatsOpen] = useState(wide);
   const [legendOpen, setLegendOpen] = useState(wide);
@@ -115,6 +120,9 @@ export default function LiveMap({ zones, flyTo, onSelect, opByZone = {}, snapsho
     return m;
   }, [zones, hourOn, hour]);
 
+  // heat points for the selected PS1 metric (shared builder)
+  const heatPoints = useMemo(() => buildHeatPoints(display, heatMetric), [display, heatMetric]);
+
   const radius = (z) => {
     if (hourOn) return 3 + ((z.hourly?.[hour] || 0) / hourMax) * 15;
     if (lensOn) return 3 + ((actField.vals[z.id] || 0) / actField.max) * 16;
@@ -149,6 +157,8 @@ export default function LiveMap({ zones, flyTo, onSelect, opByZone = {}, snapsho
 
   return (
     <>
+      <HeatToggle on={showHeat} onToggle={setShowHeat}
+        metric={heatMetric} setMetric={setHeatMetric} pos="tc" />
       {!hourOn && !replayOn && <WhatNow zones={zones} opByZone={opByZone} onSelect={onSelect} />}
 
       <MapPanel title="Map layers &amp; view" icon="layers" pos="tl">
@@ -271,6 +281,15 @@ export default function LiveMap({ zones, flyTo, onSelect, opByZone = {}, snapsho
           <span className="ov-chev"><Icon name="chevron" size={14} /></span>
         </button>
         <div className="ov-body"><div className="ov-inner">
+        {showHeat && (
+          <div style={{ marginBottom: 8 }}>
+            <div className="row" style={{ fontWeight: 700 }}>{HEAT_METRICS[heatMetric].label}</div>
+            <div className="heat-bar" />
+            <div className="row muted" style={{ fontSize: 10, justifyContent: "space-between" }}>
+              <span>low</span><span>high</span></div>
+            <div className="row muted" style={{ fontSize: 10 }}>modeled from tickets · not measured congestion</div>
+          </div>
+        )}
         {colorMode === "tier" &&
           ["P1", "P2", "P3", "P4"].map((t) => (
             <div className="row" key={t}><span className="dot" style={{ background: tierColor(t) }} /> {t}</div>))}
@@ -298,6 +317,8 @@ export default function LiveMap({ zones, flyTo, onSelect, opByZone = {}, snapsho
         <FlyTo pos={flyTo} />
         <ClickToComplain active={complainMode} onPick={setPending} />
 
+        {showHeat && !replayOn && heatPoints.length > 0 && <HeatLayer points={heatPoints} />}
+
         {showEvidence && evidence.map((p, i) => (
           <CircleMarker key={"e" + i} center={[p.lat, p.lon]} radius={1.6}
             pathOptions={{ color: "#5b6472", weight: 0, fillOpacity: 0.5 }} />
@@ -313,7 +334,7 @@ export default function LiveMap({ zones, flyTo, onSelect, opByZone = {}, snapsho
           );
         })}
 
-        {!replayOn && display.map((z) => {
+        {!replayOn && !showHeat && display.map((z) => {
           const op = opByZone[z.id];
           return (
             <CircleMarker key={z.id} center={[z.lat, z.lon]} radius={radius(z)}
@@ -345,7 +366,7 @@ export default function LiveMap({ zones, flyTo, onSelect, opByZone = {}, snapsho
           );
         })}
 
-        {!replayOn && !hourOn && showRings && zones.filter((z) => z.evening_blind_spot).map((z) => (
+        {!replayOn && !hourOn && !showHeat && showRings && zones.filter((z) => z.evening_blind_spot).map((z) => (
           <CircleMarker key={"r" + z.id} center={[z.lat, z.lon]} radius={radius(z) + 5}
             pathOptions={{ color: "#EF9F27", weight: 1.3, fill: false, dashArray: "4" }} />
         ))}

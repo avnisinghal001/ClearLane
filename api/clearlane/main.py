@@ -206,8 +206,17 @@ def replay_frames():
 # --------------------------------------------------------------------------- #
 # Multi-model dispatch layer (M4 reranker served live).
 # --------------------------------------------------------------------------- #
+_W_LIVE = 0.30          # weight of the live traffic-stress proxy in the served score
+_DEDUP_M = 300          # same-station corridor dedup radius (metres)
+_IST = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
+_DISPATCH_NOTE = ("dispatch_priority = base modeled risk (0.7) + live travel-time "
+                  "stress proxy (0.3). 'pressure' is MODELED from historical tickets, "
+                  "NOT a live congestion measurement. assoc_score is a Mappls ETA "
+                  "delta proxy for present stress.")
+
+
 def _dispatch_score(z):
-    """dispatch_priority from the pipeline (M4); fall back to historical priority
+    """Precomputed M4 dispatch_priority (0-100); fall back to historical priority
     for an older artifact that predates the reranker."""
     v = z.get("dispatch_priority")
     return float(v) if v is not None else float(z.get("priority", 0) or 0)
@@ -217,101 +226,211 @@ def _now_iso():
     return datetime.datetime.now(datetime.timezone.utc).isoformat()
 
 
-def _build_queue(station=None, tier=None, live=False, limit=60, live_limit=12):
-    """Shared reranked-queue builder. dispatch_priority is the precomputed M4
-    blend (forecast + current pressure + under-observation + reachability). When
-    `live` and Mappls is configured, the top `live_limit` zones get a current
-    ETA-delta proxy nudged into the served priority (present stress, NOT measured
-    congestion). Returns (rows, live_on, mappls_available)."""
+def _evening_target_iso():
+    """Next 18:30 IST — the evening enforcement-planning window (informational)."""
+    now = datetime.datetime.now(_IST)
+    tgt = now.replace(hour=18, minute=30, second=0, microsecond=0)
+    if now.hour >= 19:
+        tgt += datetime.timedelta(days=1)
+    return tgt.isoformat()
+
+
+def _dispatch_tier(score):
+    if score >= 82: return "P1"
+    if score >= 68: return "P2"
+    if score >= 55: return "P3"
+    return "P4"
+
+
+def _reason_codes(z, live_stress, eta_min, enriched):
+    """Honest, instance-level reason strings. Pressure is MODELED from historical
+    tickets — never a live congestion measurement."""
+    out = []
+    if (z.get("pressure") or 0) >= 60:
+        out.append("high modeled obstruction pressure")
+    if (z.get("forecast_score") or 0) >= 60:
+        out.append("forecast pressure rising next month")
+    if (z.get("under_observed") or 0) >= 55:
+        out.append("likely under-observed (blind-spot candidate)")
+    if z.get("evening_blind_spot"):
+        out.append("evening coverage gap vs assumed peak")
+    if enriched and live_stress > 0.05:
+        out.append(f"elevated live travel delay now (+{round(live_stress * 100)}%)")
+    if eta_min is not None and eta_min <= 8:
+        out.append(f"~{eta_min} min from station")
+    return out[:5] or ["top modeled enforcement priority"]
+
+
+def _reason_detail(z, base, live_stress, enriched):
+    d = [{"code": "MODELED_RISK", "label": "modeled obstruction risk",
+          "value": round(_dispatch_score(z), 1),
+          "contribution": round(base * (1 - _W_LIVE) * 100, 1)}]
+    if enriched:
+        d.append({"code": "LIVE_DELAY", "label": "live travel-time delay proxy",
+                  "value": round(live_stress * 100, 1),
+                  "contribution": round(live_stress * _W_LIVE * 100, 1)})
+    return d
+
+
+def _dedup(rows, radius_m):
+    """Greedy same-station corridor clustering: keep the top-ranked representative,
+    attach nearby same-station zones as supporting evidence (avoids two units sent
+    to effectively the same corridor)."""
+    from . import mappls
+    kept, clusters = [], []
+    for r in rows:                       # rows arrive best-first
+        merged = False
+        for k in kept:
+            if (k["station"] == r["station"] and r.get("lat") is not None
+                    and k.get("lat") is not None
+                    and mappls.haversine_km(k["lat"], k["lon"], r["lat"], r["lon"]) * 1000 <= radius_m):
+                k.setdefault("supporting_zones", []).append(r["id"])
+                merged = True
+                break
+        if not merged:
+            kept.append(r)
+    for k in kept:
+        if k.get("supporting_zones"):
+            clusters.append({"representative": k["id"], "supporting": k["supporting_zones"]})
+    return kept, clusters
+
+
+def _assemble(station=None, tier=None, limit=60, enrich=40, do_live=True):
+    """Build the dispatch queue honestly:
+    - uniform live enrichment across the candidate set (no bias for *being* live);
+    - de-saturated score = base·(1-W) + live_stress·W;
+    - every record gets a backed ETA (mappls_live or haversine_estimate);
+    - same-station corridor dedup; sequential ranks; base vs dispatch tier."""
     from . import mappls
     zones = list((load("map_payload.json") or {}).get("zones", []))
     if station:
         zones = [z for z in zones if (z.get("station") or "").lower() == station.lower()]
     if tier:
-        zones = [z for z in zones if z.get("tier") == tier.upper()]
+        zones = [z for z in zones if (z.get("tier") or "") == tier.upper()]
     zones.sort(key=lambda z: -_dispatch_score(z))
-    rows = zones[:limit]
 
-    live_on = bool(live) and mappls.available()
-    st_ctr = {}
-    if live_on:
-        for s in (load("stations.json") or []):
-            if s.get("lat") is not None:
-                st_ctr[s["station"]] = (s["lat"], s["lon"])
+    mappls_on = mappls.available()
+    live_on = bool(do_live) and mappls_on
+    st_ctr = {s["station"]: (s["lat"], s["lon"])
+              for s in (load("stations.json") or []) if s.get("lat") is not None}
+    enrich = min(enrich, limit)
+    counts = {"req": 0, "ok": 0}
 
-    out = []
-    for i, z in enumerate(rows):
-        rec = {
-            "id": z["id"], "name": z.get("name"), "station": z.get("station"),
-            "tier": z.get("tier"), "lat": z.get("lat"), "lon": z.get("lon"),
-            "dispatch_priority": round(_dispatch_score(z), 1),
-            "dispatch_rank": z.get("dispatch_rank"),
-            "priority": z.get("priority"),
-            "pressure": z.get("pressure"),
-            "forecast_score": z.get("forecast_score"),
-            "under_observed": z.get("under_observed"),
-            "blind_spot_ml": z.get("blind_spot_ml", False),
-            "evening_blind_spot": z.get("evening_blind_spot", False),
-            "reason_codes": z.get("reason_codes", []),
-            "assoc_score": None, "eta_min": None, "live": False,
-        }
+    def make(z, allow_live):
+        base = _dispatch_score(z) / 100.0
         ctr = st_ctr.get(z.get("station"))
-        if live_on and i < live_limit and ctr and z.get("lat") is not None:
+        live_stress, eta_min, eta_source, assoc, enriched = 0.0, None, "unavailable", None, False
+        if allow_live and live_on and ctr and z.get("lat") is not None:
+            counts["req"] += 1
             dr = mappls.delay_ratio(ctr[0], ctr[1], z["lat"], z["lon"])
             sec = mappls.reach_seconds(ctr[0], ctr[1], z["lat"], z["lon"], traffic=True)
             if dr is not None:
-                rec["assoc_score"] = round(dr * 100, 1)
-                rec["live"] = True
-                rec["dispatch_priority"] = round(
-                    min(100.0, rec["dispatch_priority"] * (1 + 0.2 * dr)), 1)
+                counts["ok"] += 1
+                live_stress = max(0.0, min(1.0, dr))
+                assoc = round(dr * 100, 1)
+                enriched = True
             if sec is not None:
-                rec["eta_min"] = round(sec / 60.0, 1)
-        out.append(rec)
-    if live_on:
-        out.sort(key=lambda r: -r["dispatch_priority"])
-    return out, live_on, mappls.available()
+                eta_min, eta_source = round(sec / 60.0, 1), "mappls_live"
+        if eta_min is None and ctr and z.get("lat") is not None:   # backed fallback
+            km = mappls.haversine_km(ctr[0], ctr[1], z["lat"], z["lon"])
+            eta_min, eta_source = round(km / 20.0 * 60.0, 1), "haversine_estimate"
+        score = base * (1 - _W_LIVE) + live_stress * _W_LIVE
+        uo = z.get("under_observed")
+        return {
+            "id": z["id"], "name": z.get("name"), "station": z.get("station"),
+            "lat": z.get("lat"), "lon": z.get("lon"),
+            "base_priority": z.get("priority"), "base_tier": z.get("tier"),
+            "tier": z.get("tier"),                       # back-compat (base/historical)
+            "pressure": z.get("pressure"), "forecast_score": z.get("forecast_score"),
+            "dispatch_priority_raw": round(score, 4),
+            "dispatch_priority": round(score * 100, 1),
+            "dispatch_tier": _dispatch_tier(score * 100),
+            "under_observed": uo, "under_observed_score": uo,
+            "under_observed_candidate": bool((uo or 0) >= 55),
+            "blind_spot_ml": bool(z.get("blind_spot_ml", False)),
+            "evening_blind_spot": bool(z.get("evening_blind_spot", False)),
+            "assoc_score": assoc, "eta_min": eta_min, "eta_source": eta_source,
+            "live_enriched": enriched,
+            "reason_codes": _reason_codes(z, live_stress, eta_min, enriched),
+            "reasons": _reason_detail(z, base, live_stress, enriched),
+        }
+
+    candidates = [make(z, True) for z in zones[:enrich]]
+    planned = [make(z, False) for z in zones[enrich:limit]]
+    candidates.sort(key=lambda r: -r["dispatch_priority_raw"])
+    live_queue, clusters = _dedup(candidates, _DEDUP_M)
+    for i, r in enumerate(live_queue, 1):
+        r["dispatch_rank"] = i
+    for i, r in enumerate(planned, 1):
+        r["dispatch_rank"] = i
+
+    cov = round(100.0 * counts["ok"] / counts["req"], 1) if counts["req"] else 0.0
+    return {
+        "generated_at": _now_iso(), "horizon": "deploy_now",
+        "traffic_mode": "live" if live_on else "model_only",
+        "evening_target_at": _evening_target_iso(),
+        "mappls_enabled": mappls_on, "live": live_on,
+        "mappls_requested_count": counts["req"], "mappls_success_count": counts["ok"],
+        "live_coverage_pct": cov, "note": _DISPATCH_NOTE,
+        "count": len(live_queue), "queue": live_queue,
+        "planned_count": len(planned), "planned": planned, "clusters": clusters,
+    }
 
 
-_DISPATCH_NOTE = ("dispatch_priority is the M4 reranker; assoc_score is a live "
-                  "Mappls ETA delta proxy (present stress, NOT measured congestion).")
+def _filter_rank(items, station, tier, limit):
+    out = list(items)
+    if station:
+        out = [z for z in out if (z.get("station") or "").lower() == station.lower()]
+    if tier:
+        out = [z for z in out if tier.upper() in
+               ((z.get("dispatch_tier") or ""), (z.get("base_tier") or ""))]
+    out = out[:limit]
+    for i, r in enumerate(out, 1):
+        r = dict(r); r["dispatch_rank"] = i; out[i - 1] = r
+    return out
 
 
 @app.get("/api/dispatch/queue")
 def dispatch_queue(station: str | None = None, tier: str | None = None,
                    live: bool = False, limit: int = Query(60, le=500)):
-    """Reranked deployment queue (M4). Reports when it was computed and when the
-    background cron last refreshed the live snapshot."""
-    out, live_on, mappls_on = _build_queue(station, tier, live, limit)
-    snap = load("dispatch_rerank.json") or {}
-    return ok({"live": live_on, "mappls": mappls_on, "note": _DISPATCH_NOTE,
-               "generated_at": _now_iso(), "last_recalc": snap.get("generated_at"),
-               "auto_interval_min": 5, "count": len(out), "queue": out})
+    """Serves the latest live-rerank snapshot (kept fresh by the recalc cron) so
+    the console is fast and consistent; falls back to a model-only compute when no
+    snapshot exists. `?live=1` forces a fresh Mappls recompute."""
+    snap = load("dispatch_rerank.json")
+    if snap and snap.get("queue") and not live:
+        q = _filter_rank(snap["queue"], station, tier, limit)
+        meta = {k: snap.get(k) for k in
+                ("generated_at", "horizon", "traffic_mode", "evening_target_at",
+                 "mappls_enabled", "live", "live_coverage_pct",
+                 "mappls_requested_count", "mappls_success_count", "note")}
+        return ok({**meta, "from_snapshot": True, "last_recalc": snap.get("generated_at"),
+                   "auto_interval_min": 5, "count": len(q), "queue": q})
+    res = _assemble(station, tier, limit, enrich=min(limit, 40), do_live=live)
+    res["from_snapshot"] = False
+    res["last_recalc"] = (load("dispatch_rerank.json") or {}).get("generated_at")
+    res["auto_interval_min"] = 5
+    return ok(res)
 
 
 @app.get("/api/dispatch/recalc")
 @app.post("/api/dispatch/recalc")
-def dispatch_recalc(limit: int = Query(80, le=500)):
-    """Force a live rerank NOW: pull current Mappls ETA deltas for the top zones,
-    re-blend dispatch_priority, persist a snapshot to Mongo, and return it.
-
-    Hit on a schedule by the Vercel cron (every 5 min) and on demand by the
-    console's 'Force recalculate' button. Recompute-only — it reads the
-    precomputed artifacts + live traffic and writes a derived snapshot; it NEVER
-    edits the historical ML scores."""
-    out, live_on, mappls_on = _build_queue(None, None, True, limit, live_limit=25)
-    snap = {"generated_at": _now_iso(), "live": live_on, "mappls": mappls_on,
-            "note": _DISPATCH_NOTE, "count": len(out), "queue": out}
+def dispatch_recalc(limit: int = Query(80, le=500), enrich: int = Query(40, le=120)):
+    """Force a live rerank NOW: enrich the top `enrich` candidates UNIFORMLY with
+    current Mappls ETA deltas, re-blend + re-rank + dedup, persist the snapshot to
+    Mongo, and return it. Hit by the 5-min cron and the console's 'Force
+    recalculate' button. Recompute-only — never edits the historical ML scores."""
+    res = _assemble(None, None, limit, enrich=enrich, do_live=True)
     try:
         from . import db
         if db.mongo_enabled():
-            db.save_artifact("dispatch_rerank.json", snap)
-            snap["persisted"] = True
+            db.save_artifact("dispatch_rerank.json", res)
+            res["persisted"] = True
         else:
-            snap["persisted"] = False
+            res["persisted"] = False
     except Exception as e:                       # pragma: no cover
-        snap["persisted"] = False
-        snap["persist_error"] = type(e).__name__
-    return ok(snap)
+        res["persisted"] = False
+        res["persist_error"] = type(e).__name__
+    return ok(res)
 
 
 _BANDIT_REWARD = {              # officer-feedback kind -> bandit reward in [0,1]

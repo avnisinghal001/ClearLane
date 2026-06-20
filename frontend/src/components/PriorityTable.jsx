@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { tierColor } from "../lib/format.js";
 import { isActive, zoneActivity, lensLabel } from "../lib/timeLens.js";
+import Expandable from "./Expandable.jsx";
 
 export default function PriorityTable({ zones, onSelect, opByZone = {},
                                        lens = { mode: "all" }, daily = null }) {
@@ -42,7 +43,7 @@ export default function PriorityTable({ zones, onSelect, opByZone = {},
             style={{ marginRight: 6 }} onClick={() => setTier(t)}>{t || "All"}</button>
         ))}
       </div>
-      <div className="scroll">
+      <Expandable title="Priority queue table" subtitle={`${rows.length} zones`} bodyClassName="scroll">
         <table>
           <thead>
             <tr>
@@ -77,7 +78,7 @@ export default function PriorityTable({ zones, onSelect, opByZone = {},
             ))}
           </tbody>
         </table>
-      </div>
+      </Expandable>
     </div>
   );
 }

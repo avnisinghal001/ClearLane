@@ -338,11 +338,25 @@ DAY_TYPES = ["weekday", "weekend"]
 # Poisson objective; forecast_pressure is derived from the predicted count so the
 # downstream payload/UI keep working.
 FORECAST_POISSON = True
+# Regularized + early-stopped: n_estimators is an upper cap (early stopping picks
+# the real count on a validation split), with L1/L2 + bagging to curb overfitting.
 FORECAST_LGBM_PARAMS = {
-    "objective": "poisson", "n_estimators": 500, "learning_rate": 0.03,
-    "num_leaves": 31, "subsample": 0.8, "colsample_bytree": 0.8, "min_child_samples": 20,
+    "objective": "poisson", "n_estimators": 2000, "learning_rate": 0.03,
+    "num_leaves": 24, "max_depth": 6,
+    "subsample": 0.7, "subsample_freq": 1, "colsample_bytree": 0.7,
+    "min_child_samples": 50, "min_split_gain": 0.0,
+    "reg_alpha": 0.2, "reg_lambda": 3.0,
 }
+FORECAST_EARLY_STOPPING = 60        # rounds w/o val improvement before stopping
+FORECAST_VAL_FRAC = 0.2             # validation carved from train for early stopping
+FORECAST_CV_FOLDS = 5              # K-fold CV for an honest generalization estimate
+FORECAST_OVERFIT_GAP = 0.12        # warn if train_r2 - cv_r2 exceeds this
 FORECAST_CATBOOST = True            # train a CatBoost Poisson challenger if installed
+FORECAST_CATBOOST_PARAMS = {
+    "loss_function": "Poisson", "iterations": 1500, "learning_rate": 0.03,
+    "depth": 6, "l2_leaf_reg": 6.0, "random_strength": 1.0,
+    "od_type": "Iter", "od_wait": 60, "allow_writing_files": False, "verbose": False,
+}
 
 # --- M2 blind-spot / under-observation ranker (positive-unlabeled) ---------- #
 # Context-residual PU: predict pressure from CONTEXT-only features (no history);

@@ -6,6 +6,7 @@ import { slugify } from "../lib/auth.js";
 import { Icon } from "./icons.jsx";
 import { obsLevel, patrolsOnDuty, fetchRankedRoutes, istHour } from "../lib/citizen.js";
 import { istToday, activityField, fmtDate } from "../lib/timeLens.js";
+import { HeatLayer, HeatToggle, heatPoints as buildHeatPoints } from "./HeatLayer.jsx";
 
 const CENTER = [12.9716, 77.5946];
 const DARK = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
@@ -45,6 +46,7 @@ export default function CitizenApp() {
   const [routes, setRoutes] = useState([]);
   const [routeSel, setRouteSel] = useState(0);
   const [routeLoading, setRouteLoading] = useState(false);
+  const [showHeat, setShowHeat] = useState(false);   // points view default; toggle to heatmap
   const hour = istHour();
 
   useEffect(() => {
@@ -75,6 +77,7 @@ export default function CitizenApp() {
       _allTime: z.pressure,
     }));
   }, [zones, daily, today]);
+  const heatPts = useMemo(() => buildHeatPoints(zonesT, "pressure"), [zonesT]);
 
   // keep the selected zone in sync with today's recomputed values
   const selZone = selected ? (zonesT.find((z) => z.id === selected.id) || selected) : null;
@@ -135,8 +138,10 @@ export default function CitizenApp() {
           <FlyTo pos={flyTo} />
           <ClickCatcher active={reportMode} onPick={setPending} />
 
-          {/* TODAY's predicted obstruction-risk zones */}
-          {zonesT.map((z) => {
+          {showHeat && heatPts.length > 0 && <HeatLayer points={heatPts} />}
+
+          {/* TODAY's predicted obstruction-risk zones (points mode) */}
+          {!showHeat && zonesT.map((z) => {
             const lv = obsLevel(z.pressure);
             const isSel = selected?.id === z.id;
             return (
@@ -189,6 +194,8 @@ export default function CitizenApp() {
             </CircleMarker>
           ))}
         </MapContainer>
+
+        <HeatToggle on={showHeat} onToggle={setShowHeat} pos="tr" label="Risk heatmap" />
 
         {/* legend chip */}
         <div className="citizen-legend">
