@@ -1,0 +1,36 @@
+# Files Vercel should NOT upload with the deployment. Keeps the build fast and the
+# serverless function well under the size limit. Runtime data lives in MongoDB, so
+# none of this is needed in production.
+
+# Raw dataset (110 MB CSV) + heavy pipeline intermediates — never read at runtime
+data/raw/
+data/processed/*.parquet
+data/processed/*.csv
+
+# The whole ML pipeline + its heavy deps are build-time only (not used by the API)
+ml/
+requirements-ml.txt
+outputs/
+
+# Local virtualenvs / caches / build artifacts (Vercel rebuilds what it needs)
+.venv/
+backend/.venv/
+**/__pycache__/
+**/*.pyc
+frontend/node_modules/
+frontend/dist/
+node_modules/
+
+# Local runtime state + secrets (set env vars in the Vercel dashboard instead)
+backend/data/
+*.db
+.env
+backend/.env
+
+# Docker / compose are not used on Vercel
+docker-compose.yml
+**/Dockerfile
+
+# Editor / OS
+.cursor/
+.DS_Store
