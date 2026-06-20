@@ -46,23 +46,21 @@ async function stationSlugMap() {
 export async function login(username, password) {
   const user = (username || "").trim().toLowerCase();
   const pw = (password || "").trim().toLowerCase();
-  // 1) try the live backend
-  if (BASE) {
-    try {
-      const r = await fetch(BASE + "/api/auth/login", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: user, password: pw }),
-      });
-      if (r.ok) {
-        const a = { ...(await r.json()), live: true };
-        setAuth(a);
-        return a;
-      }
-      if (r.status === 401) throw new Error("Invalid credentials.");
-    } catch (e) {
-      if (String(e.message).includes("Invalid")) throw e;
-      // network error -> fall through to offline auth
+  // 1) try the live backend (relative "/api" on Vercel, or an absolute base)
+  try {
+    const r = await fetch(BASE + "/api/auth/login", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: user, password: pw }),
+    });
+    if (r.ok) {
+      const a = { ...(await r.json()), live: true };
+      setAuth(a);
+      return a;
     }
+    if (r.status === 401) throw new Error("Invalid credentials.");
+  } catch (e) {
+    if (String(e.message).includes("Invalid")) throw e;
+    // network error / no backend -> fall through to offline auth
   }
   // 2) offline auth (slug == username == password)
   if (user === "govt" && pw === "govt") {
@@ -83,7 +81,7 @@ export async function login(username, password) {
 
 export async function logout() {
   const a = getAuth();
-  if (BASE && a?.token && !a.token.startsWith("offline")) {
+  if (a?.token && !a.token.startsWith("offline")) {
     try {
       await fetch(BASE + "/api/auth/logout", {
         method: "POST", headers: authHeader(),
@@ -94,9 +92,9 @@ export async function logout() {
 }
 
 // Authenticated fetch helper for force endpoints (returns null on failure so the
-// caller can fall back to the offline force engine).
+// caller can fall back to the offline force engine). Uses the same-origin "/api"
+// on Vercel; an offline token short-circuits straight to the offline engine.
 export async function authFetch(path, opts = {}) {
-  if (!BASE) return null;
   const a = getAuth();
   if (!a || a.token?.startsWith("offline")) return null;
   try {

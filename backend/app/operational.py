@@ -8,31 +8,24 @@ zone carries three SEPARATE numbers:
   * live_adjustment       — a transparent operational boost/cooldown (rules below)
   * operational_priority  — historical + live_adjustment (clamped 0..100)
 
-State persists in SQLite (backend/data/clearlane.db), created on startup. The
-existing read APIs in main.py are untouched; this is a separate APIRouter.
+State persists in MongoDB (collections: complaints, officer_feedback, dispatches,
+dispatch_status_history, zone_state) so the app runs on Vercel's read-only
+serverless filesystem. The existing read APIs in main.py are untouched; this is a
+separate APIRouter.
 """
 from __future__ import annotations
 
-import json
 import math
-import os
-import sqlite3
 import time
-from pathlib import Path
 from threading import Lock
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-router = APIRouter(prefix="/api")
+from . import db
 
-# --------------------------------------------------------------------------- #
-# Paths / artifacts (mirror main.py's resolution so we stay offline-first)
-# --------------------------------------------------------------------------- #
-ROOT = Path(__file__).resolve().parents[2]
-DB_PATH = ROOT / "backend" / "data" / "clearlane.db"
-DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+router = APIRouter(prefix="/api")
 
 BBOX = {"lat_min": 12.80, "lat_max": 13.29, "lon_min": 77.44, "lon_max": 77.77}
 
@@ -57,13 +50,9 @@ _zone_index: list[dict] | None = None
 
 
 # --------------------------------------------------------------------------- #
-def _art_dir() -> Path:
-    override = os.environ.get("CLEARLANE_ARTIFACTS")
-    if override and Path(override).exists():
-        return Path(override)
-    proc = ROOT / "data" / "processed"
-    demo = ROOT / "frontend" / "public" / "demo"
-    return proc if (proc / "map_payload.json").exists() else demo
+def _require_mongo():
+    if not db.mongo_enabled():
+        raise HTTPException(503, "MongoDB not configured (set MONGODB_URI).")
 
 
 def zone_index() -> list[dict]:
@@ -71,7 +60,7 @@ def zone_index() -> list[dict]:
     global _zone_index
     if _zone_index is None:
         try:
-            payload = json.loads((_art_dir() / "map_payload.json").read_text())
+            payload = db.artifact("map_payload.json") or {}
             _zone_index = [{
                 "id": z["id"], "name": z.get("name") or z["id"],
                 "lat": z["lat"], "lon": z["lon"], "tier": z["tier"],
@@ -109,36 +98,16 @@ def in_bbox(lat, lon):
 
 
 # --------------------------------------------------------------------------- #
-def _conn():
-    c = sqlite3.connect(DB_PATH)
-    c.row_factory = sqlite3.Row
-    return c
-
-
 def init_db():
-    with _conn() as c:
-        c.executescript("""
-        CREATE TABLE IF NOT EXISTS complaints(
-            id INTEGER PRIMARY KEY AUTOINCREMENT, lat REAL, lon REAL,
-            description TEXT, vehicle_type TEXT, zone_id TEXT, distance_m REAL,
-            status TEXT DEFAULT 'unverified', created_ts REAL);
-        CREATE TABLE IF NOT EXISTS officer_feedback(
-            id INTEGER PRIMARY KEY AUTOINCREMENT, zone_id TEXT, dispatch_id INTEGER,
-            kind TEXT, note TEXT, created_ts REAL);
-        CREATE TABLE IF NOT EXISTS dispatches(
-            id INTEGER PRIMARY KEY AUTOINCREMENT, zone_id TEXT, complaint_id INTEGER,
-            state TEXT DEFAULT 'recommended', created_ts REAL, updated_ts REAL);
-        CREATE TABLE IF NOT EXISTS dispatch_status_history(
-            id INTEGER PRIMARY KEY AUTOINCREMENT, dispatch_id INTEGER, state TEXT, ts REAL);
-        CREATE TABLE IF NOT EXISTS zone_state(
-            zone_id TEXT PRIMARY KEY, boost REAL DEFAULT 0, dispatch_state TEXT,
-            escalated INTEGER DEFAULT 0, complaints INTEGER DEFAULT 0,
-            updated_ts REAL);
-        """)
-        # migration: add vehicle_number to older complaints tables (idempotent)
-        cols = [r[1] for r in c.execute("PRAGMA table_info(complaints)").fetchall()]
-        if "vehicle_number" not in cols:
-            c.execute("ALTER TABLE complaints ADD COLUMN vehicle_number TEXT")
+    """Create indexes (idempotent). No-op when Mongo is not configured."""
+    if not db.mongo_enabled():
+        return
+    try:
+        db.col("complaints").create_index("created_ts")
+        db.col("dispatches").create_index("updated_ts")
+        db.col("zone_state").create_index("zone_id", unique=True)
+    except Exception:                       # pragma: no cover - first-run races
+        pass
 
 
 def _decayed_boost(boost, updated_ts, now):
@@ -148,10 +117,11 @@ def _decayed_boost(boost, updated_ts, now):
     return max(0.0, boost - OP_RULES["decay_per_hour"] * hours)
 
 
-def _bump_zone(c, zone_id, delta=None, reset=False, state=None, escalate=False,
+def _bump_zone(zone_id, delta=None, reset=False, state=None, escalate=False,
                add_complaint=False):
     now = time.time()
-    row = c.execute("SELECT * FROM zone_state WHERE zone_id=?", (zone_id,)).fetchone()
+    c = db.col("zone_state")
+    row = c.find_one({"_id": zone_id})
     boost = _decayed_boost(row["boost"], row["updated_ts"], now) if row else 0.0
     if reset:
         boost = 0.0
@@ -160,13 +130,11 @@ def _bump_zone(c, zone_id, delta=None, reset=False, state=None, escalate=False,
     comp = (row["complaints"] if row else 0) + (1 if add_complaint else 0)
     new_state = state if state is not None else (row["dispatch_state"] if row else None)
     esc = 1 if escalate else (row["escalated"] if row else 0)
-    c.execute("""INSERT INTO zone_state(zone_id,boost,dispatch_state,escalated,complaints,updated_ts)
-                 VALUES(?,?,?,?,?,?)
-                 ON CONFLICT(zone_id) DO UPDATE SET
-                   boost=excluded.boost, dispatch_state=excluded.dispatch_state,
-                   escalated=excluded.escalated, complaints=excluded.complaints,
-                   updated_ts=excluded.updated_ts""",
-              (zone_id, boost, new_state, esc, comp, now))
+    c.replace_one({"_id": zone_id}, {
+        "_id": zone_id, "zone_id": zone_id, "boost": boost,
+        "dispatch_state": new_state, "escalated": esc,
+        "complaints": comp, "updated_ts": now,
+    }, upsert=True)
 
 
 # --------------------------------------------------------------------------- #
@@ -197,13 +165,9 @@ class StatusIn(BaseModel):
     state: str
 
 
-# ensure tables exist as soon as the module is imported (idempotent)
-init_db()
-
-
 def _safe(obj):
     if isinstance(obj, dict):
-        return {k: _safe(v) for k, v in obj.items()}
+        return {k: _safe(v) for k, v in obj.items() if k != "_id"}
     if isinstance(obj, list):
         return [_safe(v) for v in obj]
     if isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
@@ -222,12 +186,14 @@ def ok(p):
 def snapshot():
     now = time.time()
     zi = {z["id"]: z for z in zone_index()}
-    with _conn() as c:
-        states = c.execute("SELECT * FROM zone_state").fetchall()
-        complaints = [dict(r) for r in c.execute(
-            "SELECT * FROM complaints ORDER BY created_ts DESC LIMIT 200").fetchall()]
-        dispatches = [dict(r) for r in c.execute(
-            "SELECT * FROM dispatches ORDER BY updated_ts DESC LIMIT 200").fetchall()]
+    if not db.mongo_enabled():
+        return ok({"ts": now,
+                   "counts": {"active_complaints": 0, "open_dispatches": 0,
+                              "live_zones": 0, "escalations": 0},
+                   "zones": [], "complaints": [], "dispatches": []})
+    states = list(db.col("zone_state").find())
+    complaints = list(db.col("complaints").find().sort("created_ts", -1).limit(200))
+    dispatches = list(db.col("dispatches").find().sort("updated_ts", -1).limit(200))
     # annotate each complaint/dispatch with its nearest station (from resolved zone)
     for cc in complaints:
         z = zi.get(cc.get("zone_id"))
@@ -240,8 +206,8 @@ def snapshot():
     zones = []
     for s in states:
         z = zi.get(s["zone_id"])
-        boost = _decayed_boost(s["boost"], s["updated_ts"], now)
-        if boost <= 0 and not s["dispatch_state"] and not s["escalated"]:
+        boost = _decayed_boost(s.get("boost"), s.get("updated_ts"), now)
+        if boost <= 0 and not s.get("dispatch_state") and not s.get("escalated"):
             continue
         hist = z["historical_priority"] if z else 0
         zones.append({
@@ -252,17 +218,17 @@ def snapshot():
             "historical_priority": round(hist, 1),
             "live_adjustment": round(boost, 1),
             "operational_priority": round(min(100.0, hist + boost), 1),
-            "dispatch_state": s["dispatch_state"],
-            "escalated": bool(s["escalated"]),
-            "complaints": s["complaints"],
+            "dispatch_state": s.get("dispatch_state"),
+            "escalated": bool(s.get("escalated")),
+            "complaints": s.get("complaints", 0),
         })
     zones.sort(key=lambda x: -x["operational_priority"])
     return ok({
         "ts": now,
         "counts": {
-            "active_complaints": sum(1 for x in complaints if x["status"] != "resolved"),
+            "active_complaints": sum(1 for x in complaints if x.get("status") != "resolved"),
             "open_dispatches": sum(1 for d in dispatches
-                                   if d["state"] not in ("cleared", "structural_escalation")),
+                                   if d.get("state") not in ("cleared", "structural_escalation")),
             "live_zones": len(zones),
             "escalations": sum(1 for x in zones if x["escalated"]),
         },
@@ -272,41 +238,44 @@ def snapshot():
 
 @router.get("/operational/changes")
 def changes(since: float = 0.0):
-    with _conn() as c:
-        comp = [dict(r) for r in c.execute(
-            "SELECT * FROM complaints WHERE created_ts > ? ORDER BY created_ts", (since,)).fetchall()]
-        disp = [dict(r) for r in c.execute(
-            "SELECT * FROM dispatches WHERE updated_ts > ? ORDER BY updated_ts", (since,)).fetchall()]
+    if not db.mongo_enabled():
+        return ok({"ts": time.time(), "new_complaints": [], "updated_dispatches": []})
+    comp = list(db.col("complaints").find({"created_ts": {"$gt": since}}).sort("created_ts", 1))
+    disp = list(db.col("dispatches").find({"updated_ts": {"$gt": since}}).sort("updated_ts", 1))
     return ok({"ts": time.time(), "new_complaints": comp, "updated_dispatches": disp})
 
 
 @router.post("/complaints")
 def post_complaint(body: ComplaintIn):
+    _require_mongo()
     if not in_bbox(body.lat, body.lon):
         raise HTTPException(422, "Coordinate outside the Bengaluru bounding box.")
     zone, dist = _nearest_zone(body.lat, body.lon)
     zone_id = zone["id"] if zone else None
     now = time.time()
-    with _lock, _conn() as c:
-        cur = c.execute(
-            """INSERT INTO complaints(lat,lon,description,vehicle_type,vehicle_number,zone_id,distance_m,status,created_ts)
-               VALUES(?,?,?,?,?,?,?,?,?)""",
-            (body.lat, body.lon, body.description, body.vehicle_type,
-             body.vehicle_number.upper().strip(), zone_id,
-             None if zone is None else round(dist, 1), "unverified", now))
-        cid = cur.lastrowid
+    plate = body.vehicle_number.upper().strip()
+    with _lock:
+        cid = db.next_id("complaints")
+        db.col("complaints").insert_one({
+            "_id": cid, "id": cid, "lat": body.lat, "lon": body.lon,
+            "description": body.description, "vehicle_type": body.vehicle_type,
+            "vehicle_number": plate, "zone_id": zone_id,
+            "distance_m": None if zone is None else round(dist, 1),
+            "status": "unverified", "created_ts": now,
+        })
         if zone_id:
-            _bump_zone(c, zone_id, delta=OP_RULES["complaint_unverified"], add_complaint=True)
+            _bump_zone(zone_id, delta=OP_RULES["complaint_unverified"], add_complaint=True)
     return ok({"id": cid, "zone_id": zone_id,
                "zone_name": zone["name"] if zone else None,
                "station": zone["station"] if zone else None,
-               "vehicle_number": body.vehicle_number.upper().strip() or None,
+               "vehicle_number": plate or None,
                "assignment": "nearest_historical_zone" if zone else "emerging_operational_point",
                "distance_m": None if zone is None else round(dist, 1), "status": "unverified"})
 
 
 @router.post("/officer-feedback")
 def post_feedback(body: FeedbackIn):
+    _require_mongo()
     now = time.time()
     kind = body.kind
     delta, reset, state, escalate = None, False, None, False
@@ -326,52 +295,61 @@ def post_feedback(body: FeedbackIn):
         delta, state = OP_RULES["false_alarm"], "cleared"
     else:
         raise HTTPException(422, f"Unknown feedback kind '{kind}'.")
-    with _lock, _conn() as c:
-        c.execute("""INSERT INTO officer_feedback(zone_id,dispatch_id,kind,note,created_ts)
-                     VALUES(?,?,?,?,?)""", (body.zone_id, body.dispatch_id, kind, body.note, now))
-        _bump_zone(c, body.zone_id, delta=delta, reset=reset, state=state, escalate=escalate)
+    with _lock:
+        db.col("officer_feedback").insert_one({
+            "_id": db.next_id("officer_feedback"), "zone_id": body.zone_id,
+            "dispatch_id": body.dispatch_id, "kind": kind, "note": body.note,
+            "created_ts": now,
+        })
+        _bump_zone(body.zone_id, delta=delta, reset=reset, state=state, escalate=escalate)
         if body.dispatch_id:
-            c.execute("UPDATE dispatches SET state=?, updated_ts=? WHERE id=?",
-                      (state, now, body.dispatch_id))
-            c.execute("INSERT INTO dispatch_status_history(dispatch_id,state,ts) VALUES(?,?,?)",
-                      (body.dispatch_id, state, now))
+            db.col("dispatches").update_one(
+                {"_id": body.dispatch_id}, {"$set": {"state": state, "updated_ts": now}})
+            db.col("dispatch_status_history").insert_one({
+                "_id": db.next_id("dispatch_status_history"),
+                "dispatch_id": body.dispatch_id, "state": state, "ts": now})
     return ok({"stored": True, "zone_id": body.zone_id, "kind": kind, "new_state": state})
 
 
 @router.post("/dispatches")
 def post_dispatch(body: DispatchIn):
+    _require_mongo()
     if body.state not in DISPATCH_STATES:
         raise HTTPException(422, f"state must be one of {DISPATCH_STATES}")
     now = time.time()
-    with _lock, _conn() as c:
-        cur = c.execute("""INSERT INTO dispatches(zone_id,complaint_id,state,created_ts,updated_ts)
-                           VALUES(?,?,?,?,?)""",
-                        (body.zone_id, body.complaint_id, body.state, now, now))
-        did = cur.lastrowid
-        c.execute("INSERT INTO dispatch_status_history(dispatch_id,state,ts) VALUES(?,?,?)",
-                  (did, body.state, now))
-        _bump_zone(c, body.zone_id, state=body.state)
+    with _lock:
+        did = db.next_id("dispatches")
+        db.col("dispatches").insert_one({
+            "_id": did, "id": did, "zone_id": body.zone_id,
+            "complaint_id": body.complaint_id, "state": body.state,
+            "created_ts": now, "updated_ts": now})
+        db.col("dispatch_status_history").insert_one({
+            "_id": db.next_id("dispatch_status_history"),
+            "dispatch_id": did, "state": body.state, "ts": now})
+        _bump_zone(body.zone_id, state=body.state)
     return ok({"id": did, "zone_id": body.zone_id, "state": body.state})
 
 
 @router.patch("/dispatches/{dispatch_id}/status")
 def patch_dispatch(dispatch_id: int, body: StatusIn):
+    _require_mongo()
     if body.state not in DISPATCH_STATES:
         raise HTTPException(422, f"state must be one of {DISPATCH_STATES}")
     now = time.time()
-    with _lock, _conn() as c:
-        row = c.execute("SELECT * FROM dispatches WHERE id=?", (dispatch_id,)).fetchone()
+    with _lock:
+        row = db.col("dispatches").find_one({"_id": dispatch_id})
         if not row:
             raise HTTPException(404, "dispatch not found")
-        c.execute("UPDATE dispatches SET state=?, updated_ts=? WHERE id=?",
-                  (body.state, now, dispatch_id))
-        c.execute("INSERT INTO dispatch_status_history(dispatch_id,state,ts) VALUES(?,?,?)",
-                  (dispatch_id, body.state, now))
+        db.col("dispatches").update_one(
+            {"_id": dispatch_id}, {"$set": {"state": body.state, "updated_ts": now}})
+        db.col("dispatch_status_history").insert_one({
+            "_id": db.next_id("dispatch_status_history"),
+            "dispatch_id": dispatch_id, "state": body.state, "ts": now})
         # cleared removes the live boost; chronic historical hotspot remains
         if body.state == "cleared":
-            _bump_zone(c, row["zone_id"], reset=True, state="cleared")
+            _bump_zone(row["zone_id"], reset=True, state="cleared")
         elif body.state == "structural_escalation":
-            _bump_zone(c, row["zone_id"], escalate=True, state="structural_escalation")
+            _bump_zone(row["zone_id"], escalate=True, state="structural_escalation")
         else:
-            _bump_zone(c, row["zone_id"], state=body.state)
+            _bump_zone(row["zone_id"], state=body.state)
     return ok({"id": dispatch_id, "state": body.state})

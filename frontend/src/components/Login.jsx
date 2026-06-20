@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { login } from "../lib/auth.js";
+import { Icon } from "./icons.jsx";
 
 // RBAC login gate. govt/govt = Government (all areas). Each station logs in with
 // its slug as BOTH username and password (e.g. HAL Old Airport -> hal-old-airport).
@@ -23,9 +24,12 @@ export default function Login({ onAuthed }) {
 
   return (
     <div className="login-wrap">
+      <div className="login-bg" />
       <form className="login-card" onSubmit={submit}>
-        <div className="wordmark" style={{ fontSize: 26 }}>
-          Clear<span className="lane">Lane</span> <span className="muted" style={{ fontSize: 13, fontWeight: 600 }}>Force Command</span>
+        <div className="wordmark" style={{ fontSize: 24 }}>
+          <span className="brand-mark hdr-mark"><Icon name="lane" size={17} strokeWidth={2} /></span>
+          Clear<span className="lane">Lane</span>
+          <span className="muted" style={{ fontSize: 13, fontWeight: 600 }}>Force Command</span>
         </div>
         <p className="muted" style={{ marginTop: 4, fontSize: 13 }}>
           Role-based access — Government command oversees every station; each station

@@ -7,6 +7,7 @@ import CommandCenter from "./components/CommandCenter.jsx";
 import SideNav from "./components/SideNav.jsx";
 import Header from "./components/Header.jsx";
 import CitizenApp from "./components/CitizenApp.jsx";
+import Onboarding from "./components/Onboarding.jsx";
 import { Icon } from "./components/icons.jsx";
 import { num } from "./lib/format.js";
 import KpiStrip from "./components/KpiStrip.jsx";
@@ -75,6 +76,9 @@ export default function App() {
   const [view, setView] = useState(() => hashView() || "force");
   const [navOpen, setNavOpen] = useState(false);      // mobile drawer
   const [collapsed, setCollapsed] = useState(false);  // desktop rail
+  const [onboarded, setOnboarded] = useState(() => {
+    try { return localStorage.getItem("cl_onboarded") === "1"; } catch { return true; }
+  });
   const [metricsOpen, setMetricsOpen] = useState(typeof window !== "undefined" && window.innerWidth > 900);
   const [payload, setPayload] = useState(null);
   const [filter, setFilter] = useState(null); // KPI quick-filter
@@ -142,7 +146,10 @@ export default function App() {
     go("command"); openZone(id, true); setNavOpen(false);
   }, [go, openZone]);
 
-  // Public citizen app — no login required (hooks above all run unconditionally)
+  // One-time device onboarding (hooks above all run unconditionally)
+  if (!onboarded) return <Onboarding onDone={() => setOnboarded(true)} />;
+
+  // Public citizen app — no login required
   if (hash.startsWith("#/citizen")) return <CitizenApp />;
 
   // RBAC gate

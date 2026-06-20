@@ -1,55 +1,34 @@
 """
 ClearLane API — serves the precomputed pipeline artifacts.
 
-The ML is precomputed (ml/pipeline). This layer just loads the JSON artifacts,
-sanitizes NaN/Inf, gzips large payloads and bbox-filters heavy layers. The
-complaint / officer-feedback / copilot routes are clearly-labelled deployment
-extensions; the core intelligence is fully deterministic.
+The ML is precomputed (ml/pipeline). This layer just loads the JSON artifacts
+(from MongoDB on Vercel, filesystem in local dev), sanitizes NaN/Inf, gzips large
+payloads and bbox-filters heavy layers. The complaint / officer-feedback /
+copilot routes are clearly-labelled deployment extensions; the core intelligence
+is fully deterministic.
 
-Run:  uvicorn app.main:app --reload --port 8000   (from backend/)
+Run locally:  uvicorn app.main:app --reload --port 8000   (from backend/)
+On Vercel:    exposed through api/index.py as a Python serverless function.
 """
 from __future__ import annotations
 
-import json
 import math
 import os
 import time
-from pathlib import Path
 
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 
-# artifacts: prefer data/processed, fall back to the bundled demo folder
-ROOT = Path(__file__).resolve().parents[2]
-PROC = ROOT / "data" / "processed"
-DEMO = ROOT / "frontend" / "public" / "demo"
-# explicit override (used by the Docker image, which bundles only the artifacts)
-OVERRIDE = os.environ.get("CLEARLANE_ARTIFACTS")
-DEMO_MODE = os.environ.get("CLEARLANE_DEMO_MODE", "0") == "1"
+from . import db
 
-
-def _art_dir() -> Path:
-    if OVERRIDE and Path(OVERRIDE).exists():
-        return Path(OVERRIDE)
-    if DEMO_MODE:
-        return DEMO
-    return PROC if (PROC / "map_payload.json").exists() else DEMO
-
-
-_CACHE: dict[str, object] = {}
+DEMO_MODE = not db.mongo_enabled()
 
 
 def load(name: str):
-    if name in _CACHE:
-        return _CACHE[name]
-    path = _art_dir() / name
-    if not path.exists():           # last-resort fallback to demo bundle
-        path = DEMO / name
-    data = json.loads(path.read_text()) if path.exists() else None
-    _CACHE[name] = data
-    return data
+    """Load a precomputed artifact: MongoDB first, filesystem fallback."""
+    return db.artifact(name)
 
 
 def _scrub(obj):
@@ -74,10 +53,10 @@ app.add_middleware(
 )
 
 # operational layer (additive): the live complaint -> verify -> dispatch -> clear
-# loop, persisted in SQLite. Never modifies historical ML scores.
+# loop, persisted in MongoDB. Never modifies historical ML scores.
 from . import operational  # noqa: E402
-# force-command layer (additive): RBAC auth + station/officer SQL management +
-# troop-tracking simulation. Also never modifies historical ML scores.
+# force-command layer (additive): RBAC auth + station/officer roster management in
+# MongoDB + troop-tracking simulation. Also never modifies historical ML scores.
 from . import force  # noqa: E402
 
 app.include_router(operational.router)
@@ -92,13 +71,14 @@ def _startup():
 
 # --------------------------------------------------------------------------- #
 @app.get("/health")
+@app.get("/api/health")
 def health():
-    artifacts = {n: (_art_dir() / n).exists() for n in
+    artifacts = {n: (load(n) is not None) for n in
                  ["map_payload.json", "zones_detail.json", "validation.json",
                   "timing_gap.json", "forecast.json"]}
-    return ok({"status": "ok", "demo_mode": DEMO_MODE,
-               "artifact_dir": str(_art_dir()), "artifacts": artifacts,
-               "ts": time.time()})
+    return ok({"status": "ok", "mongo": db.mongo_enabled(),
+               "source": "mongodb" if db.mongo_enabled() else "filesystem",
+               "artifacts": artifacts, "ts": time.time()})
 
 
 @app.get("/api/map/payload")

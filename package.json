@@ -1,0 +1,17 @@
+{
+  "name": "clearlane",
+  "private": true,
+  "version": "1.0.0",
+  "description": "ClearLane AI — Vercel monorepo (Vite frontend + Python/MongoDB serverless API).",
+  "scripts": {
+    "install:all": "npm install --prefix frontend",
+    "dev": "npm run dev --prefix frontend",
+    "build": "npm run build --prefix frontend",
+    "preview": "npm run preview --prefix frontend",
+    "migrate": "python scripts/migrate_to_mongo.py",
+    "vercel-build": "npm run build --prefix frontend"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

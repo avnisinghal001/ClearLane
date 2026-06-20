@@ -1,5 +1,10 @@
 // API layer. Every call falls back to the bundled /demo/*.json so the dashboard
 // always renders even when the backend is asleep or unreachable (judging safety).
+//
+// VITE_API_BASE is empty by default -> same-origin RELATIVE "/api/*" calls, which
+// is exactly how we deploy on Vercel (frontend + Python function share an origin).
+// In local dev the Vite proxy (vite.config.js) forwards "/api" to the backend.
+// Set an absolute VITE_API_BASE only to point at a backend on another origin.
 const BASE = (import.meta.env.VITE_API_BASE || "").replace(/\/$/, "");
 
 const DEMO = {
@@ -17,7 +22,9 @@ const DEMO = {
   "/api/daily": "/demo/daily.json",
 };
 
-let LIVE = !!BASE;
+// Try the live API first (relative on Vercel, or an absolute VITE_API_BASE);
+// flip to demo fallback only after a request actually fails.
+let LIVE = true;
 export const isLive = () => LIVE;
 
 async function getJSON(url) {
@@ -34,11 +41,11 @@ async function detailMap() {
 }
 
 export async function api(path) {
-  if (BASE) {
+  if (LIVE) {
     try {
       return await getJSON(BASE + path);
     } catch (e) {
-      LIVE = false; // fall through to demo
+      LIVE = false; // backend unreachable -> fall through to bundled demo
     }
   }
   // demo fallbacks
@@ -97,29 +104,29 @@ async function postJSON(path, body) {
 }
 
 export const opSnapshot = async () => {
-  if (BASE) { try { return await getJSON(BASE + "/api/operational/snapshot"); } catch {} }
+  try { return await getJSON(BASE + "/api/operational/snapshot"); } catch {}
   return localOps.snapshot();
 };
 export const opComplaint = async (body) => {
-  if (BASE) { try { return await postJSON("/api/complaints", body); } catch (e) {
-    if (String(e.message).includes("bounding box")) throw e; } }
+  try { return await postJSON("/api/complaints", body); } catch (e) {
+    if (String(e.message).includes("bounding box")) throw e; }
   return localOps.postComplaint(body);
 };
 export const opDispatch = async (body) => {
-  if (BASE) { try { return await postJSON("/api/dispatches", body); } catch {} }
+  try { return await postJSON("/api/dispatches", body); } catch {}
   return localOps.postDispatch(body);
 };
 export const opFeedback = async (body) => {
-  if (BASE) { try { return await postJSON("/api/officer-feedback", body); } catch {} }
+  try { return await postJSON("/api/officer-feedback", body); } catch {}
   return localOps.postFeedback(body);
 };
 export const opPatchStatus = async (id, stateVal) => {
-  if (BASE) { try {
+  try {
     const r = await fetch(`${BASE}/api/dispatches/${id}/status`, {
       method: "PATCH", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ state: stateVal }) });
     if (r.ok) return r.json();
-  } catch {} }
+  } catch {}
   return localOps.patchStatus(id, stateVal);
 };
 // seed the offline fallback's zone index from the bundled map payload
@@ -129,15 +136,13 @@ export const seedOpZones = (zones) =>
     priority: z.priority, station: z.station })));
 
 export async function copilot(body) {
-  if (BASE) {
-    try {
-      const r = await fetch(BASE + "/api/copilot", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (r.ok) return r.json();
-    } catch {}
-  }
+  try {
+    const r = await fetch(BASE + "/api/copilot", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (r.ok) return r.json();
+  } catch {}
   // demo briefing fallback
   try {
     const briefs = await getJSON("/demo/briefings.json");

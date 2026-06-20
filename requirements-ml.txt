@@ -1,0 +1,17 @@
+# ClearLane — ML pipeline + local backend (Python 3.11).
+# Heavy stack used ONLY to regenerate artifacts (ml/pipeline/run_all.py) and for
+# local development. It is intentionally NOT installed on Vercel — the serverless
+# API (root requirements.txt) just serves precomputed artifacts out of MongoDB.
+pandas>=2.2
+numpy>=1.26
+scikit-learn>=1.4
+scipy>=1.12
+lightgbm>=4.0
+shap>=0.45
+pyarrow>=15
+fastapi>=0.110
+uvicorn[standard]>=0.29
+pymongo>=4.8
+dnspython>=2.6
+# optional — only for the LLM copilot deployment extension (CLEARLANE_LLM=1)
+# anthropic>=0.40

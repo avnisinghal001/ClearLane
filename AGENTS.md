@@ -81,7 +81,7 @@ clear) but must keep three numbers strictly separate per zone:
 - `live_adjustment` — transparent rule-based boost/cooldown (decays over time).
 - `operational_priority` — `historical + live_adjustment`, clamped 0–100.
 
-Backend source of truth: `backend/app/operational.py` (SQLite). Offline mirror:
+Backend source of truth: `backend/app/operational.py` (MongoDB). Offline mirror:
 `frontend/src/lib/localOps.js` (same rules, in-memory).
 
 ## Repo map
@@ -102,18 +102,25 @@ Backend source of truth: `backend/app/operational.py` (SQLite). Offline mirror:
 ```bash
 # 1. ML pipeline (regenerates every artifact; ~11s; prints self-check table)
 python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements-ml.txt
 cd ml/pipeline && python run_all.py
 
-# 2. Backend
+# 2. MongoDB (state + artifacts live here — Vercel has no writable disk)
+pip install -r requirements.txt          # light: fastapi + pymongo + dnspython
+export MONGODB_URI="mongodb+srv://..."    # Atlas or local mongo
+python scripts/migrate_to_mongo.py        # upload artifacts + seed rosters
+
+# 3. Backend
 cd backend && pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 
-# 3. Frontend
+# 4. Frontend (VITE_API_BASE stays empty; Vite proxies /api -> :8000)
 cd frontend && npm install && cp .env.example .env && npm run dev   # :5173
 
 # One command
 docker compose up --build     # frontend :5173, backend :8000
+
+# Deploy: one repo -> one Vercel project. See DEPLOY.md.
 ```
 
 ## Working norms for agents

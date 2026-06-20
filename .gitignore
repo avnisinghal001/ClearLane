@@ -20,7 +20,11 @@ node_modules/
 frontend/dist/
 frontend/.env
 
-# Secrets & runtime state
+# Vercel
+.vercel/
+
+# Secrets & runtime state (Mongo replaces the old SQLite store)
+.env
 backend/.env
 backend/data/*.db
 

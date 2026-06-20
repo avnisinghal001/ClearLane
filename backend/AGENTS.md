@@ -9,10 +9,10 @@ The backend is a **thin, stateless-ish serving layer over precomputed artifacts*
 It does NOT run any ML. The pipeline (`ml/pipeline/`) already produced every
 number; this layer just:
 
-- loads the JSON/parquet artifacts from `data/processed/` (or a demo/override dir),
+- loads the JSON artifacts from **MongoDB** (filesystem fallback in local dev),
 - sanitizes `NaN`/`Inf` → `null` (`_scrub` / `_safe`) so the JSON is always valid,
 - gzips large payloads, sets permissive CORS, and bbox-filters heavy layers,
-- runs the **operational closed loop** (the only stateful part) in SQLite.
+- runs the **operational closed loop** + Force Command (the stateful parts) in MongoDB.
 
 Keep the core read APIs **fully deterministic**. Anything that calls an external
 service or LLM is a clearly-labelled **deployment extension** behind a flag.
@@ -24,28 +24,28 @@ cd backend && pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
-`requirements.txt`: `fastapi`, `uvicorn[standard]`. `anthropic` is optional
-(commented) — only needed for the LLM copilot extension.
+`backend/requirements.txt`: `fastapi`, `uvicorn[standard]`, `pymongo`, `dnspython`.
+`anthropic` is optional (commented) — only needed for the LLM copilot extension.
+Connection comes from `MONGODB_URI` / `MONGODB_DB` (see `app/db.py`).
 
 ## Files
 
+- `app/db.py` — MongoDB connection (cached client) + artifact store (Mongo→FS fallback).
 - `app/main.py` — the read APIs (serve artifacts) + the copilot extension.
-- `app/operational.py` — the live loop (`APIRouter` mounted by `main.py`), SQLite-backed.
-- `data/clearlane.db` — SQLite store, created on startup (gitignored runtime state).
+- `app/operational.py` — the live loop (`APIRouter` mounted by `main.py`), MongoDB-backed.
+- `app/force.py` — RBAC auth + station/officer rosters, MongoDB-backed.
 - `Dockerfile` — image that bundles only the artifacts (see `CLEARLANE_ARTIFACTS`).
 
 ## Artifact resolution (important)
 
-`_art_dir()` in both `main.py` and `operational.py` resolves where artifacts live,
-in priority order:
+`db.artifact(name)` resolves where each JSON artifact comes from, in priority order:
 
-1. `CLEARLANE_ARTIFACTS` env var (used by the Docker image, which bundles only artifacts);
-2. if `CLEARLANE_DEMO_MODE=1` → the `frontend/public/demo/` bundle;
-3. else `data/processed/` if `map_payload.json` exists there, otherwise the demo bundle.
+1. the MongoDB `artifacts` collection (`{_id: "<name>.json", data: …}`);
+2. filesystem fallback: `data/processed/` then `frontend/public/demo/`.
 
-`load()` caches artifacts in `_CACHE` and last-resort-falls-back to the demo dir.
-**If you add an artifact**, make sure it exists in both `data/processed/` and the
-demo bundle (the pipeline's `_bundle_demo` handles the latter).
+Results are cached in `db._artifact_cache`. **If you add an artifact**, re-run
+`python scripts/migrate_to_mongo.py` so it lands in MongoDB, and make sure it
+exists in the demo bundle too (the pipeline's `_bundle_demo` handles the latter).
 
 ## Read endpoints (`main.py`)
 
@@ -75,8 +75,9 @@ All responses go through `ok()` → `_scrub()`. Use that wrapper for new routes.
 ## Operational loop (`operational.py`) — the stateful part
 
 The live closed loop: **complaint → verify → dispatch → clear**, persisted in
-SQLite. Mounted as an `APIRouter` with prefix `/api`; `main.py` calls
-`operational.init_db()` on startup.
+MongoDB. Mounted as an `APIRouter` with prefix `/api`; `init_db()` runs lazily on
+first request (Vercel doesn't run ASGI startup events reliably) and on `uvicorn`
+startup.
 
 **HARD RULE: this layer NEVER modifies historical ML scores.** Every zone carries
 three separate numbers (see root AGENTS.md): `historical_priority` (immutable,
@@ -124,5 +125,6 @@ never depends on it. Keep it clearly labelled as a deployment extension.
 
 - Wrap every response in `ok()` so NaN/Inf scrubbing and JSON encoding stay uniform.
 - Don't add ML/compute here — produce it in the pipeline and serve the artifact.
-- Don't introduce statefulness outside `operational.py`'s SQLite store.
+- Don't introduce statefulness outside the MongoDB collections used by
+  `operational.py` / `force.py` (Vercel's filesystem is read-only).
 - Keep CORS/gzip middleware intact; the frontend relies on cross-origin + gzip.

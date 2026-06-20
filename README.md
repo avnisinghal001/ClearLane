@@ -32,27 +32,40 @@ bias, corrected for it, and extracted operational intelligence:
 
 ---
 
-## Quick start
+> **Deploying to Vercel?** It's a one-repo, one-project deploy (static Vite
+> frontend + a Python serverless API backed by MongoDB). See **[DEPLOY.md](DEPLOY.md)**.
+
+## Quick start (local)
 
 ### 1. Run the ML pipeline (regenerates every artifact)
 ```bash
 python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-cd ml/pipeline && python run_all.py        # ~11s; prints a self-check vs verified targets
+pip install -r requirements-ml.txt          # heavy pipeline stack
+cd ml/pipeline && python run_all.py          # ~11s; prints a self-check vs verified targets
 ```
 The raw 110 MB CSV is gitignored (over the 50 MB limit). A 500-row sample is at
 `data/raw/sample_500.csv`. Drop the full file in `data/raw/` to regenerate from scratch.
 
-### 2. Backend
+### 2. MongoDB (state + artifacts live here — Vercel has no writable disk)
+```bash
+pip install -r requirements.txt              # light: fastapi + pymongo + dnspython
+export MONGODB_URI="mongodb+srv://..."        # MongoDB Atlas (or local mongo)
+python scripts/migrate_to_mongo.py            # upload artifacts + seed rosters
+```
+Without `MONGODB_URI` the backend still serves reads from the bundled artifacts and
+the frontend uses its offline engine — but live writes need Mongo.
+
+### 3. Backend
 ```bash
 cd backend && pip install -r requirements.txt
+export MONGODB_URI="mongodb+srv://..."
 uvicorn app.main:app --reload --port 8000
 ```
 
-### 3. Frontend
+### 4. Frontend
 ```bash
 cd frontend && npm install
-cp .env.example .env          # VITE_API_BASE=http://localhost:8000
+cp .env.example .env          # VITE_API_BASE stays EMPTY; Vite proxies /api → :8000
 npm run dev                   # http://localhost:5173
 ```
 The dashboard **always renders** — if the backend is down it loads the bundled

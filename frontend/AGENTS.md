@@ -13,9 +13,9 @@
 
 ```bash
 cd frontend && npm install
-cp .env.example .env          # VITE_API_BASE=http://localhost:8000
+cp .env.example .env          # VITE_API_BASE empty -> same-origin /api (Vite proxy in dev, Vercel fn in prod)
 npm run dev                   # http://localhost:5173
-npm run build                 # -> dist/  (bundle is ~120KB gz; keep it lean)
+npm run build                 # -> dist/  (bundle is ~150KB gz; keep it lean)
 ```
 
 ## The offline-first contract (do not break this)
