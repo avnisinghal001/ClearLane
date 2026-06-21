@@ -55,12 +55,14 @@ python scripts/migrate_to_mongo.py            # upload artifacts + seed rosters
 Without `MONGODB_URI` the backend still serves reads from the bundled artifacts and
 the frontend uses its offline engine — but live writes need Mongo.
 
-### 3. Backend
+### 3. API (the same app Vercel runs — serves v1 + v3 routers)
 ```bash
-cd backend && pip install -r requirements.txt
+pip install -r api/requirements.txt
 export MONGODB_URI="mongodb+srv://..."
-uvicorn app.main:app --reload --port 8000
+uvicorn clearlane.main:app --reload --port 8000 --app-dir api
 ```
+> The FastAPI app lives in `api/clearlane/` and deploys via `api/index.py`. The old
+> `backend/app/` is gone — `backend/` is now just a Docker stub.
 
 ### 4. Frontend
 ```bash
@@ -85,8 +87,11 @@ docker compose up --build     # frontend :5173, backend :8000
 | `ml/pipeline/config.py` | **single source of truth** — every verified fact, weight, threshold |
 | `ml/pipeline/01..08_*.py` | clean → superzones → scores → advanced → forecaster → timing-gap → validation → payload |
 | `ml/pipeline/run_all.py` | one command; prints the **self-check table** (flags any metric >15% off) |
-| `backend/app/main.py` | FastAPI serving precomputed artifacts (NaN-safe, gzip, CORS, demo mode) |
-| `frontend/` | React + Vite + react-leaflet command center |
+| `ml.v3/` | **v3** H3 cell-based pipeline (12 stages) → `data/processed/v3/` |
+| `api/clearlane/main.py` | FastAPI serving precomputed artifacts (NaN-safe, gzip, CORS, demo mode); deploys via `api/index.py` |
+| `api/clearlane/v3.py` | v3 cell APIs + H3 closed loop (`/api/v3/*`) |
+| `frontend/` | **deployed** React + Vite + react-leaflet command center (JSX) |
+| `frontend.v3/` | React + TypeScript + shadcn role-based app (not deployed yet) |
 | `outputs/reports/` | cleaning summary, validation, forecaster metrics (judge-facing) |
 | `docs/METHODOLOGY.md` | honesty statement, weights + rationale, validation, limitations |
 

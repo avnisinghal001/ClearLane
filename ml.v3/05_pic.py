@@ -101,7 +101,8 @@ def run() -> dict:
     cells.reset_index().to_parquet(C.DATA_PROC / "pic.parquet", index=False)
 
     keep = ["h3_r10", "lat", "lon", "police_station", "intensity",
-            "congestion_severity", "congestion_source", "pic_raw", "pic_score", "pic_rank"]
+            "congestion_severity", "congestion_source", "road_class",
+            "pic_raw", "pic_score", "pic_rank"]
     top = (cells.reset_index().sort_values("pic_score", ascending=False)
            .head(200)[[k for k in keep if k in cells.reset_index().columns]])
     summary = {

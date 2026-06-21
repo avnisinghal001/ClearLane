@@ -47,35 +47,32 @@ export function TimeControl({
         })}
       </div>
 
-      {isForecast ? (
-        <div className="px-1 pt-2">
-          <div className="flex items-baseline justify-between">
-            <span className="text-xs font-medium text-muted-foreground">
-              {dowLabel(value.when)} · forecast
-            </span>
-            <span className={cn("num text-sm font-semibold", peak ? "text-primary" : "text-foreground")}>
-              {fmtHour(value.hour)}
-              {peak ? ` · assumed ${peak} window` : ""}
-            </span>
-          </div>
-          <input
-            type="range"
-            min={0}
-            max={23}
-            value={value.hour}
-            onChange={(e) => onChange({ ...value, hour: +e.target.value })}
-            className="mt-1.5 w-full accent-primary"
-          />
-          <p className="mt-1 text-[11px] leading-tight text-muted-foreground">
-            Modeled expected violations (recorded weekday × hour-of-day pattern). Congestion windows are stated
-            assumptions — <b>not</b> measured peaks.
-          </p>
+      {/* Hour scrubber — drives the 24 hourly heatmaps in EVERY mode (live + forecast) */}
+      <div className="px-1 pt-2">
+        <div className="flex items-baseline justify-between">
+          <span className="text-xs font-medium text-muted-foreground">
+            {isForecast ? `${dowLabel(value.when)} · forecast` : "Live"} · hour-of-day
+          </span>
+          <span className={cn("num text-sm font-semibold", peak ? "text-primary" : "text-foreground")}>
+            {fmtHour(value.hour)}
+            {peak ? ` · ${peak} peak` : ""}
+          </span>
         </div>
-      ) : (
-        <p className="px-1 pt-2 text-[11px] leading-tight text-muted-foreground">
-          Live snapshot — PIC blends bias-corrected intensity with congestion severity (provenance badged per cell).
+        <input
+          type="range"
+          min={0}
+          max={23}
+          value={value.hour}
+          onChange={(e) => onChange({ ...value, hour: +e.target.value })}
+          className="mt-1.5 w-full accent-primary"
+          aria-label="Hour of day"
+        />
+        <p className="mt-1 text-[11px] leading-tight text-muted-foreground">
+          Heatmap = historical PIC × <b>modeled typical congestion</b> for this hour
+          {isForecast ? ` (${dowLabel(value.when)} day-of-week propensity)` : ""}. Congestion varies by
+          hour; ticket counts are day-of-week (upload time) — <b>not</b> measured peaks.
         </p>
-      )}
+      </div>
     </div>
   );
 }

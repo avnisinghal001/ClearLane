@@ -38,7 +38,8 @@ STAGES = ["01_clean", "02_h3_bin", "03_features", "04_exposure_nb",   # Phase 1
           "09_online",                                                # Phase 5 (online learning)
           "10_causal",                                                # Phase 6 (quasi-causal panel)
           "11_evaluate",                                              # Phase 7 (scorecard)
-          "12_sim_rl"]                                                # Phase 8 (sim dispatch policy)
+          "12_sim_rl",                                                # Phase 8 (sim dispatch policy)
+          "13_hourly_congestion"]                                     # Phase 9 (hourly congestion overlay)
 
 
 def _load(stage):

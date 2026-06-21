@@ -1,4 +1,4 @@
-import { Layers, ShieldCheck, TrendingUp, Crosshair, Activity, BadgeCheck } from "lucide-react";
+import { Layers, TrendingUp, Crosshair, Activity, BadgeCheck } from "lucide-react";
 import { Kpi } from "@/components/Kpi";
 import { num, pct } from "@/lib/format";
 import type { Kpis } from "@/lib/types";

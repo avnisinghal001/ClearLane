@@ -1,7 +1,24 @@
 # AGENTS.md — ClearLane AI (root)
 
 > Guidance for AI coding agents (and humans) working in this repo. Read this first,
-> then the scoped `AGENTS.md` in `ml/`, `backend/`, and `frontend/`.
+> then the scoped `AGENTS.md` for the layer you're touching:
+> `api/clearlane/` (the API), `ml/` (v1 pipeline), `ml.v3/` (v3 pipeline),
+> `frontend/` (deployed JSX app), `frontend.v3/` (TS role-based successor).
+>
+> **This repo has two coexisting generations — know which one you're in:**
+>
+> | | Generation v1 (DEPLOYED) | Generation v3 (newer) |
+> |---|---|---|
+> | ML | `ml/pipeline/` (8 stages, zone-based) | `ml.v3/` (12 stages, H3 cell-based) |
+> | Artifacts | `data/processed/*.json` | `data/processed/v3/*` |
+> | API | `api/clearlane/main.py` (+ `operational.py`, `force.py`) | `api/clearlane/v3.py` |
+> | Frontend | `frontend/` (React 18 + JSX) | `frontend.v3/` (React 18 + **TS** + shadcn) |
+> | Demo bundle | `frontend/public/demo/` | `frontend.v3/public/demo-v3/` |
+>
+> `vercel.json` currently builds **`frontend/`** and serves the whole FastAPI app
+> (all routers, including `/api/v3`) through **`api/index.py`**. So the v3 API is
+> live, but the deployed UI is still the v1 `frontend/`. Don't assume `frontend.v3`
+> is wired into production unless `vercel.json` says so.
 
 ## What this project is
 
@@ -53,24 +70,40 @@ All of these are checked against the raw file and codified in `ml/pipeline/confi
 - Timestamps are stored UTC (+00); all user-facing times are **IST** (+5:30).
 - Bengaluru bbox: lat 12.80–13.29, lon 77.44–77.77 (0 missing coords).
 
-## Architecture (three layers, one data flow)
+## Architecture (precompute → serve → render, ×2 generations)
 
 ```
-ml/pipeline/  ──(writes)──>  data/processed/*.json|*.parquet
-                                   │
-                                   ├──> backend/app/  (FastAPI serves artifacts)
-                                   │         │
-                                   │         └──> frontend/  (React dashboard)
-                                   │
-                                   └──> frontend/public/demo/  (offline fallback bundle)
+v1:  ml/pipeline/  ──writes──>  data/processed/*.json|*.parquet
+                                      │
+                                      ├──> api/clearlane/main.py  (FastAPI serves artifacts)
+                                      │         │
+                                      │         └──> frontend/  (React JSX dashboard)
+                                      │
+                                      └──> frontend/public/demo/  (offline fallback bundle)
+
+v3:  ml.v3/  ──writes──>  data/processed/v3/*.json|*.parquet
+                                      │
+                                      ├──> api/clearlane/v3.py  (FastAPI /api/v3 cell APIs + H3 loop)
+                                      │         │
+                                      │         └──> frontend.v3/  (React TS, 3 role apps)
+                                      │
+                                      └──> frontend.v3/public/demo-v3/  (offline fallback bundle)
+
+Deploy (vercel.json):  api/index.py  →  imports the WHOLE FastAPI app (v1 + v3 routers)
+                       frontend/      →  static Vite build at the web root
+                       cron hourly    →  GET /api/v3/cron/recompute
 ```
 
-- **ML is precomputed and deterministic.** The backend does not run models; it
-  loads, sanitizes, and serves the JSON/parquet artifacts the pipeline produced.
-- The pipeline copies a curated set of artifacts into
-  `frontend/public/demo/` so the dashboard renders **even with no backend**.
-- The frontend tries the live API, then transparently falls back to the demo
+- **ML is precomputed and deterministic.** The API does not run models; it loads,
+  sanitizes, and serves the JSON/parquet artifacts a pipeline produced. (Exceptions:
+  the live Mappls dispatch *rerank* and the bandit/online-rate updates — explicitly
+  labelled, additive, and never modify historical ML scores.)
+- Each pipeline copies a curated set of artifacts into its frontend's demo bundle
+  so the UI renders **even with no backend**.
+- Each frontend tries the live API, then transparently falls back to the demo
   bundle (badge flips to "DEMO (offline)").
+- **State lives in MongoDB**, not on disk — Vercel's filesystem is read-only. The
+  API resolves artifacts MongoDB-first, filesystem-fallback (see `api/clearlane/db.py`).
 
 ## The three-number separation (operational layer)
 
@@ -81,47 +114,63 @@ clear) but must keep three numbers strictly separate per zone:
 - `live_adjustment` — transparent rule-based boost/cooldown (decays over time).
 - `operational_priority` — `historical + live_adjustment`, clamped 0–100.
 
-Backend source of truth: `backend/app/operational.py` (MongoDB). Offline mirror:
-`frontend/src/lib/localOps.js` (same rules, in-memory).
+API source of truth: `api/clearlane/operational.py` (v1 zones) and
+`api/clearlane/v3.py` (v3 H3 cells) — both in MongoDB. Offline mirrors:
+`frontend/src/lib/localOps.js` and `frontend.v3/src/lib/localStore.ts` (same rules,
+in-memory).
 
 ## Repo map
 
 | Path | What |
 |------|------|
-| `ml/pipeline/` | **canonical** 8-stage pipeline + `config.py` + `utils.py` + `run_all.py`. See `ml/AGENTS.md`. |
+| `ml/pipeline/` | **v1** 8-stage zone pipeline + `config.py` + `run_all.py`. See `ml/AGENTS.md`. |
+| `ml.v3/` | **v3** 12-stage H3 cell pipeline + Mappls cache layer. See `ml.v3/AGENTS.md`. |
+| `api/clearlane/` | the **canonical** FastAPI app (deployed via `api/index.py`). See `api/clearlane/AGENTS.md`. |
+| `api/index.py` | Vercel `@vercel/python` entry — exposes `clearlane.main:app`. |
+| `frontend/` | **deployed** React + Vite + react-leaflet JSX command center. See `frontend/AGENTS.md`. |
+| `frontend.v3/` | React + **TS** + shadcn role-based app (citizen/police/govt). See `frontend.v3/AGENTS.md`. |
+| `backend/` | **legacy stub** — only a `Dockerfile`/`requirements.txt`. The app moved to `api/clearlane/`. |
 | `data/raw/` | raw CSV (gitignored) + `sample_500.csv`. |
-| `data/processed/` | pipeline outputs (parquet + JSON artifacts). |
-| `backend/app/` | FastAPI: `main.py` (read APIs) + `operational.py` (live loop). See `backend/AGENTS.md`. |
-| `frontend/` | React + Vite + react-leaflet command center. See `frontend/AGENTS.md`. |
-| `frontend/public/demo/` | bundled artifacts for offline rendering. |
-| `outputs/reports/` | judge-facing text reports (cleaning, validation, forecaster). |
-| `docs/` | `METHODOLOGY.md`, `PRODUCT_SCOPE.md`, `CURRENT_STATE_AUDIT.md`. |
+| `data/processed/` | v1 artifacts; `data/processed/v3/` holds v3 artifacts. |
+| `*/public/demo*/` | bundled artifacts for offline rendering. |
+| `outputs/reports/` | judge-facing text reports; `outputs/reports/v3/` for v3. |
+| `docs/` | `METHODOLOGY.md`, `PRODUCT_SCOPE.md`, `ML_ARCHITECTURE.md`, `ML_ARCHITECTURE.v3.md`, `CURRENT_STATE_AUDIT.md`. |
+| `scripts/migrate_to_mongo.py` | upload artifacts + seed rosters into MongoDB. |
+| `ml-v2/` | **unrelated experiment** (Astram/CatBoost routing API) — not part of the ClearLane data flow. |
 
 ## Run it
 
 ```bash
-# 1. ML pipeline (regenerates every artifact; ~11s; prints self-check table)
-python -m venv .venv && source .venv/bin/activate
+# 0. one venv at the repo root for everything Python
+python -m venv .venv && source .venv/bin/activate   # .\.venv\Scripts\Activate.ps1 on Windows
+
+# 1a. v1 ML pipeline (regenerates data/processed/*; ~11s; prints self-check table)
 pip install -r requirements-ml.txt
-cd ml/pipeline && python run_all.py
+cd ml/pipeline && python run_all.py && cd ../..
+
+# 1b. v3 ML pipeline (regenerates data/processed/v3/*; ~75s on full data)
+pip install -r ml.v3/requirements.txt
+python ml.v3/run_all.py
 
 # 2. MongoDB (state + artifacts live here — Vercel has no writable disk)
-pip install -r requirements.txt          # light: fastapi + pymongo + dnspython
 export MONGODB_URI="mongodb+srv://..."    # Atlas or local mongo
 python scripts/migrate_to_mongo.py        # upload artifacts + seed rosters
 
-# 3. Backend
-cd backend && pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
+# 3. API (the same app Vercel runs; serves v1 + v3 routers)
+pip install -r api/requirements.txt
+uvicorn clearlane.main:app --reload --port 8000 --app-dir api
 
-# 4. Frontend (VITE_API_BASE stays empty; Vite proxies /api -> :8000)
-cd frontend && npm install && cp .env.example .env && npm run dev   # :5173
+# 4a. v1 frontend (VITE_API_BASE empty; Vite proxies /api -> :8000)
+cd frontend && npm install && cp .env.example .env && npm run dev      # :5173
+# 4b. v3 frontend
+cd frontend.v3 && npm install && cp .env.example .env && npm run dev   # :5173
 
-# One command
-docker compose up --build     # frontend :5173, backend :8000
-
-# Deploy: one repo -> one Vercel project. See DEPLOY.md.
+# Deploy: one repo -> one Vercel project (api/index.py + frontend/). See DEPLOY.md.
 ```
+
+> `uvicorn app.main:app` (the old path) no longer exists — the app is
+> `clearlane.main:app` under `api/`. `docker-compose.yml` and `backend/Dockerfile`
+> predate the move; treat `api/index.py` as the source of truth for how it runs.
 
 ## Working norms for agents
 
@@ -131,10 +180,14 @@ docker compose up --build     # frontend :5173, backend :8000
 - After any pipeline change, run `python run_all.py` — it exits non-zero if any
   headline metric drifts >15% from the §2 targets. Treat a flag as a real
   regression to explain, not to silence.
-- If you change an artifact's shape, update **all three** consumers: the pipeline
-  emitter (`08_payload.py`), the backend route, and the frontend reader — plus
-  re-bundle the demo (`run_all.py` does this unless `--no-demo`).
+- If you change an artifact's shape, update the **whole chain** for that generation:
+  the pipeline emitter (v1 `08_payload.py` / v3 stage), the API route
+  (`api/clearlane/main.py` or `v3.py`), the frontend reader (`api.js` / `api.ts`),
+  and re-bundle the demo. Don't change a v1 artifact and expect v3 to follow (or
+  vice-versa) — they are separate pipelines with separate consumers.
 - Match the surrounding code's terse, comment-light-but-pointed style. The
-  docstrings in each stage state the honesty guardrail and the self-check target —
-  keep that pattern.
+  docstrings in each stage/module state the honesty guardrail and the self-check
+  target — keep that pattern.
+- Confirm which generation a request targets before editing. If unclear, the
+  **deployed** path (v1 + `frontend/`) is the safer default to assume.
 - Don't commit or push unless asked.

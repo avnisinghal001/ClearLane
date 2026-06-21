@@ -1,17 +1,16 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { CircleMarker, MapContainer, Marker, Polyline, Popup, Tooltip, useMap, useMapEvents } from "react-leaflet";
-import L from "leaflet";
-import { Layers, Crosshair, Flame, Car, Route as RouteIcon } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Layers, Crosshair, Flame, Car, Route as RouteIcon, Loader2, AlertTriangle } from "lucide-react";
 import type { Cell, DispatchRoute } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { sourceMeta } from "@/lib/format";
-import { BaseLayer, type BaseKind } from "./BaseLayer";
-import { TrafficLayer } from "./TrafficLayer";
-import { HeatLayer } from "./HeatLayer";
+import { toast } from "@/components/toast";
+import { useMapKeys } from "@/hooks/useConfig";
+import { initBestMap, PROVIDER_TOTAL, type MapEngine } from "./engines";
+import type { CircleSpec, HeatPoint, PinSpec, PolylineSpec } from "./engines/types";
 import { circleColor, circleRadius, displayIntensity, heatPoints, type ColorMode } from "./layers";
-import { numIcon, pinIcon, userIcon } from "./pin";
 
 const BLR: [number, number] = [12.9716, 77.5946];
+const ROUTE_COLORS = ["#ea580c", "#2563eb", "#16a34a", "#9333ea", "#dc2626", "#0891b2"];
 
 export interface MapPin {
   key: string;
@@ -26,7 +25,6 @@ export interface MapPin {
 interface Props {
   cells: Cell[];
   source: "live" | "forecast";
-  mapKey: string | null;
   userLocation?: [number, number] | null;
   flyTo?: [number, number] | null;
   onCellClick?: (c: Cell) => void;
@@ -39,46 +37,9 @@ interface Props {
   className?: string;
 }
 
-function Camera({ flyTo, user, defaultZoom }: { flyTo?: [number, number] | null; user?: [number, number] | null; defaultZoom: number }) {
-  const map = useMap();
-  // Center on the user's location once on load.
-  useEffect(() => {
-    if (user) map.setView(user, Math.max(map.getZoom(), 14), { animate: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.[0], user?.[1]]);
-  useEffect(() => {
-    if (flyTo) map.flyTo(flyTo, Math.max(map.getZoom(), 16), { duration: 0.8 });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [flyTo?.[0], flyTo?.[1]]);
-  // keep tiles sized correctly after layout shifts
-  useEffect(() => {
-    const t = setTimeout(() => map.invalidateSize(), 250);
-    return () => clearTimeout(t);
-  }, [map, defaultZoom]);
-  return null;
-}
-
-function MapRef({ onReady }: { onReady: (m: L.Map) => void }) {
-  const map = useMap();
-  useEffect(() => onReady(map), [map, onReady]);
-  return null;
-}
-
-function PickHandler({ active, onPick }: { active: boolean; onPick?: (ll: [number, number]) => void }) {
-  useMapEvents({
-    click(e) {
-      if (active && onPick) onPick([e.latlng.lat, e.latlng.lng]);
-    },
-  });
-  return null;
-}
-
-const ROUTE_COLORS = ["#ea580c", "#2563eb", "#16a34a", "#9333ea", "#dc2626", "#0891b2"];
-
 export function ClearLaneMap({
   cells,
   source,
-  mapKey,
   userLocation,
   flyTo,
   onCellClick,
@@ -90,155 +51,212 @@ export function ClearLaneMap({
   defaultZoom = 12,
   className,
 }: Props) {
-  const [base, setBase] = useState<BaseKind>("mappls");
-  const [baseResolved, setBaseResolved] = useState<"mappls" | "carto" | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const engineRef = useRef<MapEngine | null>(null);
+  const { restKey, staticKey, ready } = useMapKeys();
+
+  const [info, setInfo] = useState<{ label: string; priority: number; supportsTraffic: boolean } | null>(null);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [showHeat, setShowHeat] = useState(defaultHeat);
   const [trafficOn, setTrafficOn] = useState(false);
-  const [trafficStatus, setTrafficStatus] = useState<"on" | "unavailable" | null>(null);
   const [colorMode, setColorMode] = useState<ColorMode>("pic");
   const [showRoutes, setShowRoutes] = useState(Boolean(routes?.length));
-  const [open, setOpen] = useState(false);
-  const [mapInst, setMapInst] = useState<L.Map | null>(null);
+  const [panelOpen, setPanelOpen] = useState(false);
 
-  const onResolved = useCallback((w: "mappls" | "carto") => setBaseResolved(w), []);
-  const onTraffic = useCallback((s: "on" | "unavailable") => setTrafficStatus(s), []);
+  // keep latest callbacks/flags without re-subscribing the map click handler
+  const pickRef = useRef(pickMode);
+  pickRef.current = pickMode;
+  const onPickRef = useRef(onPick);
+  onPickRef.current = onPick;
+  const onCellRef = useRef(onCellClick);
+  onCellRef.current = onCellClick;
+  const centeredRef = useRef(false);
 
+  // ---- init the engine fallback chain once keys are resolved -------------
+  useEffect(() => {
+    if (!ready || !containerRef.current) return;
+    let cancelled = false;
+    setStatus("loading");
+    initBestMap({ container: containerRef.current, center: BLR, zoom: defaultZoom, restKey, staticKey })
+      .then(({ engine, attempts }) => {
+        if (cancelled) {
+          engine.destroy();
+          return;
+        }
+        engineRef.current = engine;
+        setInfo({ label: engine.label, priority: engine.priority, supportsTraffic: engine.supportsTraffic });
+        setStatus("ready");
+        engine.onMapClick((lat, lon) => {
+          if (pickRef.current && onPickRef.current) onPickRef.current([lat, lon]);
+        });
+        setTimeout(() => engine.invalidate(), 120);
+        const failed = attempts.find((a) => !a.ok);
+        if (engine.priority === 1) {
+          toast(`Map ready · ${engine.label} (source ${engine.priority}/${PROVIDER_TOTAL})`, { tone: "success" });
+        } else {
+          toast(`${failed?.label ?? "Primary map"} unavailable — using ${engine.label} (source ${engine.priority}/${PROVIDER_TOTAL})`, {
+            tone: "warning",
+          });
+        }
+      })
+      .catch(() => !cancelled && setStatus("error"));
+    return () => {
+      cancelled = true;
+      engineRef.current?.destroy();
+      engineRef.current = null;
+    };
+  }, [ready, restKey, staticKey, defaultZoom]);
+
+  // ---- circles + heat -----------------------------------------------------
   const maxIntensity = useMemo(() => Math.max(1, ...cells.map((c) => displayIntensity(c, source))), [cells, source]);
-  const heat = useMemo(() => heatPoints(cells, source), [cells, source]);
+  useEffect(() => {
+    const engine = engineRef.current;
+    if (!engine || status !== "ready") return;
+    const circleSpecs: CircleSpec[] = cells.map((c) => ({
+      id: c.h3_r10,
+      lat: c.lat,
+      lon: c.lon,
+      radius: circleRadius(c, source, maxIntensity),
+      color: c.emerging ? "#b91c1c" : circleColor(c, colorMode),
+      fillColor: circleColor(c, colorMode),
+      weight: c.emerging ? 2 : 0.6,
+      tooltip: `${c.police_station || "—"} · PIC ${Math.round(c.pic_score)}${c.emerging ? " · emerging" : ""}`,
+      onClick: () => onCellRef.current?.(c),
+    }));
+    const heatSpecs: HeatPoint[] = heatPoints(cells, source).map(([lat, lon, intensity]) => ({ lat, lon, intensity }));
+    engine.setCircles(showHeat ? [] : circleSpecs);
+    engine.setHeat(heatSpecs, showHeat);
+  }, [cells, source, colorMode, showHeat, maxIntensity, status]);
+
+  // ---- pins (role pins + numbered route stops + user) + route polylines ---
+  useEffect(() => {
+    const engine = engineRef.current;
+    if (!engine || status !== "ready") return;
+    const pinSpecs: PinSpec[] = (pins ?? []).map((p) => ({
+      id: p.key,
+      lat: p.lat,
+      lon: p.lon,
+      color: p.color ?? "#ea580c",
+      pulse: p.pulse,
+      popup: p.label,
+      onClick: p.onClick,
+      kind: "pin",
+    }));
+    if (showRoutes && routes) {
+      routes.forEach((rt, ri) =>
+        rt.stops.forEach((s, si) =>
+          pinSpecs.push({
+            id: `stop-${rt.station}-${si}`,
+            lat: s.lat,
+            lon: s.lon,
+            color: ROUTE_COLORS[ri % ROUTE_COLORS.length],
+            kind: "num",
+            num: si + 1,
+            popup: `${rt.station} — stop ${si + 1} · PIC ${Math.round(s.pic_score)}`,
+          }),
+        ),
+      );
+    }
+    if (userLocation) pinSpecs.push({ id: "user", lat: userLocation[0], lon: userLocation[1], color: "#2563eb", kind: "user", popup: "You are here" });
+    engine.setPins(pinSpecs);
+
+    const lines: PolylineSpec[] =
+      showRoutes && routes
+        ? routes.map((rt, ri) => ({ id: rt.station, points: rt.stops.map((s) => [s.lat, s.lon] as [number, number]), color: ROUTE_COLORS[ri % ROUTE_COLORS.length] }))
+        : [];
+    engine.setPolylines(lines);
+  }, [pins, routes, showRoutes, userLocation, status]);
+
+  // ---- camera: fly-to + one-time center on the user ----------------------
+  useEffect(() => {
+    const engine = engineRef.current;
+    if (engine && status === "ready" && flyTo) engine.setView(flyTo, Math.max(engine.getZoom(), 16));
+  }, [flyTo, status]);
+  useEffect(() => {
+    const engine = engineRef.current;
+    if (engine && status === "ready" && userLocation && !centeredRef.current) {
+      engine.setView(userLocation, Math.max(engine.getZoom(), 14));
+      centeredRef.current = true;
+    }
+  }, [userLocation, status]);
+
+  // ---- traffic ------------------------------------------------------------
+  useEffect(() => {
+    const engine = engineRef.current;
+    if (engine && status === "ready" && engine.supportsTraffic) engine.setTraffic(trafficOn);
+  }, [trafficOn, status]);
+
+  // ---- keep sized on layout/viewport changes ------------------------------
+  useEffect(() => {
+    const onResize = () => engineRef.current?.invalidate();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  const trafficAvailable = info?.supportsTraffic ?? false;
 
   return (
-    <div className={cn("relative h-full w-full overflow-hidden", className)}>
-      <MapContainer center={BLR} zoom={defaultZoom} preferCanvas zoomControl={false} className="h-full w-full">
-        <BaseLayer base={base} mapKey={mapKey} onResolved={onResolved} />
-        {trafficOn && <TrafficLayer mapKey={mapKey} onStatus={onTraffic} />}
-        <MapRef onReady={setMapInst} />
-        <Camera flyTo={flyTo} user={userLocation} defaultZoom={defaultZoom} />
-        <PickHandler active={pickMode} onPick={onPick} />
+    <div className={cn("relative h-full w-full overflow-hidden bg-muted", className)}>
+      <div ref={containerRef} className="h-full w-full" />
 
-        {showHeat && heat.length > 0 && <HeatLayer points={heat} />}
-
-        {!showHeat &&
-          cells.map((c) => {
-            const r = circleRadius(c, source, maxIntensity);
-            const col = circleColor(c, colorMode);
-            return (
-              <CircleMarker
-                key={c.h3_r10}
-                center={[c.lat, c.lon]}
-                radius={r}
-                pathOptions={{
-                  color: c.emerging ? "#b91c1c" : col,
-                  weight: c.emerging ? 2 : 0.6,
-                  fillColor: col,
-                  fillOpacity: 0.62,
-                }}
-                eventHandlers={{ click: () => onCellClick?.(c) }}
-              >
-                <Tooltip direction="top" offset={[0, -2]} opacity={1}>
-                  <span className="text-[11px] font-medium">
-                    {c.police_station || "—"} · PIC {Math.round(c.pic_score)}
-                    {c.emerging ? " · emerging" : ""}
-                  </span>
-                </Tooltip>
-              </CircleMarker>
-            );
-          })}
-
-        {/* numbered dispatch route overlay */}
-        {showRoutes &&
-          routes?.map((rt, ri) =>
-            rt.stops.length ? (
-              <Polyline
-                key={"line-" + rt.station}
-                positions={rt.stops.map((s) => [s.lat, s.lon] as [number, number])}
-                pathOptions={{ color: ROUTE_COLORS[ri % ROUTE_COLORS.length], weight: 3, opacity: 0.8, dashArray: "6 4" }}
-              />
-            ) : null,
-          )}
-        {showRoutes &&
-          routes?.flatMap((rt, ri) =>
-            rt.stops.map((s, si) => (
-              <Marker key={`stop-${rt.station}-${si}`} position={[s.lat, s.lon]} icon={numIcon(si + 1, ROUTE_COLORS[ri % ROUTE_COLORS.length])}>
-                <Popup>
-                  <b>{rt.station}</b> — stop {si + 1}
-                  <br />
-                  PIC {Math.round(s.pic_score)} · {s.h3_r10}
-                </Popup>
-              </Marker>
-            )),
-          )}
-
-        {/* role pins (problem cells, open complaints, etc.) */}
-        {pins?.map((p) => (
-          <Marker key={p.key} position={[p.lat, p.lon]} icon={pinIcon(p.color || "#ea580c", p.pulse)} eventHandlers={{ click: () => p.onClick?.() }}>
-            {p.label && <Popup>{p.label}</Popup>}
-          </Marker>
-        ))}
-
-        {userLocation && (
-          <Marker position={userLocation} icon={userIcon()} zIndexOffset={1000}>
-            <Tooltip direction="top">You are here</Tooltip>
-          </Marker>
-        )}
-      </MapContainer>
+      {/* loading / error states — never a blank map */}
+      {status === "loading" && (
+        <div className="absolute inset-0 z-[450] flex flex-col items-center justify-center gap-3 bg-background/70 backdrop-blur-sm">
+          <Loader2 className="h-7 w-7 animate-spin text-primary" />
+          <div className="text-sm font-medium text-muted-foreground">Loading map…</div>
+        </div>
+      )}
+      {status === "error" && (
+        <div className="absolute inset-0 z-[450] flex flex-col items-center justify-center gap-2 p-6 text-center">
+          <AlertTriangle className="h-7 w-7 text-destructive" />
+          <div className="font-semibold">Map unavailable</div>
+          <div className="max-w-xs text-sm text-muted-foreground">All map providers failed to load. Check your network / API key & quota.</div>
+        </div>
+      )}
 
       {/* layer controls */}
       <div className="absolute right-3 top-3 z-[500] flex flex-col items-end gap-2">
         <button
-          onClick={() => setOpen((o) => !o)}
+          onClick={() => setPanelOpen((o) => !o)}
           className="flex h-10 w-10 items-center justify-center rounded-full border bg-background/95 text-foreground shadow-md backdrop-blur hover:bg-accent"
           aria-label="Map layers"
         >
           <Layers className="h-5 w-5" />
         </button>
-        {open && (
+        {panelOpen && (
           <div className="w-60 animate-slide-up rounded-xl border bg-background/97 p-3 text-sm shadow-xl backdrop-blur">
             <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Layers</div>
             <Toggle icon={<Flame className="h-4 w-4" />} label="Heatmap" checked={showHeat} onChange={setShowHeat} />
-            <div className="my-1">
-              <label className="flex cursor-pointer items-center justify-between gap-2 rounded-md px-1 py-1.5 hover:bg-accent">
+            {trafficAvailable ? (
+              <Toggle icon={<Car className="h-4 w-4" />} label="Live traffic" checked={trafficOn} onChange={setTrafficOn} />
+            ) : (
+              <div className="flex items-center justify-between gap-2 rounded-md px-1 py-1.5 text-muted-foreground">
                 <span className="flex items-center gap-2">
                   <Car className="h-4 w-4" /> Live traffic
                 </span>
-                <input type="checkbox" checked={trafficOn} onChange={(e) => setTrafficOn(e.target.checked)} className="accent-primary" />
-              </label>
-              {trafficOn && trafficStatus === "unavailable" && (
-                <div className="px-1 pb-1 text-[11px] leading-tight text-muted-foreground">
-                  Live Mappls traffic unavailable here (key/quota). Not simulated from tickets.
-                </div>
-              )}
-            </div>
-            {Boolean(routes?.length) && (
-              <Toggle icon={<RouteIcon className="h-4 w-4" />} label="Dispatch route" checked={showRoutes} onChange={setShowRoutes} />
+                <span className="rounded bg-muted px-1.5 py-0.5 text-[10px]">n/a on fallback basemap</span>
+              </div>
             )}
+            {Boolean(routes?.length) && <Toggle icon={<RouteIcon className="h-4 w-4" />} label="Dispatch route" checked={showRoutes} onChange={setShowRoutes} />}
             <div className="mt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Color points by</div>
-            <select
-              value={colorMode}
-              onChange={(e) => setColorMode(e.target.value as ColorMode)}
-              className="mt-1 w-full rounded-md border bg-background px-2 py-1.5 text-sm"
-            >
+            <select value={colorMode} onChange={(e) => setColorMode(e.target.value as ColorMode)} className="mt-1 w-full rounded-md border bg-background px-2 py-1.5 text-sm">
               <option value="pic">PIC score</option>
               <option value="operational">Operational priority</option>
               <option value="source">Congestion source</option>
             </select>
-            <div className="mt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Base map</div>
-            <select
-              value={base}
-              onChange={(e) => setBase(e.target.value as BaseKind)}
-              className="mt-1 w-full rounded-md border bg-background px-2 py-1.5 text-sm"
-            >
-              <option value="mappls">Mappls{baseResolved === "carto" ? " (→ Carto fallback)" : ""}</option>
-              <option value="light">Carto Light</option>
-              <option value="osm">OpenStreetMap</option>
-            </select>
+            {info && (
+              <div className="mt-2 text-[11px] text-muted-foreground">
+                Basemap: <b>{info.label}</b> (source {info.priority}/{PROVIDER_TOTAL})
+              </div>
+            )}
           </div>
         )}
       </div>
 
       {/* recenter on user */}
-      {userLocation && (
+      {userLocation && status === "ready" && (
         <button
-          onClick={() => mapInst?.flyTo(userLocation, Math.max(mapInst.getZoom(), 15), { duration: 0.7 })}
+          onClick={() => engineRef.current?.setView(userLocation, Math.max(engineRef.current.getZoom(), 15))}
           className="absolute bottom-3 right-3 z-[500] flex h-10 w-10 items-center justify-center rounded-full border bg-background/95 text-primary shadow-md backdrop-blur hover:bg-accent"
           aria-label="Recenter on my location"
           title="Recenter on my location"
@@ -260,13 +278,14 @@ export function ClearLaneMap({
           </div>
         ) : (
           <>
-            <div className="mb-1 font-medium">{colorMode === "operational" ? "Operational priority" : source === "forecast" ? "Forecast intensity" : "PIC score"}</div>
-            <div className="h-2 w-32 rounded-full" style={{ background: "linear-gradient(90deg,#fde68a,#fb923c,#ea580c,#b91c1c)" }} />
+            <div className="mb-1 font-medium">{colorMode === "operational" ? "Operational priority" : source === "forecast" ? "Forecast intensity" : "Hourly intensity"}</div>
+            <div className="h-2 w-32 rounded-full" style={{ background: "linear-gradient(90deg,#16a34a,#84cc16,#facc15,#f97316,#dc2626)" }} />
             <div className="mt-0.5 flex justify-between text-muted-foreground">
               <span>low</span>
+              <span>med</span>
               <span>high</span>
             </div>
-            <div className="mt-0.5 text-muted-foreground">modeled from tickets · not measured congestion</div>
+            <div className="mt-0.5 text-muted-foreground">historical PIC × typical congestion for the hour · not measured</div>
           </>
         )}
       </div>

@@ -114,7 +114,9 @@ def next_id(name: str) -> int:
 # Artifact store (the precomputed pipeline JSON)
 # --------------------------------------------------------------------------- #
 def _fs_artifact(name: str):
-    for d in (ROOT / "data" / "processed", ROOT / "frontend" / "public" / "demo"):
+    # v1 (legacy) artifacts — retained only as a generic loader; the v3-only API
+    # uses v3_artifact(). data/processed is the sole filesystem source now.
+    for d in (ROOT / "data" / "processed",):
         p = d / name
         if p.exists():
             try:
@@ -161,8 +163,7 @@ def save_artifact(name: str, data) -> None:
 # migration) and fall back to a flat "<name>" key, then the filesystem.
 def _fs_v3_artifact(name: str):
     for d in (ROOT / "data" / "processed" / "v3",
-              ROOT / "frontend" / "public" / "demo-v3",
-              ROOT / "frontend" / "public" / "demo" / "v3"):
+              ROOT / "frontend.v3" / "public" / "demo-v3"):
         p = d / name
         if p.exists():
             try:

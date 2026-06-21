@@ -282,6 +282,71 @@ def _hist_priority(cell):
 
 
 # --------------------------------------------------------------------------- #
+# HOURLY CONGESTION OVERLAY (stage 13 artifact; constant fallback) — the honest
+# "24 heatmaps". Congestion genuinely varies by hour, so it modulates the map by
+# hour; the historical propensity (pic_score) stays day-of-week. The shape is
+# MODELED from documented Bengaluru commute peaks — NEVER measured from tickets
+# (ticket time is upload time, so ticket COUNTS never vary by hour).
+# --------------------------------------------------------------------------- #
+_HC_BASE = [0.10, 0.07, 0.05, 0.05, 0.06, 0.12, 0.28, 0.55, 0.82, 0.95, 0.88, 0.70,
+            0.62, 0.60, 0.58, 0.62, 0.72, 0.90, 1.00, 0.95, 0.80, 0.55, 0.32, 0.18]
+_HC_AMP = {"ring_road": 1.00, "arterial": 0.95, "commercial": 0.90,
+           "main_road": 0.85, "local": 0.45, "unknown": 0.70}
+_HC_FLOOR = 0.08
+# how strongly the hour modulates the displayed heat (keeps spatial structure but
+# lets the map visibly pulse with the commute): heat = base·(BASE_W + CONG_W·cong)
+_HC_BASE_W, _HC_CONG_W = 0.40, 0.60
+_HC: dict | None = None
+
+
+def _hourly_congestion():
+    global _HC
+    if _HC is not None:
+        return _HC
+    d = db.v3_artifact("hourly_congestion.json")
+    if d and d.get("curves"):
+        _HC = {"curves": d["curves"], "global": d.get("global"),
+               "provenance": d.get("provenance", "modeled_typical")}
+    else:                                   # constant fallback (Vercel w/o artifact)
+        curves = {cls: [round(min(1.0, max(0.0, _HC_FLOOR + b * amp)), 4) for b in _HC_BASE]
+                  for cls, amp in _HC_AMP.items()}
+        glob = [round(min(1.0, max(0.0, _HC_FLOOR + b * 0.70)), 4) for b in _HC_BASE]
+        _HC = {"curves": curves, "global": glob, "provenance": "modeled_typical_fallback"}
+    return _HC
+
+
+def _cong_at(road_class, hour):
+    """Typical congestion 0..1 for a road class at an hour (0..23)."""
+    hc = _hourly_congestion()
+    h = int(hour) % 24
+    cur = (hc["curves"].get(road_class or "unknown") or hc.get("global")
+           or hc["curves"].get("unknown"))
+    try:
+        return float(cur[h])
+    except Exception:                       # pragma: no cover
+        return 0.5
+
+
+def _hour_heat(base, road_class, hour):
+    """Hour-modulated display heat: historical propensity × typical congestion."""
+    return _clamp(base * (_HC_BASE_W + _HC_CONG_W * _cong_at(road_class, hour)))
+
+
+def _city_hour_profile():
+    """City-average typical congestion per hour (24) for the time scrubber."""
+    hc = _hourly_congestion()
+    g = hc.get("global")
+    if g and len(g) == 24:
+        return [round(float(x), 3) for x in g]
+    cur = hc["curves"].get("arterial") or next(iter(hc["curves"].values()))
+    return [round(float(x), 3) for x in cur]
+
+
+def _ist_hour():
+    return datetime.datetime.now(_IST).hour
+
+
+# --------------------------------------------------------------------------- #
 # Cell live state (three-number separation), persisted in v3_cell_state
 # --------------------------------------------------------------------------- #
 def _decayed_boost(boost, updated_ts, now):
@@ -454,14 +519,18 @@ def v3_map(when: str = Query("now", pattern="^(now|today|tomorrow)$"),
            hour: int | None = Query(None, ge=0, le=23),
            limit: int = Query(250, ge=1, le=2000),
            authorization: str | None = Header(default=None)):
-    """The single composed payload the map renders. `now` = live PIC + operational
-    (congestion stays MODELED/typical until the live ETA product is enabled);
-    `today`/`tomorrow` overlay the forecast_daily day-of-week curve as
-    `forecast_intensity` (modeled, labelled). Cells = pic.json top PIC cells."""
+    """The single composed payload the map renders, hour-aware. The displayed
+    `intensity` = historical propensity (pic_score, day-of-week when forecasting)
+    × MODELED typical congestion for the chosen hour. Congestion genuinely varies
+    by hour; ticket COUNTS never do (upload time, not parking time). `now` overlays
+    the live operational boost; `today`/`tomorrow` overlay the forecast_daily
+    day-of-week curve. Served from the DB-cached hourly heatmap when present (kept
+    fresh by the govt force-recompute / hourly cron), else composed inline."""
     _ensure_init()
     _maybe_lazy_recompute()              # 24h read-path safety net (best-effort)
     idx = _indices()
     now = time.time()
+    hour_used = hour if hour is not None else _ist_hour()
 
     target_dow = None
     if when in ("today", "tomorrow"):
@@ -471,6 +540,7 @@ def v3_map(when: str = Query("now", pattern="^(now|today|tomorrow)$"),
         target_dow = _DOW[base.weekday()]   # Mon..Sun
     fc_order = idx["fc_order"]
     fc_max = idx["fc_max"] or 1.0
+    forecast_mode = when in ("today", "tomorrow")
 
     states = {}
     if db.mongo_enabled():
@@ -479,30 +549,51 @@ def v3_map(when: str = Query("now", pattern="^(now|today|tomorrow)$"),
         except Exception:                # pragma: no cover
             states = {}
 
+    # DB-cached deterministic hour heat (historical × congestion), baked by the
+    # govt force-recompute / cron. {h3: [24]}. Live boost is still applied on top.
+    cache = db.v3_artifact("heatmap_hourly.json") or {}
+    cache_cells = cache.get("cells") or {}
+
     cells = []
     for c in idx["pic_list"][:limit]:
         h = c["h3_r10"]
         hist = float(c.get("pic_score") or 0.0)
+        rc = c.get("road_class")
+        cong = _cong_at(rc, hour_used)
         boost = _decayed_boost((states.get(h) or {}).get("boost"),
                                (states.get(h) or {}).get("updated_ts"), now)
         on = idx["online"].get(h, {})
+
+        # historical base for this lens (day-of-week when forecasting)
         finten = None
+        base_val = hist
         if target_dow is not None:
             fcc = idx["fc"].get(h)
             if fcc and fcc.get("dow_curve"):
                 try:
                     val = fcc["dow_curve"][fc_order.index(target_dow)]
-                    finten = round(100.0 * val / fc_max, 1)
+                    base_val = 100.0 * val / fc_max
                 except Exception:        # pragma: no cover
-                    finten = None
+                    base_val = hist
+
+        cached24 = cache_cells.get(h)
+        if cached24 and not forecast_mode:
+            heat = float(cached24[hour_used % 24])
+        else:
+            heat = _hour_heat(base_val, rc, hour_used)
+        if forecast_mode:
+            finten = round(heat, 1)
+
         cells.append({
             "h3_r10": h, "lat": c["lat"], "lon": c["lon"],
             "police_station": c.get("police_station"),
-            "intensity": c.get("intensity"),
-            "pic_score": c.get("pic_score"),
+            "road_class": rc,
+            "intensity": round(heat, 1),            # hour-modulated display heat
+            "pic_score": c.get("pic_score"),        # immutable historical propensity
             "pic_rank": c.get("pic_rank"),
             "congestion_severity": c.get("congestion_severity"),
             "congestion_source": c.get("congestion_source"),
+            "congestion_hour": round(cong, 3),      # typical congestion at this hour
             "forecast_intensity": finten,
             "emerging": bool(on.get("emerging", False)),
             "drift_z": on.get("drift_z"),
@@ -512,17 +603,25 @@ def v3_map(when: str = Query("now", pattern="^(now|today|tomorrow)$"),
         })
 
     meta = (db.col("v3_meta").find_one({"_id": "state"}) if db.mongo_enabled() else None) or {}
-    forecast_mode = when in ("today", "tomorrow")
+    hc_prov = _hourly_congestion().get("provenance", "modeled_typical")
+    hh = f"{hour_used:02d}:00"
     return ok({
-        "when": when, "hour": hour, "dow": target_dow,
+        "when": when, "hour": hour_used, "dow": target_dow,
         "source": "forecast" if forecast_mode else "live",
         "congestion_mode": idx["congestion_mode"],
+        "congestion_provenance": hc_prov,
+        "hour_profile": _city_hour_profile(),   # 24 city-typical congestion values
         "predictive_eta": False,
-        "badge": (f"Forecast · {target_dow} · modeled day-of-week curve (hour does "
-                  f"not change intensity — ticket time is upload time, not parking "
-                  f"time)" if forecast_mode
-                  else "Live PIC + operational · congestion MODELED (typical), not "
-                       "measured from tickets"),
+        "heatmap_cached": bool(cache_cells) and not forecast_mode,
+        "source_note": (
+            (f"Forecast · {target_dow} @ {hh} — modeled day-of-week propensity × "
+             f"modeled TYPICAL congestion for the hour. " if forecast_mode
+             else f"Live @ {hh} — historical PIC × modeled TYPICAL congestion for "
+                  f"the hour, + live operational boost. ")
+            + "Congestion is MODELED from typical commute patterns, not measured "
+              "from tickets; ticket counts are day-of-week (upload time)."),
+        "badge": (f"{'Forecast · ' + target_dow if forecast_mode else 'Live'} · "
+                  f"{hh} · congestion MODELED (typical), counts are day-of-week"),
         "n_cells": len(cells), "cells": cells, "kpis": _kpis(),
         "generated_at": _now_iso(), "last_calc": meta.get("last_calc"),
     })
@@ -1212,6 +1311,58 @@ def _recompute(reason="cron"):
     return summary
 
 
+def _rebuild_hourly_cache():
+    """Bake the deterministic 24-hour heat (historical pic_score × MODELED typical
+    congestion per road class) for the top PIC cells and persist it to Mongo as
+    heatmap_hourly.json, so /map serves a force-calculated, cached heatmap. The
+    live operational boost stays separate (applied at read time). Not measured."""
+    idx = _indices()
+    cells = {}
+    for c in idx["pic_list"]:
+        h = c["h3_r10"]
+        hist = float(c.get("pic_score") or 0.0)
+        rc = c.get("road_class")
+        cells[h] = [round(_hour_heat(hist, rc, hr), 1) for hr in range(24)]
+    payload = {
+        "generated_at": _now_iso(),
+        "provenance": _hourly_congestion().get("provenance", "modeled_typical"),
+        "n_cells": len(cells),
+        "hour_profile": _city_hour_profile(),
+        "note": ("24-hour heat = historical PIC propensity × MODELED typical "
+                 "congestion per hour; live boost applied at read time. Not measured."),
+        "cells": cells,
+    }
+    if db.mongo_enabled():
+        db.save_v3_artifact("heatmap_hourly.json", payload)
+    return {"n_cells": len(cells), "provenance": payload["provenance"],
+            "generated_at": payload["generated_at"]}
+
+
+@router.post("/recompute")
+def v3_force_recompute(authorization: str | None = Header(default=None)):
+    """Government-only FORCE update (the dashboard button). Folds live feedback into
+    the per-cell online rates, re-ranks dispatch, and re-bakes the 24-hour heatmap
+    cache — so the map immediately reflects the freshly recomputed, DB-cached
+    heatmaps. Recompute-only; historical ML scores are never edited."""
+    sess = _require_session(authorization)
+    if sess.get("role") != "govt":
+        raise HTTPException(403, "Government role required to force a recompute.")
+    _require_mongo()
+    _ensure_init()
+    with _lock:
+        summary = _recompute("manual")
+        heat = _rebuild_hourly_cache()
+    return ok({
+        "ok": True, "reason": "manual",
+        "recompute": {k: summary.get(k) for k in
+                      ("last_calc", "prev_calc", "n_new_complaints", "n_new_closed",
+                       "n_cells_updated", "n_verified_cells", "duration_ms")},
+        "dispatch_rerank_top": summary.get("dispatch_rerank", [])[:10],
+        "heatmap": heat,
+        "method": summary.get("method"),
+    })
+
+
 def _check_cron(token, authorization):
     secret = (os.environ.get("CLEARLANE_CRON_SECRET") or os.environ.get("CRON_SECRET"))
     if not secret:
@@ -1236,8 +1387,10 @@ def cron_recompute(token: str | None = None,
     _ensure_init()
     with _lock:
         summary = _recompute("cron")
+        heat = _rebuild_hourly_cache()
     return ok({"updated": summary["n_cells_updated"],
-               "last_calc": summary["last_calc"], "summary": summary})
+               "last_calc": summary["last_calc"], "heatmap": heat,
+               "summary": summary})
 
 
 def _maybe_lazy_recompute():

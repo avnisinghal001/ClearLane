@@ -27,7 +27,11 @@ SRC = ROOT / "data" / "processed" / "v3"
 OUT = ROOT / "frontend.v3" / "public" / "demo-v3"
 OUT.mkdir(parents=True, exist_ok=True)
 
-STATIC_KEY = "dnnjqdkukvlealrrtuvklzwjtkyoshusxdef"  # public Mappls map key (domain-whitelisted)
+# Public, domain-whitelisted Mappls keys. The REST key works against the legacy
+# map_load endpoint (engine 1); the static key 401s there but is the access_token
+# for the Mappls v3 SDK (engine 2). GET /api/config returns the REST key.
+REST_KEY = "1c04439bdb5b2f9d9bd3bca144614f5c"
+STATIC_KEY = "dnnjqdkukvlealrrtuvklzwjtkyoshusxdef"
 
 DOW_ORDER = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 MAP_CELLS = 800  # top cells (by PIC) carried into the offline map
@@ -304,7 +308,8 @@ def main():
     jdump("evaluation.json", evaluation)
     jdump("causal.json", causal)
     jdump("sim_rl.json", sim)
-    jdump("config.json", {"mappls_key": STATIC_KEY, "demo": True})
+    jdump("hourly_congestion.json", jload("hourly_congestion.json"))  # stage 13 overlay
+    jdump("config.json", {"mappls_key": REST_KEY, "static_key": STATIC_KEY, "demo": True})
 
     print(f"\nDone. {len(cells)} map cells, {len(stations)} stations, {len(tickets)} tickets -> {OUT}")
 

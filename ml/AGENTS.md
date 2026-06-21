@@ -1,8 +1,14 @@
-# AGENTS.md — ML & Data Processing (`ml/`)
+# AGENTS.md — ML & Data Processing (`ml/`) — v1, DEPLOYED
 
 > Scope: the data cleaning, feature engineering, scoring, modeling, and artifact
 > generation pipeline. Read the root `AGENTS.md` first — especially the **honesty
 > contract** and **verified dataset ground truth**, which this layer enforces.
+>
+> **This is the v1 (zone-based) pipeline and it is the one currently deployed** —
+> its `data/processed/*.json` artifacts are what `api/clearlane/main.py` and the
+> `frontend/` dashboard serve. The newer H3 cell-based rebuild lives in `ml.v3/`
+> (see `ml.v3/AGENTS.md`); it writes to `data/processed/v3/` and does **not** touch
+> these artifacts. Edits here affect production; edits in `ml.v3/` do not (yet).
 
 ## Canonical location
 

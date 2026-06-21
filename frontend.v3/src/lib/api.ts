@@ -25,7 +25,9 @@ const liveListeners = new Set<(live: boolean) => void>();
 export const isLive = () => LIVE;
 export function onLiveChange(cb: (live: boolean) => void) {
   liveListeners.add(cb);
-  return () => liveListeners.delete(cb);
+  return () => {
+    liveListeners.delete(cb);
+  };
 }
 function setLive(v: boolean) {
   if (LIVE !== v) {
@@ -65,13 +67,17 @@ async function tryLive<T>(path: string, opts?: RequestInit): Promise<T | null> {
 }
 
 // --------------------------------------------------------------------------
-export async function getConfig(): Promise<{ mappls_key: string | null; demo?: boolean }> {
-  const baked = import.meta.env.VITE_MAPPLS_KEY;
-  if (baked) return { mappls_key: baked };
+export interface AppConfig {
+  mappls_key: string | null; // REST key — engine 1 (map_load)
+  static_key?: string | null; // static/JS key — engine 2 (Mappls v3 access_token)
+  demo?: boolean;
+}
+
+export async function getConfig(): Promise<AppConfig> {
   try {
-    return await getJSON<{ mappls_key: string | null }>(BASE + "/api/config");
+    return await getJSON<AppConfig>(BASE + "/api/config");
   } catch {
-    return demo<{ mappls_key: string | null; demo?: boolean }>("config.json");
+    return demo<AppConfig>("config.json");
   }
 }
 
@@ -80,12 +86,29 @@ function round(x: number, d = 1) {
   return Math.round(x * k) / k;
 }
 
+// Hourly congestion overlay (mirror of the backend; modeled typical, not measured).
+interface DemoHourlyCongestion {
+  provenance: string;
+  curves: Record<string, number[]>;
+  global: number[];
+}
+const HC_BASE_W = 0.4;
+const HC_CONG_W = 0.6;
+function congAt(hc: DemoHourlyCongestion | null, roadClass: string | null | undefined, hour: number): number {
+  if (!hc) return 1;
+  const cur = hc.curves[roadClass || "unknown"] || hc.global || hc.curves["unknown"];
+  const v = cur?.[((hour % 24) + 24) % 24];
+  return v == null ? 0.5 : v;
+}
+const clamp100 = (x: number) => Math.max(0, Math.min(100, x));
+
 // Compose the /api/v3/map payload offline from the cell base + KPIs, applying the
-// time lens (now = live PIC; today/tomorrow@hour = modeled forecast layer).
-function composeMap(when: When, hour: number | null, base: DemoCells, kpis: Kpis): MapPayload {
+// time lens. The displayed `intensity` = historical PIC × modeled typical
+// congestion for the active hour (the same honest model the backend serves).
+function composeMap(when: When, hour: number | null, base: DemoCells, kpis: Kpis, hc: DemoHourlyCongestion | null): MapPayload {
   const isForecast = when !== "now";
   const dow = dowForWhen(when);
-  const hourW = isForecast && hour != null ? base.hour_profile?.[hour] ?? 1 : 1;
+  const hr = hour ?? new Date().getHours();
 
   let maxBase = 1;
   const baseVal = new Map<string, number>();
@@ -99,49 +122,100 @@ function composeMap(when: When, hour: number | null, base: DemoCells, kpis: Kpis
 
   const cells: Cell[] = base.cells.map((c) => {
     const adj = local.liveAdjustment(c.h3_r10);
-    const op = Math.max(0, Math.min(100, c.pic_score + adj));
+    const op = clamp100(c.pic_score + adj);
+    const cong = congAt(hc, c.road_class, hr);
+    const mod = HC_BASE_W + HC_CONG_W * cong;
     let forecast_intensity: number | null = null;
+    let intensity = c.intensity;
     if (isForecast) {
-      const b = baseVal.get(c.h3_r10) ?? 0;
-      forecast_intensity = round((b / maxBase) * 100 * hourW, 2);
+      const b = (baseVal.get(c.h3_r10) ?? 0) / maxBase;
+      forecast_intensity = round(clamp100(b * 100 * mod), 1);
+    } else {
+      intensity = round(clamp100(c.pic_score * mod), 1); // hour-modulated live heat
     }
-    return { ...c, forecast_intensity, live_adjustment: round(adj, 1), operational_priority: round(op, 1) };
+    return {
+      ...c,
+      intensity,
+      forecast_intensity,
+      congestion_hour: round(cong, 3),
+      live_adjustment: round(adj, 1),
+      operational_priority: round(op, 1),
+    };
   });
 
+  const hh = `${String(hr).padStart(2, "0")}:00`;
   const source_note = isForecast
-    ? `Forecast — modeled expected violations for ${dowLabel(when)}${
-        hour != null ? ` around ${hour}:00` : ""
-      } (recorded weekday × modeled hour-of-day pattern). Not measured congestion.`
-    : "Live snapshot — PIC = bias-corrected intensity × congestion severity. Severity provenance is badged per cell.";
+    ? `Forecast · ${dowLabel(when)} @ ${hh} — modeled day-of-week propensity × modeled TYPICAL congestion for the hour. Congestion is modeled (commute pattern), not measured from tickets.`
+    : `Live @ ${hh} — historical PIC × modeled TYPICAL congestion for the hour, + live boost. Congestion varies by hour; ticket counts are day-of-week (upload time).`;
 
   return {
     when,
-    hour: isForecast ? hour : null,
+    hour: hr,
     source: isForecast ? "forecast" : "live",
     source_note,
     cells,
     kpis,
-    hour_profile: base.hour_profile,
+    hour_profile: hc?.global ?? base.hour_profile,
     dow_order: base.dow_order,
   };
 }
 
 export async function getMap(when: When, hour: number | null): Promise<MapPayload> {
   const qs = new URLSearchParams({ when });
-  if (hour != null && when !== "now") qs.set("hour", String(hour));
+  if (hour != null) qs.set("hour", String(hour)); // hour drives the heatmap in every mode
   const live = await tryLive<MapPayload>(`/api/v3/map?${qs}`);
   if (live && live.cells) {
     return {
+      ...live,
       when,
-      hour: when === "now" ? null : hour,
+      hour: live.hour ?? hour,
       source: when === "now" ? "live" : "forecast",
       source_note: live.source_note ?? "",
-      ...live,
     };
   }
-  const [base, kpis] = await Promise.all([demo<DemoCells>("cells.json"), demo<Kpis>("kpis.json")]);
+  const [base, kpis, hc] = await Promise.all([
+    demo<DemoCells>("cells.json"),
+    demo<Kpis>("kpis.json"),
+    demo<DemoHourlyCongestion>("hourly_congestion.json").catch(() => null),
+  ]);
   local.seed(base.cells, await demo<Ticket[]>("tickets.json"));
-  return composeMap(when, hour, base, kpis);
+  return composeMap(when, hour, base, kpis, hc);
+}
+
+// Government-only FORCE update: recompute online rates + re-rank + re-bake the
+// 24-hour heatmap cache. Needs the live API + a government bearer session.
+export async function forceRecompute(): Promise<{
+  ok: boolean;
+  error?: string;
+  heatmap?: { n_cells: number; provenance: string; generated_at: string };
+  recompute?: Record<string, unknown>;
+}> {
+  let token: string | null = null;
+  try {
+    token = JSON.parse(localStorage.getItem("cl_v3_auth") || "null")?.token ?? null;
+  } catch {
+    token = null;
+  }
+  try {
+    const r = await fetch(BASE + "/api/v3/recompute", {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!r.ok) {
+      return {
+        ok: false,
+        error:
+          r.status === 401 || r.status === 403
+            ? "Government login required to force a recompute."
+            : r.status === 503
+              ? "Recompute needs the live backend + MongoDB (offline demo can't recompute)."
+              : `Recompute failed (${r.status}).`,
+      };
+    }
+    return await r.json();
+  } catch {
+    return { ok: false, error: "Backend unavailable — recompute needs the live API + MongoDB." };
+  }
 }
 
 export async function getKpis(): Promise<Kpis> {

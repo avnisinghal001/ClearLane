@@ -10,7 +10,7 @@ export function useMapData(when: When, hour: number) {
 
   const load = useCallback(() => {
     setLoading(true);
-    const h = when === "now" ? null : hour;
+    const h = hour; // hour drives the heatmap in every mode (live + forecast)
     getMap(when, h)
       .then(setData)
       .finally(() => setLoading(false));
@@ -19,7 +19,7 @@ export function useMapData(when: When, hour: number) {
   useEffect(() => {
     let on = true;
     setLoading(true);
-    const h = when === "now" ? null : hour;
+    const h = hour; // hour drives the heatmap in every mode (live + forecast)
     getMap(when, h)
       .then((d) => on && setData(d))
       .finally(() => on && setLoading(false));
