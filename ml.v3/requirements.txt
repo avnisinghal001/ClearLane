@@ -1,0 +1,18 @@
+# ClearLane v3 — Phase 0+1 (offline science core). Python 3.11.
+# Install:  pip install -r ml.v3/requirements.txt
+pandas>=2.2
+numpy>=1.26
+scipy>=1.12
+pyarrow>=15
+scikit-learn>=1.4          # spatial-CV learner (PoissonRegressor, GroupKFold)
+statsmodels>=0.14          # Negative-Binomial GLM with log-exposure offset
+h3>=4.1                    # hexagonal binning (v3 API also supported by utils)
+esda>=2.5                  # Getis-Ord Gi* + Moran's I significance
+libpysal>=4.9              # spatial weights for esda
+pymongo>=4.8               # cache layer: durable static + TTL live (ml.v3/cache)
+dnspython>=2.6             # mongodb+srv:// URIs
+
+# --- Phase 2+ (live layer) — not needed for Phase 0+1, listed for convenience ---
+# lightgbm>=4.0            # daily Poisson forecaster (C3)
+# pulp>=2.8                # MCLP exact coverage solver (C4)   (or ortools)
+# river>=0.21              # online drift detection (C5)

@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 420" fill="none" role="img" aria-label="ClearLane city map illustration">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFF7ED"/>
+      <stop offset="1" stop-color="#FFFFFF"/>
+    </linearGradient>
+    <linearGradient id="road" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FDBA74"/>
+      <stop offset="1" stop-color="#F97316"/>
+    </linearGradient>
+  </defs>
+  <rect width="720" height="420" fill="url(#sky)"/>
+  <circle cx="600" cy="90" r="120" fill="#FFEDD5" opacity="0.7"/>
+  <circle cx="120" cy="60" r="70" fill="#FFEDD5" opacity="0.6"/>
+  <!-- buildings -->
+  <g fill="#E7E5E4">
+    <rect x="70" y="210" width="70" height="150" rx="6"/>
+    <rect x="155" y="170" width="60" height="190" rx="6"/>
+    <rect x="520" y="190" width="64" height="170" rx="6"/>
+    <rect x="600" y="150" width="74" height="210" rx="6"/>
+  </g>
+  <g fill="#FDE68A">
+    <rect x="84" y="226" width="12" height="14" rx="2"/><rect x="106" y="226" width="12" height="14" rx="2"/>
+    <rect x="84" y="252" width="12" height="14" rx="2"/><rect x="106" y="252" width="12" height="14" rx="2"/>
+    <rect x="616" y="170" width="12" height="14" rx="2"/><rect x="640" y="170" width="12" height="14" rx="2"/>
+    <rect x="616" y="198" width="12" height="14" rx="2"/><rect x="640" y="198" width="12" height="14" rx="2"/>
+  </g>
+  <!-- winding road -->
+  <path d="M40 360 C 200 360 220 240 360 240 S 540 150 690 150" stroke="#E7E5E4" stroke-width="46" fill="none" stroke-linecap="round"/>
+  <path d="M40 360 C 200 360 220 240 360 240 S 540 150 690 150" stroke="url(#road)" stroke-width="30" fill="none" stroke-linecap="round"/>
+  <path d="M40 360 C 200 360 220 240 360 240 S 540 150 690 150" stroke="#FFFFFF" stroke-width="3" stroke-dasharray="2 16" fill="none" stroke-linecap="round"/>
+  <!-- location pins -->
+  <g>
+    <g transform="translate(250 196)">
+      <path d="M0 0 C 16 0 24 12 24 22 C 24 36 0 56 0 56 C 0 56 -24 36 -24 22 C -24 12 -8 0 0 0Z" fill="#EA580C"/>
+      <circle cx="0" cy="22" r="9" fill="#fff"/>
+    </g>
+    <g transform="translate(430 168)">
+      <path d="M0 0 C 13 0 20 10 20 18 C 20 30 0 46 0 46 C 0 46 -20 30 -20 18 C -20 10 -7 0 0 0Z" fill="#F59E0B"/>
+      <circle cx="0" cy="18" r="7" fill="#fff"/>
+    </g>
+    <g transform="translate(560 132)">
+      <path d="M0 0 C 13 0 20 10 20 18 C 20 30 0 46 0 46 C 0 46 -20 30 -20 18 C -20 10 -7 0 0 0Z" fill="#16A34A"/>
+      <circle cx="0" cy="18" r="7" fill="#fff"/>
+    </g>
+  </g>
+</svg>

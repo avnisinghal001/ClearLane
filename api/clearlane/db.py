@@ -34,10 +34,12 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def _load_dotenv() -> None:
-    """Local-dev convenience: populate os.environ from .env / backend/.env so
-    `uvicorn` picks up MONGODB_URI without extra steps. On Vercel the platform
-    injects env vars directly and these files don't exist, so this no-ops."""
-    for p in (ROOT / ".env", ROOT / "backend" / ".env"):
+    """Local-dev convenience: populate os.environ from .env / backend/.env /
+    ml.v3/.env so `uvicorn` picks up MONGODB_URI + the Mappls keys without extra
+    steps. On Vercel the platform injects env vars directly and these files don't
+    exist, so this no-ops. (ml.v3/.env carries MYMAPINDIA_STATIC_API_KEY — the
+    browser Map-SDK key the v3 frontend needs from /api/config.)"""
+    for p in (ROOT / ".env", ROOT / "backend" / ".env", ROOT / "ml.v3" / ".env"):
         if not p.exists():
             continue
         try:
@@ -147,3 +149,56 @@ def save_artifact(name: str, data) -> None:
         raise RuntimeError("MongoDB not configured")
     c.replace_one({"_id": name}, {"_id": name, "data": data}, upsert=True)
     _artifact_cache.pop(name, None)
+
+
+# --------------------------------------------------------------------------- #
+# v3 artifact store (the cell-centric ml.v3 pipeline JSON in data/processed/v3)
+# --------------------------------------------------------------------------- #
+# v3 names (pic.json, hotspots.json, forecast_daily.json, dispatch_plan.json,
+# online_state.json, evaluation.json, causal.json, sim_rl.json, …) do NOT collide
+# with the v1 artifact names, so they can live in the same Mongo `artifacts`
+# collection. We prefer a namespaced "v3/<name>" key (future-proof for a tidy
+# migration) and fall back to a flat "<name>" key, then the filesystem.
+def _fs_v3_artifact(name: str):
+    for d in (ROOT / "data" / "processed" / "v3",
+              ROOT / "frontend" / "public" / "demo-v3",
+              ROOT / "frontend" / "public" / "demo" / "v3"):
+        p = d / name
+        if p.exists():
+            try:
+                return json.loads(p.read_text(encoding="utf-8"))
+            except Exception:               # pragma: no cover
+                pass
+    return None
+
+
+def v3_artifact(name: str):
+    """Load a named v3 JSON artifact: MongoDB (v3/<name> then <name>) first,
+    filesystem (data/processed/v3, demo-v3) fallback. Cached."""
+    key = "v3/" + name
+    if key in _artifact_cache:
+        return _artifact_cache[key]
+    data = None
+    c = col(ARTIFACTS_COLLECTION)
+    if c is not None:
+        for _id in (key, name):
+            try:
+                doc = c.find_one({"_id": _id})
+            except Exception:               # pragma: no cover - network hiccup
+                doc = None
+            if doc is not None and doc.get("data") is not None:
+                data = doc["data"]
+                break
+    if data is None:
+        data = _fs_v3_artifact(name)
+    _artifact_cache[key] = data
+    return data
+
+
+def save_v3_artifact(name: str, data) -> None:
+    c = col(ARTIFACTS_COLLECTION)
+    if c is None:
+        raise RuntimeError("MongoDB not configured")
+    c.replace_one({"_id": "v3/" + name}, {"_id": "v3/" + name, "data": data},
+                  upsert=True)
+    _artifact_cache.pop("v3/" + name, None)

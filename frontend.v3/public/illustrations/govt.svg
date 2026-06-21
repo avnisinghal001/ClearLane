@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none" role="img" aria-label="Government">
+  <rect width="200" height="200" rx="20" fill="#FFF7ED"/>
+  <circle cx="100" cy="96" r="64" fill="#FFEDD5"/>
+  <!-- civic building -->
+  <path d="M58 86 L100 60 L142 86 Z" fill="#F97316"/>
+  <rect x="62" y="86" width="76" height="8" fill="#EA580C"/>
+  <g fill="#fff" stroke="#FDBA74" stroke-width="2">
+    <rect x="68" y="98" width="10" height="34"/>
+    <rect x="86" y="98" width="10" height="34"/>
+    <rect x="104" y="98" width="10" height="34"/>
+    <rect x="122" y="98" width="10" height="34"/>
+  </g>
+  <rect x="58" y="136" width="84" height="10" rx="3" fill="#EA580C"/>
+  <!-- mini bars -->
+  <g fill="#16A34A">
+    <rect x="150" y="118" width="8" height="16" rx="2"/>
+    <rect x="162" y="108" width="8" height="26" rx="2"/>
+  </g>
+</svg>

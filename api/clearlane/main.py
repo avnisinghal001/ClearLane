@@ -59,15 +59,20 @@ from . import operational  # noqa: E402
 # force-command layer (additive): RBAC auth + station/officer roster management in
 # MongoDB + troop-tracking simulation. Also never modifies historical ML scores.
 from . import force  # noqa: E402
+# v3 layer (additive): cell-centric reads over the ml.v3 artifacts + the H3 closed
+# loop + the self-learning online recompute. Never modifies historical ML scores.
+from . import v3  # noqa: E402
 
 app.include_router(operational.router)
 app.include_router(force.router)
+app.include_router(v3.router)
 
 
 @app.on_event("startup")
 def _startup():
     operational.init_db()
     force.init_db()
+    v3.init_db()
 
 
 # --------------------------------------------------------------------------- #
@@ -80,6 +85,19 @@ def health():
     return ok({"status": "ok", "mongo": db.mongo_enabled(),
                "source": "mongodb" if db.mongo_enabled() else "filesystem",
                "artifacts": artifacts, "ts": time.time()})
+
+
+@app.get("/api/config")
+def public_config():
+    """Public client config: the Mappls Map-SDK key (public by design — secured via
+    domain whitelist in the Mappls console). Lets the frontend fall back to a
+    server-provided key when VITE_MAPPLS_KEY isn't baked into the build. Prefers
+    the MapMyIndia map_load key. Per project decision the maps use the REST key
+    (MYMAPINDIA_REST_MAPPLS_API_KEY), falling back to the static/combined keys."""
+    key = (os.environ.get("MYMAPINDIA_REST_MAPPLS_API_KEY")
+           or os.environ.get("MYMAPINDIA_STATIC_API_KEY")
+           or os.environ.get("MYMAPINDIA_API_KEY"))
+    return ok({"mappls_key": key or None})
 
 
 @app.get("/api/map/payload")

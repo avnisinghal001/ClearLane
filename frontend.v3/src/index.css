@@ -1,0 +1,114 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Light, warm, civic-tech theme with an orange primary accent. */
+    --background: 30 33% 99%;
+    --foreground: 24 12% 14%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 24 12% 14%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 24 12% 14%;
+
+    --primary: 21 90% 48%;
+    --primary-foreground: 40 100% 98%;
+
+    --secondary: 28 30% 95%;
+    --secondary-foreground: 24 20% 22%;
+
+    --muted: 30 16% 95%;
+    --muted-foreground: 25 8% 45%;
+
+    --accent: 27 95% 94%;
+    --accent-foreground: 21 80% 36%;
+
+    --destructive: 0 75% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 28 18% 89%;
+    --input: 28 18% 88%;
+    --ring: 21 90% 48%;
+
+    /* honesty-aligned data palette */
+    --live: 142 70% 40%;
+    --typical: 38 92% 50%;
+    --modeled: 222 60% 56%;
+    --success: 142 64% 38%;
+    --warning: 33 95% 48%;
+
+    --radius: 0.7rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "cv11", "ss01";
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* Thin, themed scrollbars */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-border;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/40;
+  }
+}
+
+@layer components {
+  .num {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* ---- Leaflet integration tweaks ---- */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  background: hsl(var(--muted));
+  font-family: inherit;
+  z-index: 0;
+}
+.leaflet-popup-content-wrapper {
+  border-radius: var(--radius);
+  box-shadow: 0 8px 30px rgb(0 0 0 / 0.12);
+}
+.leaflet-popup-content {
+  margin: 12px 14px;
+  font-size: 13px;
+}
+.leaflet-bar a {
+  color: hsl(var(--foreground));
+}
+.cl-pin {
+  filter: drop-shadow(0 2px 4px rgb(0 0 0 / 0.3));
+}
+.cl-pulse {
+  animation: cl-pulse 1.8s infinite;
+}
+@keyframes cl-pulse {
+  0% {
+    box-shadow: 0 0 0 0 hsl(var(--primary) / 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 12px hsl(var(--primary) / 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 hsl(var(--primary) / 0);
+  }
+}

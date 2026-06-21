@@ -15,5 +15,8 @@
     { "src": "/api/(.*)", "dest": "/api/index.py" },
     { "src": "/", "dest": "/frontend/index.html" },
     { "src": "/(.*)", "dest": "/frontend/$1" }
+  ],
+  "crons": [
+    { "path": "/api/v3/cron/recompute", "schedule": "0 * * * *" }
   ]
 }

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none" role="img" aria-label="Citizen">
+  <rect width="200" height="200" rx="20" fill="#FFF7ED"/>
+  <circle cx="100" cy="92" r="64" fill="#FFEDD5"/>
+  <!-- phone -->
+  <rect x="74" y="58" width="52" height="92" rx="10" fill="#fff" stroke="#FDBA74" stroke-width="3"/>
+  <rect x="82" y="70" width="36" height="44" rx="5" fill="#FFEDD5"/>
+  <!-- pin on screen -->
+  <path d="M100 78 C 108 78 112 84 112 89 C 112 96 100 108 100 108 C 100 108 88 96 88 89 C 88 84 92 78 100 78Z" fill="#EA580C"/>
+  <circle cx="100" cy="89" r="4.5" fill="#fff"/>
+  <rect x="84" y="122" width="28" height="5" rx="2.5" fill="#FED7AA"/>
+  <rect x="84" y="132" width="20" height="5" rx="2.5" fill="#FED7AA"/>
+</svg>

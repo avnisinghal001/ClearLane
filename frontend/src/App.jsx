@@ -27,6 +27,7 @@ import ForecastView from "./components/ForecastView.jsx";
 import TypologyView from "./components/TypologyView.jsx";
 import StationView from "./components/StationView.jsx";
 import DispatchView from "./components/DispatchView.jsx";
+import TestMap from "./components/TestMap.jsx";
 import Dispatch from "./components/Dispatch.jsx";
 import OperationsConsole from "./components/OperationsConsole.jsx";
 import AboutModal from "./components/AboutModal.jsx";
@@ -148,6 +149,9 @@ export default function App() {
   const onSearchPick = useCallback((id) => {
     go("command"); openZone(id, true); setNavOpen(false);
   }, [go, openZone]);
+
+  // Mappls live-traffic sandbox — standalone, no login/onboarding required
+  if (hash.startsWith("#/test")) return <TestMap />;
 
   // One-time device onboarding (hooks above all run unconditionally)
   if (!onboarded) return <Onboarding onDone={() => setOnboarded(true)} />;

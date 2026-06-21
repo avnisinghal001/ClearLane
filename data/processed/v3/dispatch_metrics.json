@@ -1,0 +1,1 @@
+{"solver":"MCLP/PuLP-CBC (exact)","officers":25,"candidates":150,"demand_cells":600,"coverage_radius_km":0.8,"covered_pic":335.02,"covered_pct":81.3,"random_baseline_pic":238.05,"uplift_vs_random":1.41,"coverage_source":"haversine-proxy (isochrone when API live)"}

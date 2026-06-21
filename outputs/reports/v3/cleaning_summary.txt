@@ -1,0 +1,13 @@
+ClearLane v3 — cleaning summary (stage 01)
+================================================
+data window (verified): 2023-11-09 -> 2024-04-08
+
+Loading jan to may police violation_anonymized791b166.csv
+Raw rows loaded: 298,450  (verified ground truth: 298,450)
+--- filtering (start 298,450) ---
+drop rejected+duplicate validation_status: -50,074
+drop rows with no parking-relevant violation: -0
+drop rows outside Bengaluru bbox / missing coords: -2
+clean rows remaining: 248,374  (16.8% removed; target 248,374)
+confidence: high=205,820 medium=42,554
+monthly (clean): 2023-11=32,663, 2023-12=47,378, 2024-01=51,626, 2024-02=48,146, 2024-03=53,129, 2024-04=15,432
