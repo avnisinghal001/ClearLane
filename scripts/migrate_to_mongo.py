@@ -1,11 +1,11 @@
 """
-Migrate ClearLane's precomputed artifacts into MongoDB so the Vercel serverless
+Migrate ClearLane v3's precomputed artifacts into MongoDB so the Vercel serverless
 API can serve them off a read-only filesystem.
 
-It uploads every JSON artifact from data/processed (falling back to
-frontend/public/demo for anything missing) into the ``artifacts`` collection as
-``{_id: "<name>.json", data: <parsed json>}``, then seeds the force-command
-rosters from stations.json.
+It uploads every JSON artifact from data/processed/v3 (falling back to
+frontend.v3/public/demo-v3 for anything missing) into the ``artifacts`` collection
+as ``{_id: "v3/<name>.json", data: <parsed json>}`` (the namespaced key the v3 API
+reads), then seeds the force-command rosters + v3 indexes.
 
 Usage:
     # set the connection string first (PowerShell):  $env:MONGODB_URI = "mongodb+srv://..."
@@ -25,9 +25,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "api"))   # the FastAPI app package lives in api/clearlane
 
+
 # tiny .env loader (no python-dotenv dependency required)
 def _load_env():
-    for p in (ROOT / ".env", ROOT / "backend" / ".env"):
+    for p in (ROOT / ".env", ROOT / "ml.v3" / ".env"):
         if p.exists():
             for line in p.read_text(encoding="utf-8").splitlines():
                 line = line.strip()
@@ -41,8 +42,8 @@ _load_env()
 
 from clearlane import db  # noqa: E402
 
-PROC = ROOT / "data" / "processed"
-DEMO = ROOT / "frontend" / "public" / "demo"
+PROC = ROOT / "data" / "processed" / "v3"
+DEMO = ROOT / "frontend.v3" / "public" / "demo-v3"
 
 
 def _artifact_names() -> list[str]:
@@ -70,27 +71,25 @@ def migrate_artifacts() -> int:
         print("       Set it, e.g.  export MONGODB_URI='mongodb+srv://user:pass@host/'")
         sys.exit(1)
 
-    coll = db.col(db.ARTIFACTS_COLLECTION)
     names = _artifact_names()
-    print(f"Uploading {len(names)} artifacts to "
-          f"{db.MONGODB_DB}.{db.ARTIFACTS_COLLECTION} ...")
+    print(f"Uploading {len(names)} v3 artifacts to "
+          f"{db.MONGODB_DB}.{db.ARTIFACTS_COLLECTION} (keyed v3/<name>) ...")
     n = 0
     for name in names:
         data = _read_local(name)
         if data is None:
             print(f"  - {name}: skipped (empty/unreadable)")
             continue
-        coll.replace_one({"_id": name}, {"_id": name, "data": data}, upsert=True)
-        size_kb = (PROC / name).stat().st_size // 1024 if (PROC / name).exists() \
-            else (DEMO / name).stat().st_size // 1024
-        print(f"  + {name}  ({size_kb} KB)")
+        db.save_v3_artifact(name, data)        # writes _id = "v3/<name>"
+        src = PROC if (PROC / name).exists() else DEMO
+        print(f"  + v3/{name}  ({(src / name).stat().st_size // 1024} KB)")
         n += 1
-    print(f"Done: {n} artifacts in MongoDB.")
+    print(f"Done: {n} v3 artifacts in MongoDB.")
     return n
 
 
 def seed_force(reseed: bool):
-    from clearlane import force, operational
+    from clearlane import force, v3
 
     if reseed:
         print("Wiping fz_stations / fz_officers / fz_sessions ...")
@@ -98,8 +97,8 @@ def seed_force(reseed: bool):
             db.col(c).delete_many({})
         db.col("counters").delete_many({"_id": "fz_officers"})
 
-    operational.init_db()
     force.init_db()  # creates indexes + seeds rosters from stations.json if empty
+    v3.init_db()     # v3 collection indexes + lazy-recompute lock doc
     n_st = db.col("fz_stations").estimated_document_count()
     n_off = db.col("fz_officers").estimated_document_count()
     print(f"Force command ready: {n_st} stations, {n_off} officers.")
@@ -110,7 +109,7 @@ def main():
         sys.stdout.reconfigure(line_buffering=True)  # show progress live
     except Exception:
         pass
-    ap = argparse.ArgumentParser(description="Migrate ClearLane artifacts to MongoDB.")
+    ap = argparse.ArgumentParser(description="Migrate ClearLane v3 artifacts to MongoDB.")
     ap.add_argument("--reseed-force", action="store_true",
                     help="wipe and reseed the force-command rosters")
     ap.add_argument("--skip-artifacts", action="store_true",

@@ -1,14 +1,14 @@
 import { picColor } from "@/lib/format";
 import type { Cell, CongestionSource } from "@/lib/types";
 
-// Legible density ramp for the heatmap (low → high). Tilted warm to match the
-// civic-orange theme while staying readable.
+// Traffic-signal density ramp for the heatmap: green (low) → yellow (medium) →
+// red (highest). Matches the per-hour congestion story.
 export const HEAT_GRADIENT: Record<number, string> = {
-  0.2: "#fde68a",
-  0.4: "#fdba74",
-  0.6: "#fb923c",
-  0.78: "#f97316",
-  0.9: "#ea580c",
+  0.15: "#16a34a",
+  0.35: "#84cc16",
+  0.5: "#facc15",
+  0.7: "#f97316",
+  0.85: "#ef4444",
   1.0: "#b91c1c",
 };
 

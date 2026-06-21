@@ -441,3 +441,31 @@ SIM_TRAVEL_PENALTY = 0.0   # per-unit spread cost applied equally to all policie
 # (~1.12x, ~95% of the hindsight oracle) while still probing ~2x as many distinct
 # cells as greedy's fixed 25 (focused blind-spot exploration, not blanket-random).
 LINUCB_ALPHA = 0.5         # UCB exploration width (higher ⇒ probes more blind spots)
+
+# --------------------------------------------------------------------------- #
+# PHASE 9 — HOURLY CONGESTION OVERLAY (stage 13) — the honest "24 heatmaps".
+# A 24-hour normalized TYPICAL-congestion shape for Bengaluru (0..1), MODELED from
+# documented commute peaks — NOT measured from tickets (ticket time is upload
+# time, not parking time, so ticket COUNTS never vary by hour). This shape only
+# modulates the *congestion* layer of the map by hour; the historical propensity
+# stays day-of-week. Two peaks: morning 08–11, evening 17–21 (evening worse),
+# trough overnight. Where Mappls TYPICAL-traffic ETA is available per corridor the
+# backend may refine a cell's amplitude, but this offline shape is the default so
+# every run is reproducible and the demo always renders.
+# --------------------------------------------------------------------------- #
+HOURLY_CONGESTION_BASE = [
+    0.10, 0.07, 0.05, 0.05, 0.06, 0.12, 0.28, 0.55,   # 00–07
+    0.82, 0.95, 0.88, 0.70, 0.62, 0.60, 0.58, 0.62,   # 08–15
+    0.72, 0.90, 1.00, 0.95, 0.80, 0.55, 0.32, 0.18,   # 16–23
+]
+# How strongly each road class feels the peaks (ring/arterial peak hardest; local
+# roads stay comparatively flat). Multiplies the base shape (NOT re-normalised, so
+# a local road's worst hour is genuinely below an arterial's worst hour).
+HOURLY_CONGESTION_CLASS_AMP = {
+    "ring_road": 1.00, "arterial": 0.95, "commercial": 0.90,
+    "main_road": 0.85, "local": 0.45, "unknown": 0.70,
+}
+HOURLY_CONGESTION_FLOOR = 0.08          # nothing is ever zero congestion
+HOURLY_CONGESTION_GLOBAL_AMP = 0.70     # city-wide default when a class is unknown
+HOURLY_CONGESTION_PROVENANCE = "modeled_typical"   # documented commute peaks; not measured
+HOURLY_CONGESTION_PEAKS = {"morning": 9, "midday_lull": 13, "evening": 18}

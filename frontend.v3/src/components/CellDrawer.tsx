@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import { MapPin, TrendingUp, AlertTriangle } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { SourceBadge } from "./SourceBadge";
 import { BarSpark } from "./Sparkline";
 import { DOW } from "@/lib/time";

@@ -12,7 +12,6 @@ import { TicketTable } from "./TicketTable";
 import { HotspotsPanel } from "./HotspotsPanel";
 import { CreateTicketDialog } from "./CreateTicketDialog";
 import { ResolveDialog } from "./ResolveDialog";
-import { useMapKey } from "@/hooks/useConfig";
 import { useMapData } from "@/hooks/useMapData";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 import { getDispatchPlan, getStations, getTickets, patchTicket, postTicket } from "@/lib/api";
@@ -30,7 +29,6 @@ export function PoliceApp() {
   const navigate = useNavigate();
   const auth = getAuth();
   const stationName = auth?.name ?? "";
-  const mapKey = useMapKey();
   const isMobile = useIsMobile();
 
   const [tab, setTab] = useState<"map" | "queue" | "hotspots">("map");
@@ -124,7 +122,6 @@ export function PoliceApp() {
           <ClearLaneMap
             cells={cells}
             source={data?.source ?? "live"}
-            mapKey={mapKey}
             flyTo={flyTo}
             onCellClick={setSelected}
             routes={route ? [route] : undefined}
@@ -137,6 +134,13 @@ export function PoliceApp() {
               Switch to Tomorrow to pre-plan deployment. Pins = open reports/tickets.
             </p>
           </div>
+          {/* persistent create-ticket FAB — bottom-right, clear of the mobile nav */}
+          <Button
+            onClick={() => setCreateFor({ open: true, cell: null })}
+            className="absolute bottom-20 right-4 z-[610] gap-2 rounded-full px-5 shadow-lg md:bottom-6"
+          >
+            <Plus className="h-4 w-4" /> Create ticket
+          </Button>
         </div>
       )}
 

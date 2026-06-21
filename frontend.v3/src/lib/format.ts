@@ -30,15 +30,16 @@ export const SOURCE_META: Record<CongestionSource, { label: string; variant: "li
 
 export const sourceMeta = (s: CongestionSource | undefined | null) => SOURCE_META[s ?? "modeled"] ?? SOURCE_META.modeled;
 
-// Orange → red ramp for PIC / priority scores (0..100). Matches the civic theme.
+// Green (low) → yellow (medium) → red (highest) ramp for PIC / priority /
+// hour-congestion scores (0..100). The intuitive traffic-signal scale.
 export function picColor(score: number): string {
   const t = Math.max(0, Math.min(1, (score ?? 0) / 100));
-  // light amber (low) -> deep red (high)
   const stops: [number, [number, number, number]][] = [
-    [0.0, [253, 230, 138]], // amber-200
-    [0.45, [251, 146, 60]], // orange-400
-    [0.72, [234, 88, 12]], // orange-600
-    [1.0, [185, 28, 28]], // red-700
+    [0.0, [22, 163, 74]], // green-600  (low)
+    [0.35, [132, 204, 22]], // lime-500
+    [0.55, [250, 204, 21]], // yellow-400 (medium)
+    [0.75, [249, 115, 22]], // orange-500
+    [1.0, [220, 38, 38]], // red-600    (highest)
   ];
   let a = stops[0], b = stops[stops.length - 1];
   for (let i = 0; i < stops.length - 1; i++) {

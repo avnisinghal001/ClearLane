@@ -25,6 +25,7 @@ export interface Cell {
   forecast_intensity?: number | null; // 0..100 when when=today|tomorrow
   operational_priority?: number; // historical + live adjustment, clamped 0..100
   live_adjustment?: number;
+  congestion_hour?: number | null; // 0..1 modeled typical congestion at the active hour
 }
 
 export interface Kpis {

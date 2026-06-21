@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Map as MapIcon, Megaphone, ListChecks, Megaphone as ReportIcon, Crosshair } from "lucide-react";
+import { Map as MapIcon, Megaphone, ListChecks, Crosshair } from "lucide-react";
 import { AppShell, type NavItem } from "@/components/AppShell";
 import { ClearLaneMap } from "@/components/map/ClearLaneMap";
 import { TimeControl, type TimeValue } from "@/components/TimeControl";
@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/components/toast";
 import { ReportSheet } from "./ReportSheet";
 import { MyReports } from "./MyReports";
-import { useMapKey } from "@/hooks/useConfig";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { useMapData } from "@/hooks/useMapData";
 import { useIsMobile } from "@/hooks/useMediaQuery";
@@ -29,7 +28,6 @@ const loadMyIds = (): string[] => {
 
 export function CitizenApp() {
   const navigate = useNavigate();
-  const mapKey = useMapKey();
   const isMobile = useIsMobile();
   const { cityCoords, request } = useGeolocation(true);
 
@@ -77,7 +75,7 @@ export function CitizenApp() {
 
   const nav: NavItem[] = [
     { key: "map", label: "Map", icon: <MapIcon className="h-5 w-5" /> },
-    { key: "report", label: "Report", icon: <ReportIcon className="h-5 w-5" /> },
+    { key: "report", label: "Report", icon: <Megaphone className="h-5 w-5" /> },
     { key: "reports", label: "My reports", icon: <ListChecks className="h-5 w-5" /> },
   ];
 
@@ -107,7 +105,6 @@ export function CitizenApp() {
           <ClearLaneMap
             cells={data?.cells ?? []}
             source={data?.source ?? "live"}
-            mapKey={mapKey}
             userLocation={cityCoords}
             flyTo={flyTo}
             onCellClick={setSelected}
@@ -138,12 +135,12 @@ export function CitizenApp() {
             </div>
           )}
 
-          {/* report CTA */}
+          {/* report CTA — bottom-right FAB, clear of the mobile nav */}
           <Button
             onClick={() => openReport()}
-            className="absolute bottom-4 left-1/2 z-[500] -translate-x-1/2 gap-2 rounded-full px-5 shadow-lg"
+            className="absolute bottom-20 right-4 z-[610] gap-2 rounded-full px-5 shadow-lg md:bottom-6"
           >
-            <Megaphone className="h-4 w-4" /> Report illegal parking
+            <Megaphone className="h-4 w-4" /> Report incident
           </Button>
         </div>
       ) : (
