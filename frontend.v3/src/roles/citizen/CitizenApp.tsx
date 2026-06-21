@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Map as MapIcon, Megaphone, ListChecks, Crosshair } from "lucide-react";
 import { AppShell, type NavItem } from "@/components/AppShell";
-import { ClearLaneMap } from "@/components/map/ClearLaneMap";
+import { ClearLaneMap, type MapPin } from "@/components/map/ClearLaneMap";
 import { TimeControl, type TimeValue } from "@/components/TimeControl";
 import { CellDrawer } from "@/components/CellDrawer";
 import { Badge } from "@/components/ui/badge";
@@ -50,6 +50,21 @@ export function CitizenApp() {
   useEffect(() => refreshTickets(), [refreshTickets]);
 
   const myReports = useMemo(() => allTickets.filter((t) => myIds.includes(t.id)), [allTickets, myIds]);
+  // my filed reports -> blue markers on the map
+  const reportPins = useMemo<MapPin[]>(
+    () =>
+      myReports
+        .filter((t) => t.lat != null && t.lon != null)
+        .map((t) => ({
+          key: t.id,
+          lat: t.lat as number,
+          lon: t.lon as number,
+          color: "#2563eb",
+          pulse: true,
+          label: `${t.category ?? "Your report"} · ${t.station ?? "nearest station"}`,
+        })),
+    [myReports],
+  );
   const evidence = useMemo<[number, number][]>(
     () => allTickets.filter((t) => t.lat != null && t.lon != null).map((t) => [t.lat as number, t.lon as number]),
     [allTickets],
@@ -119,8 +134,10 @@ export function CitizenApp() {
               setPickMode(false);
               setReportOpen(true);
             }}
+            onLongPress={(ll) => openReport(ll)}
             onPickModeChange={setPickMode}
             enableComplaint
+            pins={reportPins}
             evidence={evidence}
             bottomSafe
             defaultZoom={13}
@@ -138,13 +155,12 @@ export function CitizenApp() {
             </div>
           </div>
 
-          {/* report CTA — vertical tab anchored to the RIGHT EDGE, vertically centred
-              (clear of the layers FAB up top + the mobile bottom nav), with a
-              shimmer sweep. Vertical writing-mode rotates the label. */}
+          {/* report CTA — vertical 90° tab anchored to the RIGHT EDGE (or long-press
+              the map anywhere). Shimmer sweep; vertical writing-mode rotates the label. */}
           <button
             onClick={() => openReport()}
             aria-label="Report incident"
-            title="Report incident"
+            title="Report incident — or long-press the map"
             className="group fixed right-0 top-1/2 z-[610] flex -translate-y-1/2 items-center gap-2 overflow-hidden rounded-l-xl bg-primary py-4 pl-2 pr-1.5 font-semibold text-primary-foreground shadow-lg ring-1 ring-black/10 transition-[padding] hover:pl-2.5 [writing-mode:vertical-rl]"
           >
             <span

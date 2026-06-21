@@ -578,7 +578,10 @@ MAPPLS_RES_FREE = "distance_matrix"          # free-flow duration (HTTP 200 veri
 MAPPLS_RES_ETA = "distance_matrix_eta"       # typical-traffic ETA (HTTP 200 verified)
 MAPPLS_TIMEOUT_S = 2.5                        # tight: calls must fit the function budget
 MAPPLS_FAIL_LIMIT = 3                         # circuit breaker per warm process
-LIVE_BACKOFF_S = 300                          # after a 0-coverage attempt, skip Mappls 5 min
+# v1 best-practice cadence: fetch live Mappls at most once per 5 min (the Mappls
+# free tier has a daily/hourly traffic cap; an every-minute cron would exhaust it).
+# The cached snapshot (LIVE_CONG_TTL_S = 600) covers the gap between fetches.
+LIVE_ENRICH_THROTTLE_S = 300
 RERANK_THROTTLE_S = 600                       # re-bake the heavy per-station rerank ≤ every 10 min
 PLAN_THROTTLE_S = 1800                        # re-bake the next-day plan ≤ every 30 min
 LIVE_CONG_TTL_S = 600                        # live congestion freshness window (10 min)
@@ -589,7 +592,12 @@ _LIVE: dict | None = None
 
 
 def _mappls_rest_key():
-    return (os.environ.get("MYMAPINDIA_REST_MAPPLS_API_KEY")
+    # DEDICATED server-side key var (CLEARLANE_MAPPLS_REST_KEY) is preferred so the
+    # browser /api/config (which reads MYMAPINDIA_*) is NOT disturbed — the basemap
+    # SDK keeps using VITE_MAPPLS_KEY. Falls back to the MYMAPINDIA_* names only if
+    # the dedicated var is unset (local dev via ml.v3/.env).
+    return (os.environ.get("CLEARLANE_MAPPLS_REST_KEY")
+            or os.environ.get("MYMAPINDIA_REST_MAPPLS_API_KEY")
             or os.environ.get("MYMAPINDIA_API_KEY"))
 
 
@@ -634,15 +642,16 @@ def _enrich_live_congestion(top_n=LIVE_ENRICH_TOP):
     the simulated fallback. Called by the recompute cron — never by a read."""
     global _mappls_fails
     key = _mappls_rest_key()
-    # back off when Mappls is down: if the last attempt got 0 live cells recently,
-    # skip the (doomed, slow) calls and stay on the simulation — keeps the cron fast.
+    # 5-min throttle (v1 cadence): if we fetched within the window, reuse the cached
+    # snapshot and skip the (quota-limited, slow) Mappls calls — keeps the every-minute
+    # cron fast AND makes the daily quota last ~5x longer.
     prev = db.v3_artifact("live_congestion.json") or {}
-    if (key and prev.get("n_live", 0) == 0 and prev.get("ts")
-            and (time.time() - prev["ts"]) < LIVE_BACKOFF_S):
-        print(f"[v3.live] backoff: last attempt 0% live <{LIVE_BACKOFF_S}s ago -> "
-              f"skip Mappls, stay simulated")
-        return {"n_requested": 0, "n_live": 0, "coverage_pct": 0.0,
-                "generated_at": prev.get("generated_at"), "backoff": True}
+    if prev.get("ts") and (time.time() - prev["ts"]) < LIVE_ENRICH_THROTTLE_S:
+        print(f"[v3.live] throttled: fetched <{LIVE_ENRICH_THROTTLE_S}s ago "
+              f"({prev.get('n_live', 0)} live cells) -> reuse cache")
+        return {"n_requested": prev.get("n_requested", 0), "n_live": prev.get("n_live", 0),
+                "coverage_pct": prev.get("coverage_pct", 0.0),
+                "generated_at": prev.get("generated_at"), "throttled": True}
     _mappls_fails = 0                            # reset breaker each real attempt
     idx = _indices()
     cand = [c for c in idx["pic_list"][:top_n] if c.get("lat") is not None][:99]
@@ -730,7 +739,7 @@ def _congestion_source(when, hour, dow):
 # already seen is a single Mongo read; a miss computes then caches. Best-effort:
 # any cache error is swallowed and the map is computed normally.
 # --------------------------------------------------------------------------- #
-MAP_CACHE_VERSION = "dayhour_v3"
+MAP_CACHE_VERSION = "dayhour_v4"
 MAP_CACHE_COLL = "v3_map_cache"
 
 
@@ -1465,7 +1474,10 @@ def v3_map(when: str = Query("now", pattern="^(now|today|tomorrow|custom)$"),
     src = idx["map_list"]
     dow_fac = _dow_factor(sim_dow)
     if limit < len(src):
-        head = max(1, limit // 2)
+        # keep a modest block of the hottest cells, then UNIFORMLY stride across the
+        # rest so the full green→yellow→red range is represented (like v1's all-zones
+        # view), not just a red-heavy top slice.
+        head = max(1, limit // 5)
         tail = src[head:]
         step = max(1, len(tail) // max(1, (limit - head)))
         src = src[:head] + tail[::step][: (limit - head)]

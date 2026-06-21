@@ -76,6 +76,10 @@ export function createLeafletEngine(cfg: LeafletEngineConfig): MapEngine {
     onMapClick(cb) {
       map.on("click", (e: any) => cb(e.latlng.lat, e.latlng.lng));
     },
+    onLongPress(cb) {
+      // Leaflet fires `contextmenu` on a touch long-press AND a desktop right-click.
+      map.on("contextmenu", (e: any) => cb(e.latlng.lat, e.latlng.lng));
+    },
     setCircles(circles: CircleSpec[]) {
       circleLayer.clearLayers();
       for (const c of circles) {

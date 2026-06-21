@@ -1,25 +1,29 @@
-name: Dispatch rerank (5-min cron)
+name: ClearLane v3 recompute (5-min cron)
 
-# Free 5-minute trigger for the live-rerank snapshot, since Vercel Hobby crons are
-# limited to once/day. Hits the deployed recalc endpoint, which pulls current
-# Mappls ETA deltas, re-blends dispatch_priority, and stores the snapshot in Mongo.
-# (GitHub's scheduler runs roughly every 5 min; it can lag a few minutes under load.)
+# Free ~5-minute trigger for the live recompute, since Vercel Hobby crons are
+# limited to once/day. Hits the ONE v3 recalc endpoint, which (every call) refreshes
+# online learning + the day-shaped heatmap cache, fetches live Mappls typical-traffic
+# congestion at most once per 5 min (quota-friendly) with a graceful fall back to the
+# simulation, and persists everything to MongoDB. Reads serve the cached snapshot.
+#
+# Set the repo secret CLEARLANE_CRON_SECRET (Settings → Secrets → Actions) to the
+# same value as the Vercel env var. GitHub's scheduler can lag a few minutes.
 
 on:
   schedule:
     - cron: "*/5 * * * *"
-  workflow_dispatch: {}        # allows manual "Run workflow" from the Actions tab
+  workflow_dispatch: {}        # manual "Run workflow" from the Actions tab
 
-# avoid overlapping runs piling up if one is slow
-concurrency:
-  group: dispatch-rerank
+concurrency:                   # don't pile up overlapping runs
+  group: v3-recompute
   cancel-in-progress: true
 
 jobs:
-  rerank:
+  recompute:
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger /api/dispatch/recalc
+      - name: Trigger /api/v3/cron/recompute
         run: |
-          curl -fsS "https://clearlane-arisyn.vercel.app/api/dispatch/recalc?limit=80" \
-            -o /dev/null -w "recalc HTTP %{http_code} in %{time_total}s\n"
+          curl -fsS \
+            "https://clearlane-arisyn.vercel.app/api/v3/cron/recompute?token=${{ secrets.CLEARLANE_CRON_SECRET }}" \
+            -o /dev/null -w "recompute HTTP %{http_code} in %{time_total}s\n"

@@ -67,6 +67,8 @@ export interface MapEngine {
   setView(center: [number, number], zoom: number, animate?: boolean): void;
   getZoom(): number;
   onMapClick(cb: (lat: number, lon: number) => void): void;
+  // long-press (mobile) / right-click (desktop) — used to drop a report pin.
+  onLongPress?(cb: (lat: number, lon: number) => void): void;
   setCircles(circles: CircleSpec[]): void;
   setHeat(points: HeatPoint[], on: boolean): void;
   setPins(pins: PinSpec[]): void;

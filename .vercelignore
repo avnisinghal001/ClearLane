@@ -22,6 +22,10 @@ ml.v3/
 requirements-ml.txt
 outputs/
 
+# ClearLane-ML — the v1 reference codebase snapshot (own git repo). Reference only,
+# never deployed. Keeps the upload small and the function bundle clean.
+ClearLane-ML/
+
 # Local virtualenvs / caches / build artifacts (Vercel rebuilds what it needs)
 .venv/
 backend/.venv/

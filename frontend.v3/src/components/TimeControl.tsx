@@ -21,6 +21,11 @@ function todayStr() {
   return new Date().toISOString().slice(0, 10);
 }
 
+// Current Bengaluru (IST = UTC+5:30) hour 0..23 — what "Now" should snap to.
+function istHourNow(): number {
+  return Math.floor(((Date.now() / 3_600_000) + 5.5) % 24);
+}
+
 export function TimeControl({
   value,
   onChange,
@@ -63,7 +68,15 @@ export function TimeControl({
           return (
             <button
               key={o.key}
-              onClick={() => onChange({ ...value, when: o.key, date: o.key === "custom" ? value.date || todayStr() : value.date })}
+              onClick={() =>
+                onChange({
+                  ...value,
+                  when: o.key,
+                  // "Now" snaps the slider to the live IST hour (the current moment)
+                  hour: o.key === "now" ? istHourNow() : value.hour,
+                  date: o.key === "custom" ? value.date || todayStr() : value.date,
+                })
+              }
               className={cn(
                 "flex items-center justify-center gap-1 rounded-md px-1.5 py-1.5 text-[13px] font-medium transition-colors",
                 active ? "bg-background text-foreground shadow" : "text-muted-foreground hover:text-foreground",

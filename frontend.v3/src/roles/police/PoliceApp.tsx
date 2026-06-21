@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Map as MapIcon, ListChecks, Flame, Plus, Radio, Waypoints, MoonStar, Shield } from "lucide-react";
 import { AppShell, type NavItem } from "@/components/AppShell";
@@ -15,6 +15,7 @@ import { TicketTable } from "./TicketTable";
 import { HotspotsPanel } from "./HotspotsPanel";
 import { DispatchQueue } from "./DispatchQueue";
 import { CreateTicketDialog } from "./CreateTicketDialog";
+import { IncidentReporter, type IncidentReporterHandle } from "@/components/IncidentReporter";
 import { ResolveDialog } from "./ResolveDialog";
 import { ForceCommand } from "./ForceCommand";
 import { useMapData } from "@/hooks/useMapData";
@@ -28,7 +29,7 @@ import type { Cell, DispatchPlan, ResolveInput, Station, Ticket, TicketInput } f
 type Tab = "map" | "dispatch" | "queue" | "force" | "hotspots" | "flow" | "blind";
 
 const KIND_PIN: Record<string, string> = {
-  citizen_complaint: "#ea580c",
+  citizen_complaint: "#2563eb", // reported incidents -> blue markers
   police_ticket: "#2563eb",
   chalan: "#9333ea",
 };
@@ -52,6 +53,7 @@ export function PoliceApp() {
   const [createFor, setCreateFor] = useState<{ open: boolean; cell: Cell | null }>({ open: false, cell: null });
   const [resolving, setResolving] = useState<Ticket | null>(null);
   const [centered, setCentered] = useState(false);
+  const reportRef = useRef<IncidentReporterHandle>(null);
 
   const refreshTickets = useCallback(() => {
     getTickets({ station: stationName, limit: 500 }).then(setTickets).catch(() => {});
@@ -151,6 +153,7 @@ export function PoliceApp() {
             source={data?.source ?? "live"}
             flyTo={flyTo}
             onCellClick={setSelected}
+            onLongPress={(ll) => reportRef.current?.openAt(ll)}
             routes={route ? [route] : undefined}
             pins={pins}
             evidence={evidence}
@@ -243,6 +246,8 @@ export function PoliceApp() {
 
       <CreateTicketDialog open={createFor.open} onClose={() => setCreateFor({ open: false, cell: null })} station={stationName} cell={createFor.cell} officers={rosterOfficers} onCreate={handleCreate} />
       <ResolveDialog ticket={resolving} onClose={() => setResolving(null)} onResolve={handleResolve} />
+      {/* long-press the map anywhere -> report an incident (no FAB; Create-ticket is the primary) */}
+      <IncidentReporter ref={reportRef} showFab={false} onFiled={refreshTickets} defaultLoc={station ? [station.lat, station.lon] : null} />
     </AppShell>
   );
 }

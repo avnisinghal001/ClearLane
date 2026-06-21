@@ -243,16 +243,20 @@ export function clearMapCache() {
   _mapCache.clear();
 }
 
-export async function getMap(when: When, hour: number | null, date?: string): Promise<MapPayload> {
+export async function getMap(when: When, hour: number | null, date?: string, force = false): Promise<MapPayload> {
   const lens = `${when}:${hour ?? "_"}:${when === "custom" ? date ?? "" : ""}`;
   const hit = _mapCache.get(lens);
-  if (hit && (when !== "now" || Date.now() - hit.ts < MAP_TTL_NOW_MS)) {
+  // `force` (e.g. the "Now" button) always hits the API for fresh live state.
+  if (!force && hit && (when !== "now" || Date.now() - hit.ts < MAP_TTL_NOW_MS)) {
     return { ...hit.payload, served_from_client_cache: true } as MapPayload;
   }
 
   const qs = new URLSearchParams({ when });
   if (hour != null) qs.set("hour", String(hour)); // hour drives the heatmap in every mode
   if (when === "custom" && date) qs.set("date", date);
+  // Dense map like v1 (~1.5k zones): ask for the full representative spread (head +
+  // stride across all 6.5k occupied cells) instead of the thin 250-cell default.
+  qs.set("limit", "2000");
   const live = await tryLive<MapPayload>(`/api/v3/map?${qs}`);
   let out: MapPayload;
   if (live && live.cells) {

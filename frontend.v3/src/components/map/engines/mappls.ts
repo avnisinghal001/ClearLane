@@ -119,6 +119,21 @@ export async function initMappls(o: InitOptions): Promise<MapEngine> {
         /* noop */
       }
     },
+    onLongPress(cb) {
+      // long-press / right-click on the Mappls GL map -> drop a report pin.
+      const handler = (e: any) => {
+        const ll = e?.lngLat ?? e?.latLng ?? e?.latlng;
+        const lat = ll?.lat ?? (Array.isArray(ll) ? ll[1] : undefined);
+        const lng = ll?.lng ?? (Array.isArray(ll) ? ll[0] : undefined);
+        if (lat != null && lng != null) cb(lat, lng);
+      };
+      try {
+        if (typeof map.addListener === "function") map.addListener("contextmenu", handler);
+        else map.on?.("contextmenu", handler);
+      } catch {
+        /* noop */
+      }
+    },
     setCircles(specs: CircleSpec[]) {
       removeAll(circles);
       circles = [];

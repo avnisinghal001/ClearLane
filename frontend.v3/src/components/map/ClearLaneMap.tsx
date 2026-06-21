@@ -36,6 +36,7 @@ interface Props {
   onCellClick?: (c: Cell) => void;
   pickMode?: boolean;
   onPick?: (latlon: [number, number]) => void;
+  onLongPress?: (latlon: [number, number]) => void; // long-press / right-click -> report here
   onPickModeChange?: (on: boolean) => void; // citizen "file complaint (click map)" toggle
   enableComplaint?: boolean; // show the complaint-on-click toggle (citizen)
   evidence?: [number, number][]; // recorded ticket/report points for the evidence layer
@@ -66,6 +67,7 @@ export function ClearLaneMap({
   onCellClick,
   pickMode = false,
   onPick,
+  onLongPress,
   onPickModeChange,
   enableComplaint = false,
   evidence,
@@ -115,6 +117,8 @@ export function ClearLaneMap({
   pickRef.current = pickMode;
   const onPickRef = useRef(onPick);
   onPickRef.current = onPick;
+  const onLongPressRef = useRef(onLongPress);
+  onLongPressRef.current = onLongPress;
   const onCellRef = useRef(onCellClick);
   onCellRef.current = onCellClick;
   const centeredRef = useRef(false);
@@ -139,6 +143,8 @@ export function ClearLaneMap({
         engine.onMapClick((lat, lon) => {
           if (pickRef.current && onPickRef.current) onPickRef.current([lat, lon]);
         });
+        // long-press (mobile) / right-click (desktop) anywhere -> open a report here
+        engine.onLongPress?.((lat, lon) => onLongPressRef.current?.([lat, lon]));
         setTimeout(() => engine.invalidate(), 120);
       })
       .catch(() => !cancelled && setStatus("error"));
@@ -723,6 +729,9 @@ function Legend({
           <i className="inline-block h-1.5 w-1.5 rounded-full bg-slate-500" /> evidence point
         </span>
       )}
+      <span className="flex items-center gap-1.5">
+        <i className="inline-block h-2.5 w-2.5 rounded-full border-2 border-white bg-[#2563eb] shadow" /> reported incident (long-press map)
+      </span>
       <div className="text-[10px] text-muted-foreground">{hourActivity ? "size = modeled congestion @ hour" : "size = obstruction pressure"} · modeled, not measured</div>
     </div>
   );

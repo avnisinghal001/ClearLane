@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Map as MapIcon, Radio, ListChecks, Waypoints, MoonStar,
@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { AppShell, type NavItem } from "@/components/AppShell";
 import { ClearLaneMap, type MapPin } from "@/components/map/ClearLaneMap";
+import { IncidentReporter, type IncidentReporterHandle } from "@/components/IncidentReporter";
 import type { TimeValue } from "@/components/TimeControl";
 import { DateLens } from "./DateLens";
 import { CellDrawer } from "@/components/CellDrawer";
@@ -51,6 +52,23 @@ export function GovtApp() {
   const [selected, setSelected] = useState<Cell | null>(null);
   const [flyTo, setFlyTo] = useState<[number, number] | null>(null);
   const [forceSlug, setForceSlug] = useState<string>("");
+  const reportRef = useRef<IncidentReporterHandle>(null);
+
+  // reported incidents -> blue markers on the city map
+  const reportPins = useMemo<MapPin[]>(
+    () =>
+      tickets
+        .filter((t) => t.kind === "citizen_complaint" && t.status === "open" && t.lat != null && t.lon != null)
+        .map((t) => ({
+          key: t.id,
+          lat: t.lat as number,
+          lon: t.lon as number,
+          color: "#2563eb",
+          pulse: true,
+          label: `${t.category ?? "Reported incident"} · ${t.station ?? "nearest station"}`,
+        })),
+    [tickets],
+  );
 
   useEffect(() => {
     getKpis().then(setKpis);
@@ -155,6 +173,8 @@ export function GovtApp() {
             source={data?.source ?? "live"}
             flyTo={flyTo}
             onCellClick={setSelected}
+            onLongPress={(ll) => reportRef.current?.openAt(ll)}
+            pins={reportPins}
             evidence={evidence}
             defaultHeat
             defaultZoom={11}
@@ -167,6 +187,8 @@ export function GovtApp() {
               <Badge variant={data?.source === "forecast" ? "modeled" : "live"}>{data?.source === "forecast" ? "Forecast" : "Live"}</Badge>
             </div>
           </div>
+          {/* government can also report — FAB at 5vh + long-press the map */}
+          <IncidentReporter ref={reportRef} onFiled={() => getTickets({ limit: 500 }).then(setTickets).catch(() => {})} defaultLoc={cells[0] ? [cells[0].lat, cells[0].lon] : null} />
         </div>
       )}
 
