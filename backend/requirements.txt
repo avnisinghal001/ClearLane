@@ -1,6 +1,0 @@
-fastapi==0.137.1
-uvicorn[standard]==0.49.0
-pymongo==4.10.1
-dnspython==2.7.0
-# optional: enables the LLM copilot deployment extension (CLEARLANE_LLM=1)
-# anthropic>=0.40
