@@ -100,7 +100,7 @@ FEEDBACK_KINDS = REASON_VALUES
 ONLINE_PRIOR_SHAPE = 1.0
 ONLINE_PRIOR_RATE = 1.0
 
-RECOMPUTE_INTERVAL_H = 1.0               # cron cadence (hourly) -> /online/status due
+RECOMPUTE_INTERVAL_H = 24.0              # cron cadence (daily on Vercel Hobby) -> /online/status due
 LAZY_MAX_AGE_H = 24.0                    # read path force-refreshes if staler than this
 LAZY_LOCK_TTL_S = 180                    # lock window so two cold readers don't both run
 
