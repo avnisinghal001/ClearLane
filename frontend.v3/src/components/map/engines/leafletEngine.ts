@@ -30,9 +30,20 @@ export function createLeafletEngine(cfg: LeafletEngineConfig): MapEngine {
   // Shared CANVAS renderer so the full ~6.5k-cell occupied set renders smoothly
   // (SVG would choke). MapMyIndia's Leaflet map defaults to SVG, so we force a
   // canvas renderer per overlay layer here.
+  //
+  // CRITICAL: MapMyIndia's map_load serves an OLD Leaflet for some keys/sessions
+  // (observed 1.1.1 vs 1.6.0 from the SAME ?v=1.5 URL). Before Leaflet 1.2.0,
+  // `Map.getRenderer` did NOT auto-add a renderer supplied via a layer's
+  // `renderer` option, so the canvas container was never created and every
+  // circle/ring/dot silently failed to draw while the basemap still showed —
+  // i.e. "the zones don't render". We therefore attach the renderer to the map
+  // EXPLICITLY so it works on every Leaflet version.
   let canvasRenderer: any = null;
   try {
     canvasRenderer = typeof L.canvas === "function" ? L.canvas({ padding: 0.5 }) : null;
+    if (canvasRenderer && typeof map.addLayer === "function" && !map.hasLayer?.(canvasRenderer)) {
+      map.addLayer(canvasRenderer);
+    }
   } catch {
     canvasRenderer = null;
   }
@@ -68,16 +79,23 @@ export function createLeafletEngine(cfg: LeafletEngineConfig): MapEngine {
     setCircles(circles: CircleSpec[]) {
       circleLayer.clearLayers();
       for (const c of circles) {
-        const m = L.circleMarker([c.lat, c.lon], withRenderer({
-          radius: c.radius,
-          color: c.color,
-          weight: c.weight,
-          fillColor: c.fillColor,
-          fillOpacity: 0.62,
-        }));
-        if (c.tooltip) m.bindTooltip(c.tooltip, { direction: "top", offset: [0, -2] });
-        if (c.onClick) m.on("click", c.onClick);
-        m.addTo(circleLayer);
+        if (c.lat == null || c.lon == null) continue;       // skip un-geocoded cells
+        try {
+          const m = L.circleMarker([c.lat, c.lon], withRenderer({
+            radius: c.radius,
+            color: c.color,
+            weight: c.weight,
+            fillColor: c.fillColor,
+            fillOpacity: 0.62,
+          }));
+          // bindTooltip only exists in Leaflet >= 1.0; guard so an old build can't
+          // throw mid-loop and abort the whole layer (leaving the map blank).
+          if (c.tooltip && typeof m.bindTooltip === "function") m.bindTooltip(c.tooltip, { direction: "top", offset: [0, -2] });
+          if (c.onClick) m.on("click", c.onClick);
+          m.addTo(circleLayer);
+        } catch {
+          /* skip a single bad circle rather than losing the entire layer */
+        }
       }
     },
     setHeat(points: HeatPoint[], on: boolean) {
@@ -111,28 +129,38 @@ export function createLeafletEngine(cfg: LeafletEngineConfig): MapEngine {
     setRings(rings: RingSpec[]) {
       ringLayer.clearLayers();
       for (const r of rings) {
-        const m = L.circleMarker([r.lat, r.lon], withRenderer({
-          radius: r.radius,
-          color: r.color,
-          weight: r.weight ?? 1.4,
-          dashArray: r.dashArray ?? "4",
-          fill: false,
-        }));
-        if (r.tooltip) m.bindTooltip(r.tooltip, { direction: "top", offset: [0, -2] });
-        m.addTo(ringLayer);
+        if (r.lat == null || r.lon == null) continue;
+        try {
+          const m = L.circleMarker([r.lat, r.lon], withRenderer({
+            radius: r.radius,
+            color: r.color,
+            weight: r.weight ?? 1.4,
+            dashArray: r.dashArray ?? "4",
+            fill: false,
+          }));
+          if (r.tooltip && typeof m.bindTooltip === "function") m.bindTooltip(r.tooltip, { direction: "top", offset: [0, -2] });
+          m.addTo(ringLayer);
+        } catch {
+          /* skip a single bad ring */
+        }
       }
     },
     setDots(dots: DotSpec[]) {
       dotLayer.clearLayers();
       for (const d of dots) {
-        L.circleMarker([d.lat, d.lon], withRenderer({
-          radius: d.radius ?? 1.7,
-          color: d.color ?? "#64748b",
-          weight: 0,
-          fillColor: d.color ?? "#64748b",
-          fillOpacity: 0.5,
-          interactive: false,
-        })).addTo(dotLayer);
+        if (d.lat == null || d.lon == null) continue;
+        try {
+          L.circleMarker([d.lat, d.lon], withRenderer({
+            radius: d.radius ?? 1.7,
+            color: d.color ?? "#64748b",
+            weight: 0,
+            fillColor: d.color ?? "#64748b",
+            fillOpacity: 0.5,
+            interactive: false,
+          })).addTo(dotLayer);
+        } catch {
+          /* skip a single bad dot */
+        }
       }
     },
     setTraffic(on: boolean) {

@@ -115,14 +115,20 @@ export function AppShell({
           </div>
         </header>
 
-        <main className={cn("relative min-h-0 flex-1", fill ? "overflow-hidden" : "overflow-y-auto", bottomNavOnMobile && "pb-16 md:pb-0")}>
+        <main
+          className={cn(
+            "relative min-h-0 flex-1",
+            fill ? "overflow-hidden" : "overflow-y-auto",
+            bottomNavOnMobile && "pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0",
+          )}
+        >
           {children}
         </main>
       </div>
 
       {/* citizen mobile-first bottom nav */}
       {bottomNavOnMobile && (
-        <nav className="fixed inset-x-0 bottom-0 z-[600] flex h-16 items-stretch border-t bg-background/97 backdrop-blur md:hidden">
+        <nav className="fixed inset-x-0 bottom-0 z-[600] flex h-16 items-stretch border-t bg-background/97 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
           {nav.map((n) => (
             <button
               key={n.key}

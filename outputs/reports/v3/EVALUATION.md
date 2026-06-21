@@ -7,9 +7,9 @@
 | Capability | Stage | Headline metrics | Criteria | Status |
 |---|---|---|---|---|
 | Hotspots (bias-corrected NB + Gi*) | 04 | spatial-CV rho=0.373, Moran(resid)=-0.0018, Gi* hot=546 | rho>=0.3 & |Moran|<=0.05 | **PASS** |
-| Parking-Induced Congestion (PIC) | 05 | 6483 cells ranked, congestion=modeled-only | PIC computed for all occupied cells (severity live when API enabled) | **PASS** |
+| Parking-Induced Congestion (PIC) | 05 | 6483 cells ranked, congestion=mappls_typical+modeled | PIC computed for all occupied cells (severity live when API enabled) | **PASS** |
 | Daily violation forecaster | 06 | PoissonDev=2.804 vs base 3.215, Spearman=0.342, beats_baseline=yes | beats baseline & Spearman>=0.2 | **PASS** |
-| Exact dispatch (MCLP + VRP) | 08 | 25 officers cover 81.3% of PIC, uplift 1.41x vs random | uplift vs random >= 1.2x | **PASS** |
+| Exact dispatch (MCLP + VRP) | 08 | 25 officers cover 80.5% of PIC, uplift 1.39x vs random | uplift vs random >= 1.2x | **PASS** |
 | Online learning (Gamma-Poisson + drift) | 09 | 214 emerging of 2398 eligible, closed-form self-test match=yes | emerging>=1 (and < all) & closed-form update verified | **PASS** |
 | Quasi-causal enforcement panel | 10 | beta=-0.994 (CI[-1.109,-0.879]), placebo=-0.0009 | placebo ~0 (<0.05) & real beta outside placebo band | **PASS** |
 

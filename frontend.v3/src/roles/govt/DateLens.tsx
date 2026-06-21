@@ -1,4 +1,5 @@
-import { Database, CalendarDays, CalendarClock, CalendarRange, Sparkles, History } from "lucide-react";
+import { useState } from "react";
+import { Database, CalendarDays, CalendarClock, CalendarRange, Sparkles, History, ChevronDown } from "lucide-react";
 import type { When } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
@@ -33,9 +34,27 @@ export function DateLens({
   const peak = isAssumedPeak(value.hour);
   const isLearning = value.when !== "custom";
   const isCustom = value.when === "custom";
+  // Collapsible (accordion) — default OPEN on desktop, COLLAPSED on mobile.
+  const [open, setOpen] = useState(() => (typeof window !== "undefined" && window.matchMedia?.("(max-width: 767px)").matches ? false : true));
+  const whenLabel = OPTIONS.find((o) => o.key === value.when)?.label ?? "All data";
 
   return (
     <div className={cn("rounded-xl border bg-background/95 p-2 shadow-sm backdrop-blur", className)}>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between gap-2 rounded-md px-1 py-0.5 text-left"
+        aria-expanded={open}
+        aria-label="Toggle date lens"
+      >
+        <span className="flex items-center gap-1.5 text-xs font-semibold">
+          <Database className="h-3.5 w-3.5 text-primary" /> Date lens
+          <span className="num font-normal text-muted-foreground">· {whenLabel}{allDay ? " · all-day" : ` · ${fmtHour(value.hour)}`}</span>
+        </span>
+        <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", open ? "rotate-180" : "")} />
+      </button>
+
+      {!open ? null : (
+      <div className="mt-1.5">
       <div className="grid grid-cols-4 gap-1 rounded-lg bg-muted p-1">
         {OPTIONS.map((o) => {
           const active = value.when === o.key;
@@ -107,6 +126,8 @@ export function DateLens({
           {allDay ? "all-day priority (PIC), hour-independent" : "× modeled typical congestion for the hour"}. Modeled, not measured.
         </p>
       </div>
+      </div>
+      )}
     </div>
   );
 }

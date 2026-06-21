@@ -33,7 +33,9 @@ export function TimeControl({
   const peak = isAssumedPeak(value.hour);
   const isLearning = value.when === "now" || value.when === "today" || value.when === "tomorrow";
   const isCustom = value.when === "custom";
-  const [open, setOpen] = useState(true);
+  // Collapsible — default OPEN on desktop, COLLAPSED on mobile so the panel doesn't
+  // eat the small map (read the viewport once on mount).
+  const [open, setOpen] = useState(() => (typeof window !== "undefined" && window.matchMedia?.("(max-width: 767px)").matches ? false : true));
   const whenLabel = OPTIONS.find((o) => o.key === value.when)?.label ?? "Now";
 
   return (

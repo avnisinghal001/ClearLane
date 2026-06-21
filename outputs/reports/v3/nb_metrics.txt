@@ -26,7 +26,7 @@
     "available": true,
     "n_sig_hot": 546,
     "moran_I_residuals": -0.0018,
-    "moran_p_residuals": 0.463,
+    "moran_p_residuals": 0.478,
     "weights": "H3-adjacency"
   },
   "spatial_cv": {

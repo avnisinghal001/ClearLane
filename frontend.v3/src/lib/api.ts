@@ -107,11 +107,24 @@ const HC_CONG_W = 0.6;
 const DOW_FACTORS: Record<string, number> = {
   Mon: 0.9, Tue: 0.96, Wed: 1.0, Thu: 1.01, Fri: 1.06, Sat: 1.09, Sun: 1.14,
 };
-function congAt(hc: DemoHourlyCongestion | null, roadClass: string | null | undefined, hour: number): number {
-  if (!hc) return 1;
-  const cur = hc.curves[roadClass || "unknown"] || hc.global || hc.curves["unknown"];
-  const v = cur?.[((hour % 24) + 24) % 24];
-  return v == null ? 0.5 : v;
+// REAL day-shaped congestion (mirror of api/clearlane/v3.py SIM_DAYHOUR): each day
+// has its OWN 24-hour SHAPE so scrubbing the day re-patterns the offline map too
+// (Sun 09:00 quiet vs Mon 09:00 rush; Mon 12:00 dip vs Sun 12:00 busy).
+const SIM_DAYHOUR: Record<string, number[]> = {
+  Mon: [0.26, 0.22, 0.2, 0.2, 0.24, 0.34, 0.52, 0.74, 0.92, 0.95, 0.84, 0.66, 0.58, 0.55, 0.56, 0.62, 0.78, 0.94, 1.0, 0.96, 0.8, 0.6, 0.4, 0.3],
+  Tue: [0.27, 0.23, 0.21, 0.21, 0.25, 0.36, 0.55, 0.78, 0.96, 1.0, 0.88, 0.68, 0.6, 0.57, 0.58, 0.64, 0.8, 0.98, 1.04, 0.99, 0.82, 0.62, 0.42, 0.31],
+  Wed: [0.27, 0.23, 0.21, 0.21, 0.25, 0.36, 0.55, 0.78, 0.96, 1.0, 0.88, 0.68, 0.6, 0.57, 0.58, 0.64, 0.8, 0.98, 1.04, 0.99, 0.82, 0.62, 0.42, 0.31],
+  Thu: [0.28, 0.24, 0.22, 0.22, 0.26, 0.37, 0.56, 0.79, 0.97, 1.01, 0.89, 0.69, 0.61, 0.58, 0.59, 0.66, 0.82, 1.0, 1.05, 1.0, 0.84, 0.64, 0.44, 0.32],
+  Fri: [0.3, 0.25, 0.22, 0.22, 0.26, 0.37, 0.56, 0.8, 0.97, 1.0, 0.9, 0.72, 0.66, 0.64, 0.66, 0.74, 0.88, 1.02, 1.08, 1.06, 0.96, 0.8, 0.58, 0.42],
+  Sat: [0.4, 0.32, 0.27, 0.24, 0.24, 0.28, 0.36, 0.48, 0.62, 0.74, 0.84, 0.9, 0.92, 0.9, 0.9, 0.94, 1.0, 1.04, 1.06, 1.04, 0.98, 0.88, 0.74, 0.56],
+  Sun: [0.42, 0.34, 0.28, 0.25, 0.24, 0.26, 0.3, 0.38, 0.5, 0.64, 0.8, 0.92, 0.98, 0.96, 0.88, 0.84, 0.86, 0.92, 1.0, 1.04, 1.0, 0.9, 0.74, 0.56],
+};
+const HC_AMP: Record<string, number> = { ring_road: 1.0, arterial: 0.95, commercial: 0.9, main_road: 0.85, local: 0.45, unknown: 0.7 };
+function dayCong(roadClass: string | null | undefined, dowLabel: string, hour: number): number {
+  const shape = SIM_DAYHOUR[dowLabel] || SIM_DAYHOUR.Wed;
+  const base = shape[((hour % 24) + 24) % 24];
+  const amp = HC_AMP[roadClass || "unknown"] ?? 0.7;
+  return Math.max(0, Math.min(1, 0.08 + base * (0.45 + 0.55 * amp)));
 }
 const clamp100 = (x: number) => Math.max(0, Math.min(100, x));
 const LIFT_W = 0.5;
@@ -154,13 +167,14 @@ function composeMap(when: When, hour: number | null, date: string | undefined, b
     }
   }
 
-  const dowFac = DOW_FACTORS[DOW_LABELS[dow]] ?? 1;
+  const dowL = DOW_LABELS[dow];
+  void DOW_FACTORS; // superseded by SIM_DAYHOUR (kept for reference)
   let nAdjusted = 0;
   let nEmerging = 0;
   const cells: Cell[] = base.cells.map((c) => {
     const adj = local.liveAdjustment(c.h3_r10);
     const op = clamp100(c.pic_score + adj);
-    const cong = congAt(hc, c.road_class, hr);
+    const cong = dayCong(c.road_class, dowL, hr); // DAY-shaped congestion (not scaled)
     const mod = HC_BASE_W + HC_CONG_W * cong;
     const lift = learning ? offlineLift(c) : 0;
     if (Math.abs(lift) >= 0.08) nAdjusted++;
@@ -169,15 +183,15 @@ function composeMap(when: When, hour: number | null, date: string | undefined, b
     const baseL = baseProp * (1 + LIFT_W * lift);
     let intensity = round(clamp100(baseL * mod), 1);
     if (when === "now") intensity = round(clamp100(intensity + 0.5 * adj), 1);
-    // pure TIME-VARYING composite (mirror of api._dow_factor × _hour_heat): recolours
-    // the PIC layer as you scrub hour/day, with no learning. MODELED, never measured.
-    const displayScore = round(clamp100(c.pic_score * mod * dowFac), 1);
+    // pure TIME-VARYING composite: pic_score × DAY-shaped congestion for (dow,hour) —
+    // recolours AND re-patterns per day as you scrub. MODELED, never measured.
+    const displayScore = round(clamp100(c.pic_score * mod), 1);
     return {
       ...c,
       intensity,
       display_score: displayScore,
       pressure: c.pic_score,
-      forecast_intensity: when === "now" ? null : round(clamp100(baseL), 1),
+      forecast_intensity: when === "now" ? null : round(clamp100(baseL * mod), 1),
       congestion_hour: round(cong, 3),
       learn_lift: round(lift, 3),
       live_adjustment: round(adj, 1),
@@ -186,7 +200,6 @@ function composeMap(when: When, hour: number | null, date: string | undefined, b
   });
 
   const hh = `${String(hr).padStart(2, "0")}:00`;
-  const dowL = DOW_LABELS[dow];
   let source_note: string;
   let badge: string;
   if (when === "now") {
@@ -221,27 +234,46 @@ function composeMap(when: When, hour: number | null, date: string | undefined, b
   };
 }
 
+// Client-side WHOLE-MAP cache: scrubbing back to a (day, hour) already fetched is
+// instant (no network). `now` is short-lived (live data); other lenses are stable
+// until the page reloads or forceRecompute() clears the cache.
+const _mapCache = new Map<string, { ts: number; payload: MapPayload }>();
+const MAP_TTL_NOW_MS = 20_000;
+export function clearMapCache() {
+  _mapCache.clear();
+}
+
 export async function getMap(when: When, hour: number | null, date?: string): Promise<MapPayload> {
+  const lens = `${when}:${hour ?? "_"}:${when === "custom" ? date ?? "" : ""}`;
+  const hit = _mapCache.get(lens);
+  if (hit && (when !== "now" || Date.now() - hit.ts < MAP_TTL_NOW_MS)) {
+    return { ...hit.payload, served_from_client_cache: true } as MapPayload;
+  }
+
   const qs = new URLSearchParams({ when });
   if (hour != null) qs.set("hour", String(hour)); // hour drives the heatmap in every mode
   if (when === "custom" && date) qs.set("date", date);
   const live = await tryLive<MapPayload>(`/api/v3/map?${qs}`);
+  let out: MapPayload;
   if (live && live.cells) {
-    return {
+    out = {
       ...live,
       when,
       hour: live.hour ?? hour,
       source: when === "now" ? "live" : "forecast",
       source_note: live.source_note ?? "",
     };
+  } else {
+    const [base, kpis, hc] = await Promise.all([
+      demo<DemoCells>("cells.json"),
+      demo<Kpis>("kpis.json"),
+      demo<DemoHourlyCongestion>("hourly_congestion.json").catch(() => null),
+    ]);
+    local.seed(base.cells, await demo<Ticket[]>("tickets.json"));
+    out = composeMap(when, hour, date, base, kpis, hc);
   }
-  const [base, kpis, hc] = await Promise.all([
-    demo<DemoCells>("cells.json"),
-    demo<Kpis>("kpis.json"),
-    demo<DemoHourlyCongestion>("hourly_congestion.json").catch(() => null),
-  ]);
-  local.seed(base.cells, await demo<Ticket[]>("tickets.json"));
-  return composeMap(when, hour, date, base, kpis, hc);
+  _mapCache.set(lens, { ts: Date.now(), payload: out });
+  return out;
 }
 
 // Government-only FORCE update: recompute online rates + re-rank + re-bake the
@@ -274,6 +306,7 @@ export async function forceRecompute(): Promise<{
               : `Recompute failed (${r.status}).`,
       };
     }
+    clearMapCache(); // fresh recompute -> drop the client map cache so scrubs refetch
     return await r.json();
   } catch {
     return { ok: false, error: "Backend unavailable — recompute needs the live API + MongoDB." };

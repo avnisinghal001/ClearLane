@@ -67,6 +67,12 @@ export default {
           "70%": { boxShadow: "0 0 0 10px hsl(var(--primary) / 0)" },
           "100%": { boxShadow: "0 0 0 0 hsl(var(--primary) / 0)" },
         },
+        // vertical light sweep for the right-edge "Report incident" tab
+        shimmer: {
+          "0%": { transform: "translateY(-110%)" },
+          "55%": { transform: "translateY(110%)" },
+          "100%": { transform: "translateY(110%)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -74,6 +80,7 @@ export default {
         "fade-in": "fade-in 0.3s ease-out",
         "slide-up": "slide-up 0.25s ease-out",
         "pulse-ring": "pulse-ring 1.8s cubic-bezier(0.4,0,0.6,1) infinite",
+        shimmer: "shimmer 2.6s ease-in-out infinite",
       },
     },
   },

@@ -138,13 +138,22 @@ export function CitizenApp() {
             </div>
           </div>
 
-          {/* report CTA — bottom-right FAB, clear of the mobile nav + recenter */}
-          <Button
+          {/* report CTA — vertical tab anchored to the RIGHT EDGE, vertically centred
+              (clear of the layers FAB up top + the mobile bottom nav), with a
+              shimmer sweep. Vertical writing-mode rotates the label. */}
+          <button
             onClick={() => openReport()}
-            className="absolute bottom-36 right-4 z-[610] gap-2 rounded-full px-5 shadow-lg md:bottom-6"
+            aria-label="Report incident"
+            title="Report incident"
+            className="group fixed right-0 top-1/2 z-[610] flex -translate-y-1/2 items-center gap-2 overflow-hidden rounded-l-xl bg-primary py-4 pl-2 pr-1.5 font-semibold text-primary-foreground shadow-lg ring-1 ring-black/10 transition-[padding] hover:pl-2.5 [writing-mode:vertical-rl]"
           >
-            <Megaphone className="h-4 w-4" /> Report incident
-          </Button>
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-0 animate-shimmer bg-gradient-to-b from-transparent via-white/40 to-transparent"
+            />
+            <Megaphone className="h-4 w-4 rotate-90" />
+            <span className="text-sm tracking-wide">Report incident</span>
+          </button>
         </div>
       ) : (
         <div className="mx-auto max-w-4xl space-y-4 p-4 sm:p-6">

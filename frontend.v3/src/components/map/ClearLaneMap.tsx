@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Layers, Crosshair, Loader2, AlertTriangle, Sparkles, History, Play, Pause, X,
+  Layers, Crosshair, Loader2, AlertTriangle, Sparkles, History, Play, Pause, X, ChevronDown, Palette,
 } from "lucide-react";
 import type { Cell, DispatchRoute } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -88,6 +88,11 @@ export function ClearLaneMap({
   const [info, setInfo] = useState<{ label: string; priority: number; supportsTraffic: boolean } | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [panelOpen, setPanelOpen] = useState(false);
+  // floating panels are collapsible (accordion) — default OPEN on desktop, COLLAPSED
+  // on mobile to free the small map (lazy initialiser reads the viewport once).
+  const phoneInit = () => (typeof window !== "undefined" && window.matchMedia?.("(max-width: 767px)").matches ? false : true);
+  const [legendOpen, setLegendOpen] = useState(phoneInit);
+  const [captionOpen, setCaptionOpen] = useState(phoneInit);
 
   // view mode
   const [simple, setSimple] = useState(false);
@@ -205,6 +210,11 @@ export function ClearLaneMap({
     const heatSpecs: HeatPoint[] = heatPoints(cells, source).map(([lat, lon, intensity]) => ({ lat, lon, intensity }));
     engine.setCircles(showHeat ? [] : circleSpecs);
     engine.setHeat(heatSpecs, showHeat);
+    // TEMP render trace (dev-only) — confirms how many cells actually draw + which
+    // engine won. Remove once the render path is verified in the field.
+    if (import.meta.env.DEV)
+      // eslint-disable-next-line no-console
+      console.log(`[ClearLaneMap] engine=${engine.label} cells_in=${cells.length} display=${display.length} circles_drawn=${showHeat ? 0 : circleSpecs.length} heat_pts=${showHeat ? heatSpecs.length : 0} mode=${colorMode}`);
   }, [display, cells, source, colorMode, showHeat, status, replayOn, radiusOf, flowMap]);
 
   // ---- evening blind-spot rings (dashed) ----------------------------------
@@ -383,31 +393,38 @@ export function ClearLaneMap({
           <Layers className="h-5 w-5" />
         </button>
         {panelOpen && !isMobile && (
-          <div className="flex max-h-[min(70vh,32rem)] w-72 flex-col animate-slide-up rounded-xl border bg-background/97 p-3 text-sm shadow-xl backdrop-blur">
+          // Outer wrapper: flex column, min-h-0 + overflow-hidden so the INNER list
+          // can shrink and scroll instead of pushing the panel taller (the recurring
+          // overflow bug). No fixed height here — the bound lives on the inner list.
+          <div className="flex min-h-0 w-72 flex-col overflow-hidden animate-slide-up rounded-xl border bg-background/97 p-3 text-sm shadow-xl backdrop-blur">
             <div className="mb-1 flex shrink-0 items-center justify-between">
               <span className="text-xs font-bold">Map layers &amp; view</span>
               <button onClick={() => setPanelOpen(false)} className="text-muted-foreground hover:text-foreground" aria-label="Close">
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="-mr-1 min-h-0 flex-1 overflow-y-auto pr-1">{panel}</div>
+            {/* INNER scroll list: bounded max-height + overflow-y-auto DIRECTLY here so
+                it always scrolls inside the drawer, regardless of the flex chain. */}
+            <div className="-mr-1 min-h-0 max-h-[min(60vh,28rem)] flex-1 overflow-y-auto overflow-x-hidden pr-1">{panel}</div>
           </div>
         )}
       </div>
 
-      {/* mobile bottom sheet for the layers panel */}
+      {/* mobile bottom sheet for the layers panel — flex column with a bounded height;
+          the INNER list scrolls (min-h-0 + overflow-y-auto) so a long list never
+          crops, and the sheet pads for the safe-area / bottom nav. */}
       {panelOpen && isMobile && (
         <>
           <div className="fixed inset-0 z-[1100] bg-black/40 backdrop-blur-sm" onClick={() => setPanelOpen(false)} />
-          <div className="fixed inset-x-0 bottom-0 z-[1101] max-h-[80vh] animate-slide-up overflow-y-auto rounded-t-2xl border-t bg-background p-4 pb-6 shadow-2xl">
-            <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-border" />
-            <div className="mb-1 flex items-center justify-between">
+          <div className="fixed inset-x-0 bottom-0 z-[1101] flex max-h-[80vh] flex-col animate-slide-up rounded-t-2xl border-t bg-background px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3 shadow-2xl">
+            <div className="mx-auto mb-2 h-1 w-10 shrink-0 rounded-full bg-border" />
+            <div className="mb-1 flex shrink-0 items-center justify-between">
               <span className="text-sm font-bold">Map layers &amp; view</span>
               <button onClick={() => setPanelOpen(false)} className="text-muted-foreground hover:text-foreground" aria-label="Close">
                 <X className="h-5 w-5" />
               </button>
             </div>
-            {panel}
+            <div className="-mr-1 min-h-0 flex-1 overflow-y-auto overflow-x-hidden pr-1">{panel}</div>
           </div>
         </>
       )}
@@ -419,11 +436,15 @@ export function ClearLaneMap({
         </div>
       )}
 
-      {/* hour-of-day activity caption */}
+      {/* hour-of-day activity caption — collapsible */}
       {hourActivity && !replayOn && status === "ready" && (
-        <div className={cn("pointer-events-none absolute left-1/2 z-[500] w-[min(92%,30rem)] -translate-x-1/2 rounded-lg border bg-background/95 px-3 py-2 text-[11px] shadow-md backdrop-blur", bottomCls)}>
-          <b>Hour-of-day activity.</b> Circle size = MODELED typical congestion at the selected hour (drag the time
-          slider). Ticket counts never vary by hour — this is the modeled commute curve, not measured traffic.
+        <div className={cn("absolute left-1/2 z-[500] w-[min(92%,30rem)] -translate-x-1/2", bottomCls)}>
+          <MapPanel title="Hour-of-day activity" open={captionOpen} onToggle={() => setCaptionOpen((o) => !o)}>
+            <p className="text-[11px] leading-snug">
+              Circle size = MODELED typical congestion at the selected hour (drag the time slider). Ticket counts never
+              vary by hour — this is the modeled commute curve, not measured traffic.
+            </p>
+          </MapPanel>
         </div>
       )}
 
@@ -475,12 +496,48 @@ export function ClearLaneMap({
         </button>
       )}
 
-      {/* legend */}
+      {/* legend — its own collapsible accordion panel (header toggle) */}
       {!replayOn && status === "ready" && (
-        <div className={cn("pointer-events-none absolute left-3 z-[500] max-w-[62%] rounded-lg border bg-background/95 px-3 py-2 text-[11px] shadow-md backdrop-blur", bottomCls)}>
-          <Legend colorMode={colorMode} source={source} hourActivity={hourActivity} showRings={showRings} showEvidence={showEvidence} />
+        <div className={cn("absolute left-3 z-[500] w-[min(20rem,calc(100%-5rem))]", bottomCls)}>
+          <MapPanel
+            title={<><Palette className="h-3.5 w-3.5 text-primary" /> Legend</>}
+            open={legendOpen}
+            onToggle={() => setLegendOpen((o) => !o)}
+          >
+            <Legend colorMode={colorMode} source={source} hourActivity={hourActivity} showRings={showRings} showEvidence={showEvidence} />
+          </MapPanel>
         </div>
       )}
+    </div>
+  );
+}
+
+// --------------------------------------------------------------------------- //
+// Collapsible floating map panel (accordion). Header toggles a bounded, scrollable
+// body so legends/captions never crop the map. pointer-events-auto so the header is
+// always tappable even when the wrapper is positioned over the map.
+function MapPanel({
+  title,
+  open,
+  onToggle,
+  children,
+}: {
+  title: React.ReactNode;
+  open: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="pointer-events-auto flex min-h-0 flex-col overflow-hidden rounded-lg border bg-background/95 text-[11px] shadow-md backdrop-blur">
+      <button
+        onClick={onToggle}
+        aria-expanded={open}
+        className="flex w-full shrink-0 items-center justify-between gap-2 px-3 py-1.5 text-left font-semibold"
+      >
+        <span className="flex items-center gap-1.5">{title}</span>
+        <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform", open ? "rotate-180" : "")} />
+      </button>
+      {open && <div className="min-h-0 max-h-[40vh] overflow-y-auto px-3 pb-2">{children}</div>}
     </div>
   );
 }
@@ -647,8 +704,8 @@ function Legend({
             {colorMode === "flow" ? "Flow impact (modeled proxy)" : colorMode === "operational" ? "Operational priority" : source === "forecast" ? "Forecast intensity" : "PIC intensity"}
           </div>
           <div
-            className="h-2 w-32 rounded-full"
-            style={{ background: colorMode === "flow" ? `linear-gradient(90deg,${flowColor(5)},${flowColor(55)},${flowColor(95)})` : "linear-gradient(90deg,#16a34a,#84cc16,#facc15,#f97316,#dc2626)" }}
+            className="h-2 w-full rounded-full"
+            style={{ background: colorMode === "flow" ? `linear-gradient(90deg,${flowColor(5)},${flowColor(35)},${flowColor(55)},${flowColor(75)},${flowColor(95)})` : "linear-gradient(90deg,#16a34a,#84cc16,#facc15,#f97316,#dc2626)" }}
           />
           <div className="flex justify-between text-muted-foreground">
             <span>low</span>

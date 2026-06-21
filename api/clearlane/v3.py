@@ -28,9 +28,12 @@ from __future__ import annotations
 
 import datetime
 import hashlib
+import json
 import math
 import os
 import time
+import urllib.parse
+import urllib.request
 from threading import Lock
 
 from fastapi import APIRouter, Header, HTTPException, Query
@@ -152,8 +155,36 @@ SIM_DOW_FACTORS = {
     "Mon": 0.90, "Tue": 0.96, "Wed": 1.00, "Thu": 1.01,
     "Fri": 1.06, "Sat": 1.09, "Sun": 1.14,
 }
+# REAL day-shaped congestion: each day has its OWN 24-hour SHAPE (not a weekday
+# curve scaled by a day scalar). Bengaluru reality — weekdays: sharp bimodal
+# commute (08–10 + 17–20) with a midday dip; Sat: no sharp morning commute, strong
+# midday→evening commercial/social; Sun: morning very quiet (no commute), midday
+# market/temple peak, evening social peak. So scrubbing the day visibly re-patterns
+# the map (Sun 09:00 quiet vs Mon 09:00 rush; Mon 12:00 dip vs Sun 12:00 busy).
+# 0..~1.08 multipliers; congestion_source stays "simulated" (modeled, not measured).
+SIM_DAYHOUR = {
+    "Mon": [0.26, 0.22, 0.20, 0.20, 0.24, 0.34, 0.52, 0.74, 0.92, 0.95, 0.84, 0.66,
+            0.58, 0.55, 0.56, 0.62, 0.78, 0.94, 1.00, 0.96, 0.80, 0.60, 0.40, 0.30],
+    "Tue": [0.27, 0.23, 0.21, 0.21, 0.25, 0.36, 0.55, 0.78, 0.96, 1.00, 0.88, 0.68,
+            0.60, 0.57, 0.58, 0.64, 0.80, 0.98, 1.04, 0.99, 0.82, 0.62, 0.42, 0.31],
+    "Wed": [0.27, 0.23, 0.21, 0.21, 0.25, 0.36, 0.55, 0.78, 0.96, 1.00, 0.88, 0.68,
+            0.60, 0.57, 0.58, 0.64, 0.80, 0.98, 1.04, 0.99, 0.82, 0.62, 0.42, 0.31],
+    "Thu": [0.28, 0.24, 0.22, 0.22, 0.26, 0.37, 0.56, 0.79, 0.97, 1.01, 0.89, 0.69,
+            0.61, 0.58, 0.59, 0.66, 0.82, 1.00, 1.05, 1.00, 0.84, 0.64, 0.44, 0.32],
+    "Fri": [0.30, 0.25, 0.22, 0.22, 0.26, 0.37, 0.56, 0.80, 0.97, 1.00, 0.90, 0.72,
+            0.66, 0.64, 0.66, 0.74, 0.88, 1.02, 1.08, 1.06, 0.96, 0.80, 0.58, 0.42],
+    "Sat": [0.40, 0.32, 0.27, 0.24, 0.24, 0.28, 0.36, 0.48, 0.62, 0.74, 0.84, 0.90,
+            0.92, 0.90, 0.90, 0.94, 1.00, 1.04, 1.06, 1.04, 0.98, 0.88, 0.74, 0.56],
+    "Sun": [0.42, 0.34, 0.28, 0.25, 0.24, 0.26, 0.30, 0.38, 0.50, 0.64, 0.80, 0.92,
+            0.98, 0.96, 0.88, 0.84, 0.86, 0.92, 1.00, 1.04, 1.00, 0.90, 0.74, 0.56],
+}
 SIM_CELL_JITTER = 0.06
 SIM_SEED = 1729
+# Live Mappls Predictive Distance-Time Matrix (speedTypes=predictive, date_time).
+# OFF unless the product is provisioned AND the key is set; until then the
+# congestion layer resolves to `simulated` (the SIM_DAYHOUR model). When True the
+# read path may fetch a real per-corridor ETA ratio and flip the source to `live`.
+MAPPLS_PREDICTIVE_ENABLED = os.environ.get("MAPPLS_PREDICTIVE_ENABLED", "0") == "1"
 
 _lock = Lock()
 
@@ -427,6 +458,67 @@ def _hour_heat(base, road_class, hour):
     return _clamp(base * (_HC_BASE_W + _HC_CONG_W * _cong_at(road_class, hour)))
 
 
+# Finer Bengaluru behaviour: road classes respond DIFFERENTLY by day-type and time.
+# Weekdays the commute hammers ring roads + arterials (offices/IT corridors); on
+# weekends that commute load drops but COMMERCIAL streets + markets get busier
+# midday→evening, and local/residential roads see modest weekend social traffic.
+_WEEKEND = {"Sat", "Sun"}
+
+
+def _road_day_mult(road_class, dow, hour):
+    """Multiplier on the day×hour shape for a road class — captures that e.g. an IT
+    arterial is brutal on a Tue morning but calm on Sun morning, while a commercial
+    market street peaks Sun midday. MODELED, never measured."""
+    rc = road_class or "unknown"
+    weekend = dow in _WEEKEND
+    midday = 11 <= hour <= 17
+    morning = 7 <= hour <= 10
+    if rc in ("ring_road", "arterial"):
+        if weekend and morning:
+            return 0.78                     # no office commute -> calmer mornings
+        if weekend and midday:
+            return 0.95
+        return 1.0                          # weekday commute corridors feel it fully
+    if rc == "commercial":
+        if weekend and midday:
+            return 1.12                     # markets/malls busiest on weekend middays
+        if weekend:
+            return 1.05
+        return 0.98
+    if rc == "main_road":
+        return 1.02 if (weekend and midday) else 0.96
+    if rc == "local":
+        return 0.9 if weekend else 0.82     # residential: modest weekend social bump
+    return 0.92
+
+
+def _daycong(road_class, dow, hour):
+    """DAY-shaped congestion 0..1 for a road class at (dow, hour). The per-day SHAPE
+    (SIM_DAYHOUR) is damped by road-class amplitude AND modulated by road-class ×
+    day-type behaviour (_road_day_mult) — so Sun-morning arterials go calm while
+    Sun-midday markets light up. MODELED typical congestion, never measured."""
+    shape = SIM_DAYHOUR.get(dow) or SIM_DAYHOUR["Wed"]
+    base = shape[int(hour) % 24] * _road_day_mult(road_class, dow, int(hour) % 24)
+    amp = _HC_AMP.get(road_class or "unknown", 0.70)
+    return max(0.0, min(1.0, _HC_FLOOR + base * (0.45 + 0.55 * amp)))
+
+
+def _heat(base, cong):
+    """Display heat = propensity × congestion (live or simulated), clamped 0..100."""
+    return _clamp(base * (_HC_BASE_W + _HC_CONG_W * cong))
+
+
+def _dayhour_heat(base, road_class, dow, hour):
+    """Display heat = propensity × DAY-shaped congestion for (dow, hour)."""
+    return _heat(base, _daycong(road_class, dow, hour))
+
+
+def _day_hour_profile(dow):
+    """City day-shaped congestion per hour (24) for the time scrubber on a given day."""
+    shape = SIM_DAYHOUR.get(dow) or SIM_DAYHOUR["Wed"]
+    return [round(float(x), 3) for x in shape]
+
+
 def _city_hour_profile():
     """City-average typical congestion per hour (24) for the time scrubber."""
     hc = _hourly_congestion()
@@ -463,33 +555,200 @@ def _cell_jitter(cell):
 
 
 def _sim_severity(base_sev, cell, hour, dow):
-    """congestion_severity = clip(base_modeled_severity × hour_factor[H] ×
-    dow_factor[D] × (1 + jitter(cell)), 0, 1). base_sev is the cell's MODELED
-    severity (pic.json); the result is the SIMULATED, time/day-varying value."""
+    """congestion_severity = clip(base_modeled_severity × dayhour_shape[D][H] ×
+    (1 + jitter(cell)), 0, 1). The day×hour SHAPE differs per day (SIM_DAYHOUR), so
+    severity re-patterns across days (Sun 09:00 calm, Sun 12:00 busy) rather than
+    just scaling. base_sev is the cell's MODELED severity (pic.json); the result is
+    the SIMULATED, time/day-varying value — labelled `simulated`, never measured."""
     base = base_sev if base_sev is not None else 0.5
-    hf = SIM_HOUR_FACTORS[int(hour) % 24]
-    df = SIM_DOW_FACTORS.get(dow, 1.0)
-    return max(0.0, min(1.0, base * hf * df * (1.0 + _cell_jitter(cell))))
+    shape = SIM_DAYHOUR.get(dow) or SIM_DAYHOUR["Wed"]
+    return max(0.0, min(1.0, base * shape[int(hour) % 24] * (1.0 + _cell_jitter(cell))))
+
+
+# --------------------------------------------------------------------------- #
+# LIVE Mappls congestion (typical-traffic ETA) — the REAL signal, with graceful
+# fallback to the SIMULATED day×hour model on quota/401/timeout. To stay FAST the
+# read path NEVER calls Mappls: the every-minute recompute enriches the top cells
+# (2 batched many-to-many calls) and persists live_congestion.json to Mongo; /map
+# reads that cache per cell and falls back to `simulated` where it's absent/stale.
+# --------------------------------------------------------------------------- #
+MAPPLS_BASE = "https://apis.mappls.com/advancedmaps/v1"
+MAPPLS_REGION, MAPPLS_RTYPE = "ind", 0
+MAPPLS_RES_FREE = "distance_matrix"          # free-flow duration (HTTP 200 verified)
+MAPPLS_RES_ETA = "distance_matrix_eta"       # typical-traffic ETA (HTTP 200 verified)
+MAPPLS_TIMEOUT_S = 6
+MAPPLS_FAIL_LIMIT = 3                         # circuit breaker per warm process
+LIVE_CONG_TTL_S = 600                        # live congestion freshness window (10 min)
+LIVE_ENRICH_TOP = 60                         # # of top-PIC cells enriched per recompute
+LIVE_OFFSET_M = 240.0                        # short corridor length for the ratio probe
+_mappls_fails = 0
+_LIVE: dict | None = None
+
+
+def _mappls_rest_key():
+    return (os.environ.get("MYMAPINDIA_REST_MAPPLS_API_KEY")
+            or os.environ.get("MYMAPINDIA_API_KEY"))
+
+
+def _offset_point(lat, lon, d_m, bearing=90.0):
+    dlat = d_m * math.cos(math.radians(bearing)) / 111_320.0
+    dlon = d_m * math.sin(math.radians(bearing)) / (111_320.0 * math.cos(math.radians(lat)))
+    return lat + dlat, lon + dlon
+
+
+def _dm_durations(resource, key, pts):
+    """One many-to-many Distance-Time Matrix call: durations from source idx 0 to all
+    targets. Returns durations[0] list (seconds) or None on any failure. Trips the
+    circuit breaker on repeated failure so we stop firing doomed requests."""
+    global _mappls_fails
+    if _mappls_fails >= MAPPLS_FAIL_LIMIT:
+        return None
+    coords = ";".join(f"{lon:.5f},{lat:.5f}" for lat, lon in pts)
+    dests = ";".join(str(i) for i in range(1, len(pts)))
+    url = (f"{MAPPLS_BASE}/{key}/{resource}/driving/{coords}"
+           f"?rtype={MAPPLS_RTYPE}&region={MAPPLS_REGION}&sources=0&destinations={dests}")
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "clearlane/3"})
+        with urllib.request.urlopen(req, timeout=MAPPLS_TIMEOUT_S) as r:
+            data = json.loads(r.read().decode("utf-8"))
+        res = (data.get("results") or {})
+        durs = res.get("durations")
+        if durs and durs[0]:
+            return list(durs[0])
+        _mappls_fails += 1
+        return None
+    except Exception as e:                       # 401/403 quota / timeout / parse
+        _mappls_fails += 1
+        print(f"[v3.live] Mappls {resource} failed ({type(e).__name__}); "
+              f"fails={_mappls_fails}/{MAPPLS_FAIL_LIMIT} -> simulated fallback")
+        return None
+
+
+def _enrich_live_congestion(top_n=LIVE_ENRICH_TOP):
+    """Fetch a REAL per-cell congestion ratio for the top-PIC cells via 2 batched
+    Mappls calls (typical ETA vs free-flow on a short corridor from each cell) and
+    persist live_congestion.json to Mongo. Best-effort: any failure leaves the map on
+    the simulated fallback. Called by the recompute cron — never by a read."""
+    global _mappls_fails
+    _mappls_fails = 0                            # reset breaker each scheduled attempt
+    key = _mappls_rest_key()
+    idx = _indices()
+    cand = [c for c in idx["pic_list"][:top_n] if c.get("lat") is not None][:99]
+    ratios, ok_n = {}, 0
+    if key and cand:
+        # source idx 0 = a fixed city anchor; targets = the cell corridor endpoints
+        anchor = (12.9716, 77.5946)
+        pts = [anchor] + [_offset_point(c["lat"], c["lon"], LIVE_OFFSET_M) for c in cand]
+        n = len(cand)
+
+        def _align(durs):                        # tolerate optional source-to-source col
+            if not durs:
+                return None
+            if len(durs) == n:
+                return durs
+            if len(durs) == n + 1:
+                return durs[1:]
+            return durs[:n] if len(durs) > n else None
+
+        free = _align(_dm_durations(MAPPLS_RES_FREE, key, pts))
+        eta = _align(_dm_durations(MAPPLS_RES_ETA, key, pts))
+        if free and eta and len(free) == len(eta) == n:
+            for c, f, e in zip(cand, free, eta):
+                if f and e and e > 0:
+                    ratios[c["h3_r10"]] = round(max(0.0, min(1.0, 1.0 - f / e)), 4)
+                    ok_n += 1
+    payload = {
+        "generated_at": _now_iso(), "ts": time.time(), "ttl_s": LIVE_CONG_TTL_S,
+        "n_requested": len(cand), "n_live": ok_n,
+        "coverage_pct": round(100.0 * ok_n / len(cand), 1) if cand else 0.0,
+        "source": "mappls_distance_matrix_eta", "cells": ratios,
+        "note": ("Per-cell LIVE typical-traffic congestion ratio (1 − free_flow/eta) "
+                 "from Mappls; cells without a value fall back to the simulated "
+                 "day×hour model. Not real-time; Mappls' typical-traffic ETA."),
+    }
+    global _LIVE
+    _LIVE = None                                 # bust the in-process cache
+    if db.mongo_enabled():
+        db.save_v3_artifact("live_congestion.json", payload)
+    print(f"[v3.live] enriched {ok_n}/{len(cand)} cells "
+          f"({payload['coverage_pct']}% live) -> live_congestion.json")
+    return {k: payload[k] for k in ("n_requested", "n_live", "coverage_pct", "generated_at")}
+
+
+def _live_congestion():
+    """{h3: ratio} of FRESH live congestion (within TTL) + freshness flag. Cached in
+    process; reads never hit Mappls."""
+    global _LIVE
+    if _LIVE is not None:
+        return _LIVE
+    d = db.v3_artifact("live_congestion.json") or {}
+    fresh = bool(d.get("cells")) and (time.time() - (d.get("ts") or 0)) <= (d.get("ttl_s") or LIVE_CONG_TTL_S)
+    _LIVE = {"cells": (d.get("cells") or {}) if fresh else {}, "fresh": fresh,
+             "coverage_pct": d.get("coverage_pct", 0.0), "generated_at": d.get("generated_at")}
+    return _LIVE
 
 
 def _live_eta_status():
-    """Whether a LIVE per-cell Mappls travel-time signal is used for MEASURED
-    congestion. On this account the real-time-traffic matrix is NOT provisioned
-    (distance_matrix_traffic -> 401; MAPPLS_PREDICTIVE_ENABLED is False), and these
-    read paths do not fetch per-cell ETA, so we honestly report it unavailable and
-    fall back to `simulated`. Returns (available, reason). (Wiring a real live ETA
-    fetch is the only thing that should ever flip this True.)"""
-    return False, "route-not-provisioned/quota"
+    """(available, reason) — True when a fresh live-congestion cache with coverage
+    exists (the recompute reached Mappls). Reads consult only the cache, never the
+    network, so the map stays fast."""
+    lc = _live_congestion()
+    if lc["fresh"] and lc["cells"]:
+        return True, f"mappls_typical_eta {lc['coverage_pct']}%"
+    return False, "no fresh live cache (quota/not-provisioned) -> simulated"
 
 
 def _congestion_source(when, hour, dow):
-    """Resolve the congestion provenance for a map request and log it (Feature 3:
-    Vercel captures stdout). Returns (source, live_available, reason)."""
+    """Resolve congestion provenance for a request. Only `now` can be LIVE (Mappls
+    typical ETA, per-cell); today/tomorrow/custom are always SIMULATED (no working
+    predictive product for an arbitrary future day/hour). Returns
+    (source, live_available, reason)."""
+    if when != "now":
+        return "simulated", False, "future/other day -> simulated day×hour model"
     live, reason = _live_eta_status()
     source = "live" if live else "simulated"
     print(f"[v3.map] congestion source={source} when={when} hour={hour:02d} "
-          f"dow={dow} (live ETA {'used' if live else 'unavailable: ' + reason})")
+          f"dow={dow} ({reason})")
     return source, live, reason
+
+
+# --------------------------------------------------------------------------- #
+# WHOLE-MAP cache (Mongo) — keyed by lens (when:dow:hour:limit) + a version stamp
+# (recompute last_calc + live-congestion freshness). So scrubbing to a (day,hour)
+# already seen is a single Mongo read; a miss computes then caches. Best-effort:
+# any cache error is swallowed and the map is computed normally.
+# --------------------------------------------------------------------------- #
+MAP_CACHE_VERSION = "dayhour_v3"
+MAP_CACHE_COLL = "v3_map_cache"
+
+
+def _map_cache_version():
+    meta = (db.col("v3_meta").find_one({"_id": "state"}) if db.mongo_enabled() else None) or {}
+    lc = _live_congestion()
+    return f"{MAP_CACHE_VERSION}|{meta.get('last_calc')}|{lc.get('generated_at')}", meta
+
+
+def _map_cache_get(key, version):
+    if not db.mongo_enabled():
+        return None
+    try:
+        doc = db.col(MAP_CACHE_COLL).find_one({"_id": key})
+        if doc and doc.get("version") == version:
+            return doc.get("payload")
+    except Exception:                            # pragma: no cover
+        pass
+    return None
+
+
+def _map_cache_put(key, version, payload):
+    if not db.mongo_enabled():
+        return
+    try:
+        db.col(MAP_CACHE_COLL).replace_one(
+            {"_id": key}, {"_id": key, "version": version, "ts": time.time(),
+                           "payload": payload}, upsert=True)
+    except Exception:                            # pragma: no cover
+        pass
 
 
 LIFT_W = 0.5                             # how strongly online learning bends the heat
@@ -829,7 +1088,7 @@ def _rebuild_rerank_cache(when="now", hour=None):
         "note": city_meta["note"], "city": city_rows, "stations": stations,
     }
     if db.mongo_enabled():
-        db.save_v3_artifact("rerank.json", payload)
+        _cron_upsert("rerank.json", payload)              # upsert SAME key (no dupes)
         db.col("v3_meta").update_one(
             {"_id": "state"},
             {"$set": {"last_rerank": now,
@@ -839,6 +1098,7 @@ def _rebuild_rerank_cache(when="now", hour=None):
                                          "live_eta": payload["live_eta"], "hour": payload["hour"],
                                          "dow": payload["dow"]}}},
             upsert=True)
+        print(f"[v3.cron] upsert=v3_meta(last_rerank) models=manifest@{_models_version()}")
     print(f"[v3.rerank] recomputed {len(stations)} stations + city "
           f"(hour={payload['hour']:02d} dow={payload['dow']}) · "
           f"live_eta={payload['live_eta']} fallback={payload['fallback']}")
@@ -888,7 +1148,7 @@ def _persist_plan(payload):
     modes = []
     if db.mongo_enabled():
         try:
-            db.save_v3_artifact("plan_next_day.json", payload)
+            _cron_upsert("plan_next_day.json", payload)   # upsert SAME key (no dupes)
             db.col("v3_meta").update_one(
                 {"_id": "state"},
                 {"$set": {"last_plan": time.time(),
@@ -897,6 +1157,7 @@ def _persist_plan(payload):
                                             "n_forecast_rising", "n_stations",
                                             "congestion_source", "live_eta")}}},
                 upsert=True)
+            print(f"[v3.cron] upsert=v3_meta(last_plan) models=manifest@{_models_version()}")
             modes.append("mongo")
         except Exception as e:                # pragma: no cover
             print(f"[v3.plan] mongo persist failed: {e}")
@@ -1164,6 +1425,14 @@ def v3_map(when: str = Query("now", pattern="^(now|today|tomorrow|custom)$"),
     sim_dow = target_dow or _ist_dow()
     cong_source, _live_avail, _live_reason = _congestion_source(when, hour_used, sim_dow)
 
+    # whole-map cache (Mongo): scrubbing to a (day, hour) already computed = 1 read.
+    _cache_key = f"map:{when}:{sim_dow}:{hour_used}:{limit}"
+    _cache_version, meta = _map_cache_version()
+    _hit = _map_cache_get(_cache_key, _cache_version)
+    if _hit is not None:
+        _hit["served_from_cache"] = True
+        return ok(_hit)
+
     states = {}
     if db.mongo_enabled():
         try:
@@ -1174,7 +1443,9 @@ def v3_map(when: str = Query("now", pattern="^(now|today|tomorrow|custom)$"),
     # DB-cached "now" hour heat (already baked w/ learning + congestion). {h3:[24]}.
     cache = db.v3_artifact("heatmap_hourly.json") or {}
     cache_cells = cache.get("cells") or {}
-    use_cache = bool(cache_cells) and when == "now"
+    # only trust a DAY-SHAPED cache (v2); older day-agnostic caches are bypassed so
+    # the map is day-shaped immediately, until the next recompute re-bakes v2.
+    use_cache = bool(cache_cells) and when == "now" and cache.get("shape") == "dayhour_v2"
 
     # source = FULL occupied-cell set. If a smaller `limit` is requested, keep a
     # REPRESENTATIVE spread (top half + stride-sampled tail) so green+yellow+red all
@@ -1187,22 +1458,31 @@ def v3_map(when: str = Query("now", pattern="^(now|today|tomorrow|custom)$"),
         step = max(1, len(tail) // max(1, (limit - head)))
         src = src[:head] + tail[::step][: (limit - head)]
 
+    # per-cell LIVE Mappls congestion (only for `now`; cron-baked cache, never a
+    # network call here). Cells absent from the cache fall back to the simulation.
+    live_map = _live_congestion()["cells"] if cong_source == "live" else {}
+    n_live = 0
     cells, n_emerging, n_adjusted = [], 0, 0
     for c in src:
         h = c["h3_r10"]
         hist = float(c.get("pic_score") or 0.0)        # immutable pressure (0..100)
         rc = c.get("road_class")
-        cong = _cong_at(rc, hour_used)
+        live_ratio = live_map.get(h)                   # real Mappls typical-traffic ratio
+        cell_live = live_ratio is not None
+        if cell_live:
+            n_live += 1
+        cong = live_ratio if cell_live else _daycong(rc, sim_dow, hour_used)
+        cell_cong_source = "live" if cell_live else "simulated"
         st = states.get(h)
         boost = _decayed_boost((st or {}).get("boost"), (st or {}).get("updated_ts"), now)
         on = idx["online"].get(h, {})
         fcc = idx["fc"].get(h)
         hotrec = idx["hot"].get(h) or {}
 
-        # display_score = pic_score × MODELED hourly congestion × day-of-week factor,
-        # clamped. The PURE time-varying composite (no learning) — recolours as you
-        # scrub the hour AND day. MODELED typical congestion, never measured.
-        display_score = _clamp(_hour_heat(hist, rc, hour_used) * dow_fac)
+        # display_score = pic_score × congestion (LIVE Mappls ratio where available,
+        # else the DAY-SHAPED simulation) — recolours as you scrub the hour AND
+        # re-patterns per day (Sun ≠ Mon shape). Live where we have it, modeled else.
+        display_score = _clamp(_heat(hist, cong))
 
         # base propensity for this lens (today/tomorrow/custom use the forecast curve)
         base_val = hist
@@ -1217,8 +1497,8 @@ def v3_map(when: str = Query("now", pattern="^(now|today|tomorrow|custom)$"),
             n_adjusted += 1
         base_l = base_val * (1.0 + LIFT_W * lift)
 
-        cached24 = cache_cells.get(h) if use_cache else None
-        heat = float(cached24[hour_used % 24]) if cached24 else _hour_heat(base_l, rc, hour_used)
+        cached24 = cache_cells.get(h) if (use_cache and not cell_live) else None
+        heat = float(cached24[hour_used % 24]) if cached24 else _heat(base_l, cong)
         if when == "now":                 # live complaint spike on top of the baked base
             heat = _clamp(heat + 0.5 * boost)
 
@@ -1226,12 +1506,14 @@ def v3_map(when: str = Query("now", pattern="^(now|today|tomorrow|custom)$"),
         if emerging:
             n_emerging += 1
 
-        # SIMULATED time/day congestion severity (or live if ever enabled). Honest:
-        # a transparent model over the MODELED base severity — never measured.
-        sim_sev = _sim_severity(c.get("congestion_severity"), h, hour_used, sim_dow)
+        # congestion severity: LIVE Mappls ratio where we have it, else the SIMULATED
+        # time/day model over the MODELED base severity. Honest, never measured.
+        sim_sev = live_ratio if cell_live else _sim_severity(c.get("congestion_severity"), h, hour_used, sim_dow)
         # expected activity for the date-lens (forecast intensity) drives circle SIZE
         # in today/tomorrow, just like v1; `now` sizes by pressure (pic_score).
-        fc_intensity = round(_clamp(base_l), 1) if dow_base else None
+        # forecast heatmap fill = the SAME day×hour-shaped heat (so scrubbing the
+        # hour AND day re-patterns the map in today/tomorrow/custom too, not just now)
+        fc_intensity = round(heat, 1) if dow_base else None
 
         cells.append({
             "h3_r10": h, "lat": c["lat"], "lon": c["lon"],
@@ -1243,8 +1525,8 @@ def v3_map(when: str = Query("now", pattern="^(now|today|tomorrow|custom)$"),
             "intensity": round(heat, 1),            # hour + learning modulated heat
             "pic_score": c.get("pic_score"),        # immutable historical propensity
             "pic_rank": c.get("pic_rank"),
-            "congestion_severity": round(sim_sev, 3),   # SIMULATED time/day severity
-            "congestion_source": cong_source,            # simulated | live (resolution)
+            "congestion_severity": round(sim_sev, 3),   # live ratio or simulated
+            "congestion_source": cell_cong_source,       # per-cell: live | simulated
             "congestion_base_source": c.get("congestion_source"),  # modeled/typical base
             "congestion_hour": round(cong, 3),
             "forecast_intensity": fc_intensity,
@@ -1277,7 +1559,7 @@ def v3_map(when: str = Query("now", pattern="^(now|today|tomorrow|custom)$"),
                 f"propensity × modeled typical congestion. No learning, no live "
                 f"reports — a rough-idea visualisation for other days.")
         badge = f"{target_date} · {target_dow} · {hh} · historical only (rough idea)"
-    return ok({
+    resp = {
         "when": when, "hour": hour_used, "dow": target_dow, "date": target_date,
         "source": "live" if when == "now" else "forecast",
         "learning_adjusted": learning,
@@ -1286,16 +1568,19 @@ def v3_map(when: str = Query("now", pattern="^(now|today|tomorrow|custom)$"),
         "congestion_provenance": hc_prov,
         "congestion_source": cong_source,            # simulated | live (resolution result)
         "congestion_live": _live_avail,              # was the live Mappls ETA used?
+        "congestion_live_cells": n_live,             # # cells served from live Mappls
         "congestion_fallback": None if _live_avail else "simulated",
         "congestion_dow": sim_dow,                   # day-of-week the simulation used
+        "day_hour_profile": _day_hour_profile(sim_dow),  # this day's 24h congestion shape
         "congestion_note": (
             (f"Congestion severity is SIMULATED — a transparent time-of-day × "
              f"day-of-week model ({sim_dow} @ {hh}) over the modeled base severity. "
              f"NOT measured, NOT from ticket counts.")
             if cong_source == "simulated" else
-            (f"Congestion severity from LIVE Mappls travel-time ratio ({sim_dow} @ {hh}).")),
-        "hour_profile": _city_hour_profile(),
-        "predictive_eta": False,
+            (f"Congestion from LIVE Mappls typical-traffic ETA on {n_live} cells "
+             f"({sim_dow} @ {hh}); other cells fall back to the simulated model.")),
+        "hour_profile": _day_hour_profile(sim_dow),  # day-shaped scrubber profile
+        "predictive_eta": MAPPLS_PREDICTIVE_ENABLED,
         "heatmap_cached": use_cache,
         "n_emerging": n_emerging, "n_adjusted": n_adjusted,
         "source_note": note + " Congestion is MODELED (typical), not measured from "
@@ -1303,7 +1588,10 @@ def v3_map(when: str = Query("now", pattern="^(now|today|tomorrow|custom)$"),
         "badge": badge,
         "n_cells": len(cells), "cells": cells, "kpis": _kpis(),
         "generated_at": _now_iso(), "last_calc": meta.get("last_calc"),
-    })
+        "served_from_cache": False,
+    }
+    _map_cache_put(_cache_key, _cache_version, resp)   # cache the whole map for this lens
+    return ok(resp)
 
 
 @router.get("/hotspots")
@@ -2127,6 +2415,20 @@ def _models_version():
     return ts or "none"
 
 
+def _cron_upsert(name, payload):
+    """Persist a v3 artifact to its SAME preexisting Mongo key and log it.
+
+    `db.save_v3_artifact` is `replace_one({_id: "v3/<name>"}, …, upsert=True)`, so a
+    re-run REUSES the one document (never inserts a duplicate). The cron LOADS the
+    persisted models (the Gamma-Poisson posterior in online_state.json, the
+    model_manifest, and the offline LightGBM forecast / NB hotspot artifacts) and
+    folds only the closed-form online update — it NEVER retrains. We log the upsert
+    key + the loaded-model provenance so each cron run is auditable on Vercel
+    stdout: `[v3.cron] upsert=v3/<name> models=manifest@<ts>`."""
+    db.save_v3_artifact(name, payload)
+    print(f"[v3.cron] upsert=v3/{name} models=manifest@{_models_version()}")
+
+
 def _dispatch_rerank(now=None, top=60):
     """Re-rank candidate cells by operational priority + online lift. Candidates =
     dispatch_plan stops ∪ cells with live state. Recompute-only (never edits ML)."""
@@ -2219,9 +2521,11 @@ def _recompute(reason="cron"):
                    "historical ML scores untouched. Heavy LightGBM/NB retrain is the "
                    "offline run_all.py, not this cron."),
     }
-    db.col("v3_meta").replace_one({"_id": "state"}, summary, upsert=True)
-    # Feature 3: Vercel captures stdout — log the model version + online update size.
-    print(f"[v3.cron] models=manifest@{models_v} online_updated={len(touched)} "
+    db.col("v3_meta").replace_one({"_id": "state"}, summary, upsert=True)  # SAME _id (no dupes)
+    # Feature 3: Vercel captures stdout — log the upsert key + the loaded-model
+    # provenance + the online update size. The cron REUSES the persisted Gamma-Poisson
+    # posterior (online_state.json) — closed-form fold only, never a retrain.
+    print(f"[v3.cron] upsert=v3_meta models=manifest@{models_v} online_updated={len(touched)} "
           f"verified_cells={len(verified)} reason={reason}")
     return summary
 
@@ -2239,6 +2543,7 @@ def _rebuild_hourly_cache():
             states = {s["_id"]: s for s in db.col("v3_cell_state").find()}
         except Exception:                # pragma: no cover
             states = {}
+    today_dow = _ist_dow()                            # the `now` cache is today's day-shape
     cells, n_adj = {}, 0
     for c in idx["pic_list"]:
         h = c["h3_r10"]
@@ -2248,19 +2553,20 @@ def _rebuild_hourly_cache():
         if abs(lift) >= 0.08:
             n_adj += 1
         base_l = hist * (1.0 + LIFT_W * lift)
-        cells[h] = [round(_hour_heat(base_l, rc, hr), 1) for hr in range(24)]
+        cells[h] = [round(_dayhour_heat(base_l, rc, today_dow, hr), 1) for hr in range(24)]
     payload = {
         "generated_at": _now_iso(),
         "provenance": _hourly_congestion().get("provenance", "modeled_typical"),
+        "shape": "dayhour_v2", "dow": today_dow,
         "n_cells": len(cells), "n_adjusted": n_adj,
-        "hour_profile": _city_hour_profile(),
-        "note": ("24-hour heat = historical PIC × CURRENT learning lift × MODELED "
-                 "typical congestion per hour; live boost applied at read time. "
-                 "Not measured."),
+        "hour_profile": _day_hour_profile(today_dow),
+        "note": (f"24-hour heat = historical PIC × CURRENT learning lift × DAY-SHAPED "
+                 f"congestion for {today_dow}; live boost applied at read time. "
+                 f"Not measured."),
         "cells": cells,
     }
     if db.mongo_enabled():
-        db.save_v3_artifact("heatmap_hourly.json", payload)
+        _cron_upsert("heatmap_hourly.json", payload)      # upsert SAME key (no dupes)
     return {"n_cells": len(cells), "provenance": payload["provenance"],
             "generated_at": payload["generated_at"]}
 
@@ -2277,9 +2583,11 @@ def v3_force_recompute(authorization: str | None = Header(default=None)):
     _require_mongo()
     _ensure_init()
     with _lock:
+        live = _enrich_live_congestion()         # try real Mappls; sim fallback if quota
         summary = _recompute("manual")
         heat = _rebuild_hourly_cache()
         rerank = _rebuild_rerank_cache()         # re-bake the M4 queue cache too
+        summary["live_congestion"] = live
     return ok({
         "ok": True, "reason": "manual",
         "recompute": {k: summary.get(k) for k in
@@ -2314,12 +2622,20 @@ def cron_recompute(token: str | None = None,
     _require_mongo()
     _ensure_init()
     with _lock:
+        live = _enrich_live_congestion()         # real Mappls typical-ETA (sim fallback)
         summary = _recompute("cron")
-        heat = _rebuild_hourly_cache()
-        rerank = _rebuild_rerank_cache()         # keep the M4 queue cache hourly-fresh
+        summary["live_congestion"] = live
+        heat = _rebuild_hourly_cache()           # day-shaped heatmap cache (v2)
+        rerank = _rebuild_rerank_cache()         # M4 dispatch queue cache
+        try:                                     # next-day plan (best-effort)
+            plan = _plan_next_day()
+        except Exception as e:                   # pragma: no cover
+            plan = {"error": type(e).__name__}
+    # THE single recalc: online learning + day-shaped heatmap + dispatch rerank +
+    # next-day plan in one call. Point an every-minute external cron here.
     return ok({"updated": summary["n_cells_updated"],
                "last_calc": summary["last_calc"], "heatmap": heat,
-               "rerank": rerank, "summary": summary})
+               "rerank": rerank, "plan": plan, "summary": summary})
 
 
 @router.get("/rerank")

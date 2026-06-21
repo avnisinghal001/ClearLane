@@ -536,6 +536,30 @@ SIM_DOW_FACTORS = {
     "Fri": 1.06, "Sat": 1.09, "Sun": 1.14,
 }
 SIM_DOW_ORDER = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+# REAL day-shaped congestion: each day has its OWN 24-hour SHAPE (not the weekday
+# curve scaled by a scalar). Weekdays = sharp bimodal commute (08–10 + 17–20) with
+# a midday dip; Sat = no sharp morning commute, strong midday→evening; Sun = quiet
+# morning (no commute), midday market/temple peak + evening social peak. So
+# scrubbing the DAY genuinely re-patterns the heatmap. Mirrored in api/clearlane/v3.py.
+SIM_DAYHOUR = {
+    "Mon": [0.26, 0.22, 0.20, 0.20, 0.24, 0.34, 0.52, 0.74, 0.92, 0.95, 0.84, 0.66,
+            0.58, 0.55, 0.56, 0.62, 0.78, 0.94, 1.00, 0.96, 0.80, 0.60, 0.40, 0.30],
+    "Tue": [0.27, 0.23, 0.21, 0.21, 0.25, 0.36, 0.55, 0.78, 0.96, 1.00, 0.88, 0.68,
+            0.60, 0.57, 0.58, 0.64, 0.80, 0.98, 1.04, 0.99, 0.82, 0.62, 0.42, 0.31],
+    "Wed": [0.27, 0.23, 0.21, 0.21, 0.25, 0.36, 0.55, 0.78, 0.96, 1.00, 0.88, 0.68,
+            0.60, 0.57, 0.58, 0.64, 0.80, 0.98, 1.04, 0.99, 0.82, 0.62, 0.42, 0.31],
+    "Thu": [0.28, 0.24, 0.22, 0.22, 0.26, 0.37, 0.56, 0.79, 0.97, 1.01, 0.89, 0.69,
+            0.61, 0.58, 0.59, 0.66, 0.82, 1.00, 1.05, 1.00, 0.84, 0.64, 0.44, 0.32],
+    "Fri": [0.30, 0.25, 0.22, 0.22, 0.26, 0.37, 0.56, 0.80, 0.97, 1.00, 0.90, 0.72,
+            0.66, 0.64, 0.66, 0.74, 0.88, 1.02, 1.08, 1.06, 0.96, 0.80, 0.58, 0.42],
+    "Sat": [0.40, 0.32, 0.27, 0.24, 0.24, 0.28, 0.36, 0.48, 0.62, 0.74, 0.84, 0.90,
+            0.92, 0.90, 0.90, 0.94, 1.00, 1.04, 1.06, 1.04, 0.98, 0.88, 0.74, 0.56],
+    "Sun": [0.42, 0.34, 0.28, 0.25, 0.24, 0.26, 0.30, 0.38, 0.50, 0.64, 0.80, 0.92,
+            0.98, 0.96, 0.88, 0.84, 0.86, 0.92, 1.00, 1.04, 1.00, 0.90, 0.74, 0.56],
+}
+# Live Mappls Predictive Distance-Time Matrix (speedTypes=predictive + date_time):
+# OFF unless provisioned + key set; until then congestion resolves to `simulated`.
+MAPPLS_PREDICTIVE_ENABLED = False
 # Per-cell deterministic jitter (± this fraction) so neighbouring cells don't pulse
 # in lock-step. Seeded by the H3 id (stable hash) — reproducible, no RNG state.
 SIM_CELL_JITTER = 0.06

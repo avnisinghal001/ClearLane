@@ -1,8 +1,8 @@
-setup: {'n_cells': 250, 'officers': 25, 'shifts': 60, 'episodes': 30, 'seed': 42, 'linucb_alpha': 0.5, 'travel_penalty': 0.0, 'arrival_rate': 'Phase-5 online E[lambda] (proxy for true arrivals)', 'context': ['bias', 'intensity', 'congestion_severity', 'online_rate']}
-final_cumulative_reward: {'random': 574.98, 'greedy': 1142.87, 'linucb': 1284.54, 'oracle': 1357.1}
-uplift_vs_random: {'greedy': 1.988, 'linucb': 2.234, 'oracle': 2.36}
-pct_of_oracle: {'random': 42.4, 'greedy': 84.2, 'linucb': 94.7}
-final_regret_vs_oracle: {'random': 782.12, 'greedy': 214.23, 'linucb': 72.56}
-exploration: {'distinct_cells_mean_per_episode': {'random': 249.7, 'greedy': 25.0, 'linucb': 44.1}, 'blindspot_cells_visited_total': {'random': 6741, 'greedy': 0, 'linucb': 572}, 'note': 'greedy is static (visits exactly K cells); LinUCB visits MORE distinct cells — it probes under-observed / blind-spot cells via the UCB bonus, then exploits the high-value ones'}
-acceptance: {'greedy_beats_random': True, 'linucb_beats_random': True, 'linucb_beats_greedy': True, 'linucb_uplift_vs_random': 2.234, 'meets_sim_uplift_min': True}
+setup: {'n_cells': 250, 'officers': 25, 'shifts': 60, 'episodes': 30, 'seed': 1729, 'linucb_alpha': 0.5, 'travel_penalty': 0.0, 'arrival_rate': 'Phase-5 online E[lambda] (proxy for true arrivals)', 'context': ['bias', 'intensity', 'congestion_severity', 'online_rate']}
+final_cumulative_reward: {'random': 547.54, 'greedy': 1028.36, 'linucb': 1234.43, 'oracle': 1342.9}
+uplift_vs_random: {'greedy': 1.878, 'linucb': 2.255, 'oracle': 2.453}
+pct_of_oracle: {'random': 40.8, 'greedy': 76.6, 'linucb': 91.9}
+final_regret_vs_oracle: {'random': 795.36, 'greedy': 314.54, 'linucb': 108.46}
+exploration: {'distinct_cells_mean_per_episode': {'random': 249.6, 'greedy': 25.0, 'linucb': 61.2}, 'blindspot_cells_visited_total': {'random': 6738, 'greedy': 0, 'linucb': 1087}, 'note': 'greedy is static (visits exactly K cells); LinUCB visits MORE distinct cells — it probes under-observed / blind-spot cells via the UCB bonus, then exploits the high-value ones'}
+acceptance: {'greedy_beats_random': True, 'linucb_beats_random': True, 'linucb_beats_greedy': True, 'linucb_uplift_vs_random': 2.255, 'meets_sim_uplift_min': True}
 note: Trained in a data-calibrated SIMULATOR because real dispatch logs do not exist (closed_datetime / action_taken_timestamp are 100% empty). Rewards are simulated PIC-weighted catches, not field outcomes. Cell-level only; never per officer. Deterministic (fixed seeds).

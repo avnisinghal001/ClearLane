@@ -162,10 +162,12 @@ def _train_lambdamart(pic: pd.DataFrame, stations: pd.DataFrame) -> dict | None:
         if col not in df.columns:
             df[col] = 0.0
     df = df.sort_values("police_station", kind="stable")
-    X = df[LTR_FEATURES].apply(pd.to_numeric, errors="coerce").fillna(0.0)
+    # LightGBM rejects pandas-3.0 pyarrow-backed dtypes -> hand it clean numpy.
+    Xdf = df[LTR_FEATURES].apply(pd.to_numeric, errors="coerce").fillna(0.0)
+    X = np.ascontiguousarray(Xdf.to_numpy(dtype="float64"))
     # relevance grade 0..4 from the pic_score percentile (the rank target)
-    y = pd.qcut(df["pic_score"].rank(method="first"), LTR_GRADES,
-                labels=False, duplicates="drop").astype(int)
+    y = np.asarray(pd.qcut(df["pic_score"].rank(method="first"), LTR_GRADES,
+                           labels=False, duplicates="drop"), dtype=int)
     groups = df.groupby("police_station", sort=True, observed=True).size().tolist()
 
     ranker = lgb.LGBMRanker(random_state=42, verbose=-1, **LTR_LGBM)
