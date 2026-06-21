@@ -52,6 +52,7 @@ from . import force  # noqa: E402
 from . import v3     # noqa: E402
 
 app.include_router(force.router)
+app.include_router(force.v3_router)   # /api/v3/force/* (roster, officer CRUD, auto-allocate)
 app.include_router(v3.router)
 
 
@@ -66,7 +67,8 @@ def _startup():
 @app.get("/api/health")
 def health():
     names = ["pic.json", "hotspots.json", "forecast_daily.json",
-             "online_state.json", "dispatch_plan.json", "hourly_congestion.json"]
+             "online_state.json", "dispatch_plan.json", "hourly_congestion.json",
+             "map_cells.json", "model_manifest.json"]
     artifacts = {n: (db.v3_artifact(n) is not None) for n in names}
     return ok({"status": "ok", "version": "3.0", "mongo": db.mongo_enabled(),
                "source": "mongodb" if db.mongo_enabled() else "filesystem",

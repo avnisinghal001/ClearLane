@@ -18,6 +18,6 @@
     { "src": "/(.*)", "dest": "/frontend.v3/index.html" }
   ],
   "crons": [
-    { "path": "/api/v3/cron/recompute", "schedule": "0 3 * * *" }
+    { "path": "/api/v3/cron/plan-next-day", "schedule": "30 18 * * *" }
   ]
 }

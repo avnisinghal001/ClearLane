@@ -32,6 +32,27 @@ export interface PolylineSpec {
   color: string;
 }
 
+// Dashed, unfilled overlay ring (e.g. an evening blind-spot marker).
+export interface RingSpec {
+  id: string;
+  lat: number;
+  lon: number;
+  radius: number;
+  color: string;
+  weight?: number;
+  dashArray?: string;
+  tooltip?: string;
+}
+
+// A tiny, non-interactive evidence point (a recorded ticket / report location).
+export interface DotSpec {
+  id: string;
+  lat: number;
+  lon: number;
+  color?: string;
+  radius?: number;
+}
+
 export interface HeatPoint {
   lat: number;
   lon: number;
@@ -50,6 +71,8 @@ export interface MapEngine {
   setHeat(points: HeatPoint[], on: boolean): void;
   setPins(pins: PinSpec[]): void;
   setPolylines(lines: PolylineSpec[]): void;
+  setRings(rings: RingSpec[]): void;
+  setDots(dots: DotSpec[]): void;
   setTraffic(on: boolean): void;
   invalidate(): void;
   destroy(): void;

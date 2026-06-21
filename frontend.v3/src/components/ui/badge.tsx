@@ -14,6 +14,7 @@ const badgeVariants = cva(
         live: "border-transparent bg-[hsl(var(--live))]/15 text-[hsl(var(--live))]",
         typical: "border-transparent bg-[hsl(var(--typical))]/15 text-[hsl(var(--typical))]",
         modeled: "border-transparent bg-[hsl(var(--modeled))]/15 text-[hsl(var(--modeled))]",
+        simulated: "border-transparent bg-[hsl(var(--simulated))]/15 text-[hsl(var(--simulated))]",
         warning: "border-transparent bg-[hsl(var(--warning))]/15 text-[hsl(var(--warning))]",
         success: "border-transparent bg-[hsl(var(--success))]/15 text-[hsl(var(--success))]",
       },

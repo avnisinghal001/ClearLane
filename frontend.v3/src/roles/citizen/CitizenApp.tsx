@@ -33,7 +33,7 @@ export function CitizenApp() {
 
   const [tab, setTab] = useState<"map" | "reports">("map");
   const [time, setTime] = useState<TimeValue>({ when: "now", hour: 18 });
-  const { data, loading } = useMapData(time.when, time.hour);
+  const { data, loading } = useMapData(time.when, time.hour, time.date);
 
   const [selected, setSelected] = useState<Cell | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
@@ -50,6 +50,10 @@ export function CitizenApp() {
   useEffect(() => refreshTickets(), [refreshTickets]);
 
   const myReports = useMemo(() => allTickets.filter((t) => myIds.includes(t.id)), [allTickets, myIds]);
+  const evidence = useMemo<[number, number][]>(
+    () => allTickets.filter((t) => t.lat != null && t.lon != null).map((t) => [t.lat as number, t.lon as number]),
+    [allTickets],
+  );
 
   const openReport = useCallback(
     (loc?: [number, number] | null) => {
@@ -99,6 +103,7 @@ export function CitizenApp() {
         navigate("/");
       }}
       fill={tab === "map"}
+      bottomNavOnMobile
     >
       {tab === "map" ? (
         <div className="absolute inset-0">
@@ -114,7 +119,12 @@ export function CitizenApp() {
               setPickMode(false);
               setReportOpen(true);
             }}
+            onPickModeChange={setPickMode}
+            enableComplaint
+            evidence={evidence}
+            bottomSafe
             defaultZoom={13}
+            lens={{ badge: data?.badge, nEmerging: data?.n_emerging, nAdjusted: data?.n_adjusted, learningAdjusted: data?.learning_adjusted }}
           />
 
           {/* time lens */}
@@ -128,17 +138,10 @@ export function CitizenApp() {
             </div>
           </div>
 
-          {/* pick-mode hint */}
-          {pickMode && (
-            <div className="absolute left-1/2 top-3 z-[600] -translate-x-1/2 rounded-full border bg-background/95 px-3 py-1.5 text-sm shadow-md backdrop-blur">
-              Tap the spot to report
-            </div>
-          )}
-
-          {/* report CTA — bottom-right FAB, clear of the mobile nav */}
+          {/* report CTA — bottom-right FAB, clear of the mobile nav + recenter */}
           <Button
             onClick={() => openReport()}
-            className="absolute bottom-20 right-4 z-[610] gap-2 rounded-full px-5 shadow-lg md:bottom-6"
+            className="absolute bottom-36 right-4 z-[610] gap-2 rounded-full px-5 shadow-lg md:bottom-6"
           >
             <Megaphone className="h-4 w-4" /> Report incident
           </Button>
@@ -153,7 +156,7 @@ export function CitizenApp() {
         </div>
       )}
 
-      <CellDrawer cell={selected} side={isMobile ? "bottom" : "right"} onClose={() => setSelected(null)}>
+      <CellDrawer cell={selected} cells={data?.cells ?? []} side={isMobile ? "bottom" : "right"} onClose={() => setSelected(null)}>
         {selected && (
           <div className="flex gap-2">
             <Button

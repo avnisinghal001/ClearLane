@@ -60,6 +60,19 @@ export function TicketTable({
       },
       { accessorKey: "category", header: "Category", cell: ({ row }) => <span className="font-medium">{row.original.category ?? "—"}</span> },
       {
+        id: "officer",
+        header: "Officer",
+        cell: ({ row }) =>
+          row.original.assigned_badge ? (
+            <span className="whitespace-nowrap text-xs">
+              <span className="num">{row.original.assigned_badge}</span>
+              {row.original.assigned_name ? <span className="text-muted-foreground"> · {row.original.assigned_name}</span> : ""}
+            </span>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          ),
+      },
+      {
         id: "vehicle",
         header: "Vehicle",
         cell: ({ row }) => (

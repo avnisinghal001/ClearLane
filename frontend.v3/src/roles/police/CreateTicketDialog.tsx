@@ -5,22 +5,27 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { RANK_ABBR, RANKS } from "@/lib/force";
 import { TICKET_CATEGORIES, TICKET_KINDS, VEHICLE_TYPES, VIOLATION_LABELS } from "@/lib/constants";
-import type { Cell, TicketInput } from "@/lib/types";
+import type { Cell, Officer, TicketInput } from "@/lib/types";
+
+const UNASSIGNED = "__none__";
 
 export function CreateTicketDialog({
   open,
   onClose,
   station,
   cell,
+  officers = [],
   onCreate,
 }: {
   open: boolean;
   onClose: () => void;
   station: string | null;
   cell?: Cell | null;
+  officers?: Officer[];
   onCreate: (input: TicketInput) => Promise<void>;
 }) {
   const [kind, setKind] = useState<"police_ticket" | "chalan">("police_ticket");
@@ -29,6 +34,7 @@ export function CreateTicketDialog({
   const [note, setNote] = useState("");
   const [vehicleType, setVehicleType] = useState("");
   const [vehicleNumber, setVehicleNumber] = useState("");
+  const [assigned, setAssigned] = useState<string>(UNASSIGNED);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -39,9 +45,19 @@ export function CreateTicketDialog({
       setNote("");
       setVehicleType("");
       setVehicleNumber("");
+      setAssigned(UNASSIGNED);
       setBusy(false);
     }
   }, [open]);
+
+  // group the roster by rank (hierarchy order) for the assign-officer dropdown
+  const officersByRank = RANKS.map((r) => ({ rank: r, list: officers.filter((o) => o.rank === r) })).filter((g) => g.list.length);
+  // only live-backed officers (positive ids) can be persisted as assigned_officer
+  const assignableId = (() => {
+    if (assigned === UNASSIGNED) return null;
+    const id = Number(assigned);
+    return Number.isFinite(id) && id >= 0 ? id : null;
+  })();
 
   const toggleLabel = (l: string) => setLabels((cur) => (cur.includes(l) ? cur.filter((x) => x !== l) : [...cur, l]));
 
@@ -60,6 +76,7 @@ export function CreateTicketDialog({
         vehicle_type: vehicleType || null,
         vehicle_number: vehicleNumber.trim().toUpperCase() || null,
         note: note.trim() || null,
+        assigned_officer: assignableId,
       });
     } finally {
       setBusy(false);
@@ -153,6 +170,32 @@ export function CreateTicketDialog({
               </Label>
               <Input value={vehicleNumber} onChange={(e) => setVehicleNumber(e.target.value)} placeholder="KA01AB1234" className="uppercase" />
             </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>
+              Assign officer <span className="text-muted-foreground">(from roster)</span>
+            </Label>
+            <Select value={assigned} onValueChange={setAssigned}>
+              <SelectTrigger>
+                <SelectValue placeholder="Unassigned" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={UNASSIGNED}>Unassigned</SelectItem>
+                {officersByRank.map((g) => (
+                  <SelectGroup key={g.rank}>
+                    <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{g.rank}</div>
+                    {g.list.map((o) => (
+                      <SelectItem key={o.id} value={String(o.id)}>
+                        <span className="font-medium">{RANK_ABBR[o.rank] ?? ""} {o.name}</span>
+                        <span className="text-muted-foreground"> · {o.badge} · {o.shift}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                ))}
+              </SelectContent>
+            </Select>
+            {officers.length === 0 && <p className="text-[11px] text-muted-foreground">No roster loaded — open Force Command to load this station's officers.</p>}
           </div>
 
           <div className="space-y-1.5">

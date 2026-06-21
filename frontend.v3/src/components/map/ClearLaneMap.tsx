@@ -1,16 +1,22 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Layers, Crosshair, Flame, Car, Route as RouteIcon, Loader2, AlertTriangle } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Layers, Crosshair, Loader2, AlertTriangle, Sparkles, History, Play, Pause, X,
+} from "lucide-react";
 import type { Cell, DispatchRoute } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { sourceMeta } from "@/lib/format";
-import { toast } from "@/components/toast";
+import { cellTier, flowImpactTable, isBlindSpot, tierColor, flowColor } from "@/lib/signals";
+import { useIsMobile } from "@/hooks/useMediaQuery";
+import { Switch } from "@/components/ui/switch";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useMapKeys } from "@/hooks/useConfig";
 import { initBestMap, PROVIDER_TOTAL, type MapEngine } from "./engines";
-import type { CircleSpec, HeatPoint, PinSpec, PolylineSpec } from "./engines/types";
-import { circleColor, circleRadius, displayIntensity, heatPoints, type ColorMode } from "./layers";
+import type { CircleSpec, DotSpec, HeatPoint, PinSpec, PolylineSpec, RingSpec } from "./engines/types";
+import { circleColor, heatPoints, type ColorMode } from "./layers";
 
 const BLR: [number, number] = [12.9716, 77.5946];
 const ROUTE_COLORS = ["#ea580c", "#2563eb", "#16a34a", "#9333ea", "#dc2626", "#0891b2"];
+const DOW_LONG = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 export interface MapPin {
   key: string;
@@ -30,12 +36,27 @@ interface Props {
   onCellClick?: (c: Cell) => void;
   pickMode?: boolean;
   onPick?: (latlon: [number, number]) => void;
+  onPickModeChange?: (on: boolean) => void; // citizen "file complaint (click map)" toggle
+  enableComplaint?: boolean; // show the complaint-on-click toggle (citizen)
+  evidence?: [number, number][]; // recorded ticket/report points for the evidence layer
   routes?: DispatchRoute[];
   pins?: MapPin[];
   defaultHeat?: boolean;
+  defaultColorMode?: ColorMode;
   defaultZoom?: number;
+  sizeMode?: "intensity" | "pressure"; // "pressure" = all-day PIC (hour-independent)
+  bottomSafe?: boolean; // lift bottom controls above a mobile bottom nav (citizen)
   className?: string;
+  lens?: { badge?: string; nEmerging?: number; nAdjusted?: number; learningAdjusted?: boolean };
 }
+
+const COLOR_OPTIONS: { value: ColorMode; label: string }[] = [
+  { value: "tier", label: "Priority tier (P1–P4)" },
+  { value: "pic", label: "PIC · time score (hour × day)" },
+  { value: "flow", label: "Flow impact (modeled proxy)" },
+  { value: "operational", label: "Operational priority" },
+  { value: "source", label: "Congestion source" },
+];
 
 export function ClearLaneMap({
   cells,
@@ -45,23 +66,44 @@ export function ClearLaneMap({
   onCellClick,
   pickMode = false,
   onPick,
+  onPickModeChange,
+  enableComplaint = false,
+  evidence,
   routes,
   pins,
   defaultHeat = false,
+  defaultColorMode = "tier",
   defaultZoom = 12,
+  sizeMode = "intensity",
+  bottomSafe = false,
   className,
+  lens,
 }: Props) {
+  const bottomCls = bottomSafe ? "bottom-[5.5rem] md:bottom-3" : "bottom-3";
   const containerRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<MapEngine | null>(null);
   const { restKey, staticKey, ready } = useMapKeys();
+  const isMobile = useIsMobile();
 
   const [info, setInfo] = useState<{ label: string; priority: number; supportsTraffic: boolean } | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [panelOpen, setPanelOpen] = useState(false);
+
+  // view mode
+  const [simple, setSimple] = useState(false);
+  const [hourActivity, setHourActivity] = useState(false);
+  // overlays
+  const [showRings, setShowRings] = useState(true);
+  const [showEvidence, setShowEvidence] = useState(false);
+  const [replayOn, setReplayOn] = useState(false);
+  const [replayIdx, setReplayIdx] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const [speed, setSpeed] = useState(900);
+  // appearance
+  const [colorMode, setColorMode] = useState<ColorMode>(defaultColorMode);
   const [showHeat, setShowHeat] = useState(defaultHeat);
   const [trafficOn, setTrafficOn] = useState(false);
-  const [colorMode, setColorMode] = useState<ColorMode>("pic");
   const [showRoutes, setShowRoutes] = useState(Boolean(routes?.length));
-  const [panelOpen, setPanelOpen] = useState(false);
 
   // keep latest callbacks/flags without re-subscribing the map click handler
   const pickRef = useRef(pickMode);
@@ -72,13 +114,16 @@ export function ClearLaneMap({
   onCellRef.current = onCellClick;
   const centeredRef = useRef(false);
 
+  // flow-impact proxy table (for the "flow" color mode + ring tooltip), memoized
+  const flowMap = useMemo(() => flowImpactTable(cells), [cells]);
+
   // ---- init the engine fallback chain once keys are resolved -------------
   useEffect(() => {
     if (!ready || !containerRef.current) return;
     let cancelled = false;
     setStatus("loading");
     initBestMap({ container: containerRef.current, center: BLR, zoom: defaultZoom, restKey, staticKey })
-      .then(({ engine, attempts }) => {
+      .then(({ engine }) => {
         if (cancelled) {
           engine.destroy();
           return;
@@ -90,14 +135,6 @@ export function ClearLaneMap({
           if (pickRef.current && onPickRef.current) onPickRef.current([lat, lon]);
         });
         setTimeout(() => engine.invalidate(), 120);
-        const failed = attempts.find((a) => !a.ok);
-        if (engine.priority === 1) {
-          toast(`Map ready · ${engine.label} (source ${engine.priority}/${PROVIDER_TOTAL})`, { tone: "success" });
-        } else {
-          toast(`${failed?.label ?? "Primary map"} unavailable — using ${engine.label} (source ${engine.priority}/${PROVIDER_TOTAL})`, {
-            tone: "warning",
-          });
-        }
       })
       .catch(() => !cancelled && setStatus("error"));
     return () => {
@@ -107,26 +144,99 @@ export function ClearLaneMap({
     };
   }, [ready, restKey, staticKey, defaultZoom]);
 
+  // ---- replay animation timer (weekday cycle Mon→Sun) ---------------------
+  useEffect(() => {
+    if (!replayOn || !playing) return;
+    const t = setInterval(() => setReplayIdx((i) => (i + 1) % 7), speed);
+    return () => clearInterval(t);
+  }, [replayOn, playing, speed]);
+
+  // ---- display set (Simple view = P1/P2 only) -----------------------------
+  const display = useMemo(() => (simple ? cells.filter((c) => { const t = cellTier(c); return t === "P1" || t === "P2"; }) : cells), [cells, simple]);
+
+  const replayMax = useMemo(() => (replayOn ? Math.max(1, ...cells.map((c) => c.dow_curve?.[replayIdx] ?? 0)) : 1), [cells, replayOn, replayIdx]);
+  // expected-activity ceiling for the date-lens (today/tomorrow) circle sizing.
+  const activityMax = useMemo(() => Math.max(1, ...cells.map((c) => c.forecast_intensity ?? c.display_score ?? 0)), [cells]);
+
+  // ---- circle radius (v1-style) — variable, NOT uniform -------------------
+  // replay -> day's expected activity · hour-activity -> modeled congestion @ hour ·
+  // date-lens (forecast) -> EXPECTED ACTIVITY · default/now -> obstruction PRESSURE
+  // (pic_score), linear like v1 (`4 + pressure/100*11`). So sizes visibly vary.
+  const radiusOf = useCallback(
+    (c: Cell): number => {
+      if (replayOn) return 3 + Math.sqrt(Math.max(0, (c.dow_curve?.[replayIdx] ?? 0) / replayMax)) * 16;
+      if (hourActivity) return 4 + Math.max(0, Math.min(1, c.congestion_hour ?? 0.4)) * 16;
+      if (sizeMode !== "pressure" && source === "forecast") {
+        const a = c.forecast_intensity ?? c.display_score ?? 0;
+        return 4 + Math.sqrt(Math.max(0, a / activityMax)) * 15;
+      }
+      const pressure = c.pressure ?? c.pic_score ?? 0;
+      return 4 + (Math.max(0, Math.min(100, pressure)) / 100) * 12;
+    },
+    [replayOn, replayIdx, replayMax, hourActivity, sizeMode, source, activityMax],
+  );
+
   // ---- circles + heat -----------------------------------------------------
-  const maxIntensity = useMemo(() => Math.max(1, ...cells.map((c) => displayIntensity(c, source))), [cells, source]);
   useEffect(() => {
     const engine = engineRef.current;
     if (!engine || status !== "ready") return;
-    const circleSpecs: CircleSpec[] = cells.map((c) => ({
-      id: c.h3_r10,
-      lat: c.lat,
-      lon: c.lon,
-      radius: circleRadius(c, source, maxIntensity),
-      color: c.emerging ? "#b91c1c" : circleColor(c, colorMode),
-      fillColor: circleColor(c, colorMode),
-      weight: c.emerging ? 2 : 0.6,
-      tooltip: `${c.police_station || "—"} · PIC ${Math.round(c.pic_score)}${c.emerging ? " · emerging" : ""}`,
-      onClick: () => onCellRef.current?.(c),
-    }));
+
+    const fillOf = (c: Cell): string => (replayOn ? tierColor(cellTier(c)) : circleColor(c, colorMode, flowMap));
+
+    const circleSpecs: CircleSpec[] = display.map((c) => {
+      const lift = c.learn_lift ?? 0;
+      const expanding = lift >= 0.15;
+      const blind = isBlindSpot(c);
+      const fill = fillOf(c);
+      const ring = c.emerging ? "#b91c1c" : expanding ? "#f59e0b" : blind ? "#d97706" : fill;
+      const liftTip = lift > 0.08 ? ` · ▲ expanding +${Math.round(lift * 100)}%` : lift < -0.08 ? ` · ▼ cooling ${Math.round(lift * 100)}%` : "";
+      return {
+        id: c.h3_r10,
+        lat: c.lat,
+        lon: c.lon,
+        radius: radiusOf(c) + (c.emerging ? 3 : expanding ? 1.5 : 0),
+        color: ring,
+        fillColor: fill,
+        weight: c.emerging ? 2.5 : expanding ? 1.6 : blind ? 1.4 : 0.6,
+        tooltip: `${c.police_station || "—"} · ${cellTier(c)} · PIC ${Math.round(c.pic_score)}${blind ? " · ◎ blind spot" : ""}${c.emerging ? " · ◆ emerging" : ""}${liftTip}`,
+        onClick: () => onCellRef.current?.(c),
+      };
+    });
     const heatSpecs: HeatPoint[] = heatPoints(cells, source).map(([lat, lon, intensity]) => ({ lat, lon, intensity }));
     engine.setCircles(showHeat ? [] : circleSpecs);
     engine.setHeat(heatSpecs, showHeat);
-  }, [cells, source, colorMode, showHeat, maxIntensity, status]);
+  }, [display, cells, source, colorMode, showHeat, status, replayOn, radiusOf, flowMap]);
+
+  // ---- evening blind-spot rings (dashed) ----------------------------------
+  useEffect(() => {
+    const engine = engineRef.current;
+    if (!engine || status !== "ready") return;
+    if (!showRings) {
+      engine.setRings([]);
+      return;
+    }
+    const rings: RingSpec[] = display
+      .filter(isBlindSpot)
+      .map((c) => ({
+        id: `ring-${c.h3_r10}`,
+        lat: c.lat,
+        lon: c.lon,
+        radius: radiusOf(c) + 6,
+        color: "#d97706",
+        weight: 1.4,
+        dashArray: "4",
+        tooltip: `${c.police_station || "—"} · evening blind spot (high-priority · under-observed)`,
+      }));
+    engine.setRings(rings);
+  }, [display, showRings, status, radiusOf]);
+
+  // ---- evidence points (recorded tickets/reports) -------------------------
+  useEffect(() => {
+    const engine = engineRef.current;
+    if (!engine || status !== "ready") return;
+    const dots: DotSpec[] = showEvidence && evidence ? evidence.map(([lat, lon], i) => ({ id: `ev-${i}`, lat, lon })) : [];
+    engine.setDots(dots);
+  }, [evidence, showEvidence, status]);
 
   // ---- pins (role pins + numbered route stops + user) + route polylines ---
   useEffect(() => {
@@ -194,6 +304,41 @@ export function ClearLaneMap({
   }, []);
 
   const trafficAvailable = info?.supportsTraffic ?? false;
+  const blindCount = useMemo(() => display.filter(isBlindSpot).length, [display]);
+
+  const panel = (
+    <LayersPanel
+      simple={simple}
+      setSimple={setSimple}
+      hourActivity={hourActivity}
+      setHourActivity={setHourActivity}
+      enableComplaint={enableComplaint}
+      pickMode={pickMode}
+      onPickModeChange={onPickModeChange}
+      showRings={showRings}
+      setShowRings={setShowRings}
+      blindCount={blindCount}
+      showEvidence={showEvidence}
+      setShowEvidence={setShowEvidence}
+      hasEvidence={Boolean(evidence?.length)}
+      replayOn={replayOn}
+      setReplayOn={(v) => {
+        setReplayOn(v);
+        setPlaying(v);
+      }}
+      colorMode={colorMode}
+      setColorMode={setColorMode}
+      showHeat={showHeat}
+      setShowHeat={setShowHeat}
+      trafficOn={trafficOn}
+      setTrafficOn={setTrafficOn}
+      trafficAvailable={trafficAvailable}
+      hasRoutes={Boolean(routes?.length)}
+      showRoutes={showRoutes}
+      setShowRoutes={setShowRoutes}
+      info={info}
+    />
+  );
 
   return (
     <div className={cn("relative h-full w-full overflow-hidden bg-muted", className)}>
@@ -214,54 +359,115 @@ export function ClearLaneMap({
         </div>
       )}
 
-      {/* layer controls */}
-      <div className="absolute right-3 top-3 z-[500] flex flex-col items-end gap-2">
+      {/* lens status chip — what the heatmap is showing + how many zones are moving */}
+      {lens?.badge && status === "ready" && (
+        <div className="pointer-events-none absolute left-1/2 top-3 z-[500] flex max-w-[min(90%,38rem)] -translate-x-1/2 flex-wrap items-center justify-center gap-x-2 gap-y-0.5 rounded-full border bg-background/95 px-3 py-1 text-[11px] shadow-md backdrop-blur">
+          <span className={cn("inline-flex items-center gap-1 font-medium", lens.learningAdjusted ? "text-primary" : "text-muted-foreground")}>
+            {lens.learningAdjusted ? <Sparkles className="h-3 w-3" /> : <History className="h-3 w-3" />}
+            {lens.badge}
+          </span>
+          {lens.learningAdjusted && ((lens.nAdjusted ?? 0) > 0 || (lens.nEmerging ?? 0) > 0) ? (
+            <span className="text-muted-foreground">▲ {lens.nAdjusted ?? 0} adjusting · ◆ {lens.nEmerging ?? 0} emerging</span>
+          ) : null}
+        </div>
+      )}
+
+      {/* layers FAB + panel (desktop = floating card · mobile = bottom sheet) */}
+      <div className="absolute right-3 top-3 z-[600] flex flex-col items-end gap-2">
         <button
           onClick={() => setPanelOpen((o) => !o)}
           className="flex h-10 w-10 items-center justify-center rounded-full border bg-background/95 text-foreground shadow-md backdrop-blur hover:bg-accent"
-          aria-label="Map layers"
+          aria-label="Map layers & view"
+          title="Map layers & view"
         >
           <Layers className="h-5 w-5" />
         </button>
-        {panelOpen && (
-          <div className="w-60 animate-slide-up rounded-xl border bg-background/97 p-3 text-sm shadow-xl backdrop-blur">
-            <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Layers</div>
-            <Toggle icon={<Flame className="h-4 w-4" />} label="Hourly heatmap" checked={showHeat} onChange={setShowHeat} />
-            {trafficAvailable ? (
-              <Toggle icon={<Car className="h-4 w-4" />} label="Mappls traffic tiles" checked={trafficOn} onChange={setTrafficOn} />
-            ) : (
-              <div className="flex items-center justify-between gap-2 rounded-md px-1 py-1.5 text-muted-foreground">
-                <span className="flex items-center gap-2">
-                  <Car className="h-4 w-4" /> Mappls traffic tiles
-                </span>
-                <span className="rounded bg-muted px-1.5 py-0.5 text-[10px]">basemap only</span>
-              </div>
-            )}
-            <p className="px-1 pt-0.5 text-[10px] leading-tight text-muted-foreground">
-              Live-traffic feed isn't enabled on this Mappls account — the hourly heatmap above is the
-              modeled typical-congestion view (use the hour slider).
-            </p>
-            {Boolean(routes?.length) && <Toggle icon={<RouteIcon className="h-4 w-4" />} label="Dispatch route" checked={showRoutes} onChange={setShowRoutes} />}
-            <div className="mt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Color points by</div>
-            <select value={colorMode} onChange={(e) => setColorMode(e.target.value as ColorMode)} className="mt-1 w-full rounded-md border bg-background px-2 py-1.5 text-sm">
-              <option value="pic">PIC score</option>
-              <option value="operational">Operational priority</option>
-              <option value="source">Congestion source</option>
-            </select>
-            {info && (
-              <div className="mt-2 text-[11px] text-muted-foreground">
-                Basemap: <b>{info.label}</b> (source {info.priority}/{PROVIDER_TOTAL})
-              </div>
-            )}
+        {panelOpen && !isMobile && (
+          <div className="flex max-h-[min(70vh,32rem)] w-72 flex-col animate-slide-up rounded-xl border bg-background/97 p-3 text-sm shadow-xl backdrop-blur">
+            <div className="mb-1 flex shrink-0 items-center justify-between">
+              <span className="text-xs font-bold">Map layers &amp; view</span>
+              <button onClick={() => setPanelOpen(false)} className="text-muted-foreground hover:text-foreground" aria-label="Close">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="-mr-1 min-h-0 flex-1 overflow-y-auto pr-1">{panel}</div>
           </div>
         )}
       </div>
+
+      {/* mobile bottom sheet for the layers panel */}
+      {panelOpen && isMobile && (
+        <>
+          <div className="fixed inset-0 z-[1100] bg-black/40 backdrop-blur-sm" onClick={() => setPanelOpen(false)} />
+          <div className="fixed inset-x-0 bottom-0 z-[1101] max-h-[80vh] animate-slide-up overflow-y-auto rounded-t-2xl border-t bg-background p-4 pb-6 shadow-2xl">
+            <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-border" />
+            <div className="mb-1 flex items-center justify-between">
+              <span className="text-sm font-bold">Map layers &amp; view</span>
+              <button onClick={() => setPanelOpen(false)} className="text-muted-foreground hover:text-foreground" aria-label="Close">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            {panel}
+          </div>
+        </>
+      )}
+
+      {/* pick-mode hint */}
+      {pickMode && status === "ready" && (
+        <div className="pointer-events-none absolute left-1/2 top-14 z-[500] -translate-x-1/2 rounded-full border bg-background/95 px-3 py-1.5 text-sm shadow-md backdrop-blur">
+          Tap the map to drop your complaint at that spot
+        </div>
+      )}
+
+      {/* hour-of-day activity caption */}
+      {hourActivity && !replayOn && status === "ready" && (
+        <div className={cn("pointer-events-none absolute left-1/2 z-[500] w-[min(92%,30rem)] -translate-x-1/2 rounded-lg border bg-background/95 px-3 py-2 text-[11px] shadow-md backdrop-blur", bottomCls)}>
+          <b>Hour-of-day activity.</b> Circle size = MODELED typical congestion at the selected hour (drag the time
+          slider). Ticket counts never vary by hour — this is the modeled commute curve, not measured traffic.
+        </div>
+      )}
+
+      {/* historical replay controls (weekday cycle) */}
+      {replayOn && status === "ready" && (
+        <div className={cn("absolute left-1/2 z-[500] w-[min(92%,30rem)] -translate-x-1/2 rounded-lg border bg-background/95 px-3 py-2 shadow-md backdrop-blur", bottomCls)}>
+          <div className="flex items-center justify-between">
+            <b className="text-sm">Historical replay</b>
+            <span className="num text-sm font-semibold text-primary">{DOW_LONG[replayIdx]}</span>
+          </div>
+          <div className="mt-1.5 flex items-center gap-2">
+            <button onClick={() => setPlaying((p) => !p)} className="flex h-7 w-7 items-center justify-center rounded-md border bg-background hover:bg-accent" aria-label={playing ? "Pause" : "Play"}>
+              {playing ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+            </button>
+            <input
+              type="range"
+              min={0}
+              max={6}
+              value={replayIdx}
+              onChange={(e) => {
+                setPlaying(false);
+                setReplayIdx(+e.target.value);
+              }}
+              className="flex-1 accent-primary"
+              aria-label="Weekday"
+            />
+            <select aria-label="Replay speed" value={speed} onChange={(e) => setSpeed(+e.target.value)} className="rounded-md border bg-background px-1.5 py-1 text-xs">
+              <option value={1600}>0.5×</option>
+              <option value={900}>1×</option>
+              <option value={450}>2×</option>
+            </select>
+          </div>
+          <p className="mt-1 text-[10px] leading-tight text-muted-foreground">
+            Recorded day-of-week propensity (ticket COUNTS are day-of-week — upload time, not parking time). Not live
+            traffic; strategic ranking is unchanged.
+          </p>
+        </div>
+      )}
 
       {/* recenter on user */}
       {userLocation && status === "ready" && (
         <button
           onClick={() => engineRef.current?.setView(userLocation, Math.max(engineRef.current.getZoom(), 15))}
-          className="absolute bottom-3 right-3 z-[500] flex h-10 w-10 items-center justify-center rounded-full border bg-background/95 text-primary shadow-md backdrop-blur hover:bg-accent"
+          className={cn("absolute right-3 z-[500] flex h-10 w-10 items-center justify-center rounded-full border bg-background/95 text-primary shadow-md backdrop-blur hover:bg-accent", bottomCls)}
           aria-label="Recenter on my location"
           title="Recenter on my location"
         >
@@ -270,40 +476,197 @@ export function ClearLaneMap({
       )}
 
       {/* legend */}
-      <div className="pointer-events-none absolute bottom-3 left-3 z-[500] max-w-[60%] rounded-lg border bg-background/95 px-3 py-2 text-[11px] shadow-md backdrop-blur">
-        {colorMode === "source" ? (
-          <div className="flex flex-col gap-0.5">
-            {(["live", "mappls_typical", "modeled"] as const).map((s) => (
-              <span key={s} className="flex items-center gap-1.5">
-                <i className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: { live: "#16a34a", mappls_typical: "#f59e0b", modeled: "#4f7fd6" }[s] }} />
-                {sourceMeta(s).label}
-              </span>
-            ))}
-          </div>
-        ) : (
-          <>
-            <div className="mb-1 font-medium">{colorMode === "operational" ? "Operational priority" : source === "forecast" ? "Forecast intensity" : "Hourly intensity"}</div>
-            <div className="h-2 w-32 rounded-full" style={{ background: "linear-gradient(90deg,#16a34a,#84cc16,#facc15,#f97316,#dc2626)" }} />
-            <div className="mt-0.5 flex justify-between text-muted-foreground">
-              <span>low</span>
-              <span>med</span>
-              <span>high</span>
-            </div>
-            <div className="mt-0.5 text-muted-foreground">historical PIC × typical congestion for the hour · not measured</div>
-          </>
-        )}
-      </div>
+      {!replayOn && status === "ready" && (
+        <div className={cn("pointer-events-none absolute left-3 z-[500] max-w-[62%] rounded-lg border bg-background/95 px-3 py-2 text-[11px] shadow-md backdrop-blur", bottomCls)}>
+          <Legend colorMode={colorMode} source={source} hourActivity={hourActivity} showRings={showRings} showEvidence={showEvidence} />
+        </div>
+      )}
     </div>
   );
 }
 
-function Toggle({ icon, label, checked, onChange }: { icon: React.ReactNode; label: string; checked: boolean; onChange: (v: boolean) => void }) {
+// --------------------------------------------------------------------------- //
+function ToggleRow({
+  label,
+  hint,
+  checked,
+  onChange,
+  disabled,
+}: {
+  label: React.ReactNode;
+  hint?: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  disabled?: boolean;
+}) {
   return (
-    <label className="flex cursor-pointer items-center justify-between gap-2 rounded-md px-1 py-1.5 hover:bg-accent">
-      <span className="flex items-center gap-2">
-        {icon} {label}
+    <label className={cn("flex cursor-pointer items-center justify-between gap-2 py-1.5", disabled && "cursor-not-allowed opacity-50")}>
+      <span className="flex flex-col">
+        <span className="text-[13px]">{label}</span>
+        {hint && <span className="text-[10px] leading-tight text-muted-foreground">{hint}</span>}
       </span>
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="accent-primary" />
+      <Switch checked={checked} onCheckedChange={onChange} disabled={disabled} />
     </label>
+  );
+}
+
+interface PanelProps {
+  simple: boolean;
+  setSimple: (v: boolean) => void;
+  hourActivity: boolean;
+  setHourActivity: (v: boolean) => void;
+  enableComplaint: boolean;
+  pickMode: boolean;
+  onPickModeChange?: (v: boolean) => void;
+  showRings: boolean;
+  setShowRings: (v: boolean) => void;
+  blindCount: number;
+  showEvidence: boolean;
+  setShowEvidence: (v: boolean) => void;
+  hasEvidence: boolean;
+  replayOn: boolean;
+  setReplayOn: (v: boolean) => void;
+  colorMode: ColorMode;
+  setColorMode: (v: ColorMode) => void;
+  showHeat: boolean;
+  setShowHeat: (v: boolean) => void;
+  trafficOn: boolean;
+  setTrafficOn: (v: boolean) => void;
+  trafficAvailable: boolean;
+  hasRoutes: boolean;
+  showRoutes: boolean;
+  setShowRoutes: (v: boolean) => void;
+  info: { label: string; priority: number; supportsTraffic: boolean } | null;
+}
+
+function LayersPanel(p: PanelProps) {
+  return (
+    <Accordion type="multiple" defaultValue={["view", "overlays", "color"]} className="w-full">
+      <AccordionItem value="view">
+        <AccordionTrigger>View mode</AccordionTrigger>
+        <AccordionContent>
+          <ToggleRow label="Simple view" hint="P1 / P2 priority only" checked={p.simple} onChange={p.setSimple} />
+          <ToggleRow label="Hour-of-day activity" hint="size by modeled congestion at the hour" checked={p.hourActivity} onChange={p.setHourActivity} />
+          {p.enableComplaint && (
+            <ToggleRow label="File complaint" hint="tap the map to drop a report" checked={p.pickMode} onChange={(v) => p.onPickModeChange?.(v)} />
+          )}
+        </AccordionContent>
+      </AccordionItem>
+
+      <AccordionItem value="overlays">
+        <AccordionTrigger>Overlays</AccordionTrigger>
+        <AccordionContent>
+          <ToggleRow label={`Evening blind-spot rings${p.blindCount ? ` (${p.blindCount})` : ""}`} hint="high-priority · under-observed" checked={p.showRings} onChange={p.setShowRings} />
+          <ToggleRow label="Evidence points" hint="recorded tickets / reports" checked={p.showEvidence} onChange={p.setShowEvidence} disabled={!p.hasEvidence} />
+          <ToggleRow label="Historical replay" hint="day-of-week cycle (upload time)" checked={p.replayOn} onChange={p.setReplayOn} />
+          {p.hasRoutes && <ToggleRow label="Dispatch route" hint="optimiser patrol stops" checked={p.showRoutes} onChange={p.setShowRoutes} />}
+        </AccordionContent>
+      </AccordionItem>
+
+      <AccordionItem value="color">
+        <AccordionTrigger>Color zones by</AccordionTrigger>
+        <AccordionContent>
+          <select
+            aria-label="Color zones by"
+            value={p.colorMode}
+            onChange={(e) => p.setColorMode(e.target.value as ColorMode)}
+            className="w-full rounded-md border bg-background px-2 py-1.5 text-sm"
+          >
+            {COLOR_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-[10px] leading-tight text-muted-foreground">
+            green → amber → red = priority / PIC / modeled flow-impact tier — NOT measured congestion.
+          </p>
+        </AccordionContent>
+      </AccordionItem>
+
+      <AccordionItem value="base">
+        <AccordionTrigger>Base map &amp; layers</AccordionTrigger>
+        <AccordionContent>
+          <ToggleRow label="Hourly heatmap" hint="modeled typical congestion" checked={p.showHeat} onChange={p.setShowHeat} />
+          {p.trafficAvailable ? (
+            <ToggleRow label="Live traffic tiles" hint="provider live-traffic layer" checked={p.trafficOn} onChange={p.setTrafficOn} />
+          ) : (
+            <div className="flex items-center justify-between gap-2 py-1.5 text-[13px] text-muted-foreground">
+              <span>Live traffic tiles</span>
+              <span className="rounded bg-muted px-1.5 py-0.5 text-[10px]">basemap only</span>
+            </div>
+          )}
+          <p className="text-[10px] leading-tight text-muted-foreground">
+            Live-traffic feed isn't provisioned on this Mappls account — the hourly heatmap is the modeled
+            typical-congestion view.
+          </p>
+          {p.info && (
+            <div className="mt-1.5 text-[10px] text-muted-foreground">
+              Basemap: <b>{p.info.label}</b> (source {p.info.priority}/{PROVIDER_TOTAL})
+            </div>
+          )}
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
+  );
+}
+
+function Legend({
+  colorMode,
+  source,
+  hourActivity,
+  showRings,
+  showEvidence,
+}: {
+  colorMode: ColorMode;
+  source: "live" | "forecast";
+  hourActivity: boolean;
+  showRings: boolean;
+  showEvidence: boolean;
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      {colorMode === "source" ? (
+        (["live", "mappls_typical", "modeled"] as const).map((s) => (
+          <span key={s} className="flex items-center gap-1.5">
+            <i className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: { live: "#16a34a", mappls_typical: "#f59e0b", modeled: "#4f7fd6" }[s] }} />
+            {sourceMeta(s).label}
+          </span>
+        ))
+      ) : colorMode === "tier" ? (
+        <div className="flex items-center gap-2">
+          {(["P1", "P2", "P3", "P4"] as const).map((t) => (
+            <span key={t} className="flex items-center gap-1">
+              <i className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: tierColor(t) }} /> {t}
+            </span>
+          ))}
+        </div>
+      ) : (
+        <>
+          <div className="font-medium">
+            {colorMode === "flow" ? "Flow impact (modeled proxy)" : colorMode === "operational" ? "Operational priority" : source === "forecast" ? "Forecast intensity" : "PIC intensity"}
+          </div>
+          <div
+            className="h-2 w-32 rounded-full"
+            style={{ background: colorMode === "flow" ? `linear-gradient(90deg,${flowColor(5)},${flowColor(55)},${flowColor(95)})` : "linear-gradient(90deg,#16a34a,#84cc16,#facc15,#f97316,#dc2626)" }}
+          />
+          <div className="flex justify-between text-muted-foreground">
+            <span>low</span>
+            <span>high</span>
+          </div>
+        </>
+      )}
+      {showRings && (
+        <span className="flex items-center gap-1.5">
+          <i className="inline-block h-2.5 w-2.5 rounded-full border border-dashed border-[#d97706]" /> evening blind spot
+        </span>
+      )}
+      {showEvidence && (
+        <span className="flex items-center gap-1.5">
+          <i className="inline-block h-1.5 w-1.5 rounded-full bg-slate-500" /> evidence point
+        </span>
+      )}
+      <div className="text-[10px] text-muted-foreground">{hourActivity ? "size = modeled congestion @ hour" : "size = obstruction pressure"} · modeled, not measured</div>
+    </div>
   );
 }

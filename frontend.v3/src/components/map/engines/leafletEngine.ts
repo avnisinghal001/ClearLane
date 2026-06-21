@@ -1,7 +1,7 @@
 // Shared Leaflet adapter — powers BOTH engine 1 (MapMyIndia map_load, using the
 // global `L` the script exposes) and engine 3 (bundled Leaflet + OSM/Carto). The
 // only difference is which `L` instance and map are passed in.
-import { HEAT_GRADIENT, type CircleSpec, type EngineId, type HeatPoint, type MapEngine, type PinSpec, type PolylineSpec } from "./types";
+import { HEAT_GRADIENT, type CircleSpec, type DotSpec, type EngineId, type HeatPoint, type MapEngine, type PinSpec, type PolylineSpec, type RingSpec } from "./types";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -27,7 +27,19 @@ export interface LeafletEngineConfig {
 
 export function createLeafletEngine(cfg: LeafletEngineConfig): MapEngine {
   const { L, map } = cfg;
+  // Shared CANVAS renderer so the full ~6.5k-cell occupied set renders smoothly
+  // (SVG would choke). MapMyIndia's Leaflet map defaults to SVG, so we force a
+  // canvas renderer per overlay layer here.
+  let canvasRenderer: any = null;
+  try {
+    canvasRenderer = typeof L.canvas === "function" ? L.canvas({ padding: 0.5 }) : null;
+  } catch {
+    canvasRenderer = null;
+  }
+  const withRenderer = (opts: any) => (canvasRenderer ? { ...opts, renderer: canvasRenderer } : opts);
+  const dotLayer = L.layerGroup().addTo(map); // evidence points (bottom)
   const circleLayer = L.layerGroup().addTo(map);
+  const ringLayer = L.layerGroup().addTo(map); // blind-spot rings (above circles)
   const pinLayer = L.layerGroup().addTo(map);
   const lineLayer = L.layerGroup().addTo(map);
   let heat: any = null;
@@ -56,13 +68,13 @@ export function createLeafletEngine(cfg: LeafletEngineConfig): MapEngine {
     setCircles(circles: CircleSpec[]) {
       circleLayer.clearLayers();
       for (const c of circles) {
-        const m = L.circleMarker([c.lat, c.lon], {
+        const m = L.circleMarker([c.lat, c.lon], withRenderer({
           radius: c.radius,
           color: c.color,
           weight: c.weight,
           fillColor: c.fillColor,
           fillOpacity: 0.62,
-        });
+        }));
         if (c.tooltip) m.bindTooltip(c.tooltip, { direction: "top", offset: [0, -2] });
         if (c.onClick) m.on("click", c.onClick);
         m.addTo(circleLayer);
@@ -94,6 +106,33 @@ export function createLeafletEngine(cfg: LeafletEngineConfig): MapEngine {
       for (const ln of lines) {
         if (ln.points.length < 2) continue;
         L.polyline(ln.points, { color: ln.color, weight: 3, opacity: 0.85, dashArray: "6 4" }).addTo(lineLayer);
+      }
+    },
+    setRings(rings: RingSpec[]) {
+      ringLayer.clearLayers();
+      for (const r of rings) {
+        const m = L.circleMarker([r.lat, r.lon], withRenderer({
+          radius: r.radius,
+          color: r.color,
+          weight: r.weight ?? 1.4,
+          dashArray: r.dashArray ?? "4",
+          fill: false,
+        }));
+        if (r.tooltip) m.bindTooltip(r.tooltip, { direction: "top", offset: [0, -2] });
+        m.addTo(ringLayer);
+      }
+    },
+    setDots(dots: DotSpec[]) {
+      dotLayer.clearLayers();
+      for (const d of dots) {
+        L.circleMarker([d.lat, d.lon], withRenderer({
+          radius: d.radius ?? 1.7,
+          color: d.color ?? "#64748b",
+          weight: 0,
+          fillColor: d.color ?? "#64748b",
+          fillOpacity: 0.5,
+          interactive: false,
+        })).addTo(dotLayer);
       }
     },
     setTraffic(on: boolean) {

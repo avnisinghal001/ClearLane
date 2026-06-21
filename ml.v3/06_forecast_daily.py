@@ -148,6 +148,29 @@ def run() -> dict:
     (C.REPORTS / "forecaster_daily_metrics.txt").write_text(
         "\n".join(f"{k}: {v}" for k, v in metrics.items()) + "\n", encoding="utf-8")
 
+    # --- PERSIST the fitted daily forecaster (real model file + manifest) ---- #
+    try:
+        import models_io as MIO            # noqa: E402 (pipeline-local helper)
+        if _HAS_LGB:
+            MIO.save_lgb(model, "forecast_daily.lgb")
+            mfile, mtype = "forecast_daily.lgb", "LightGBM(poisson)"
+        else:                               # pragma: no cover - sklearn fallback
+            MIO.save_joblib(model, "forecast_daily.pkl")
+            mfile, mtype = "forecast_daily.pkl", "HistGBR(poisson)"
+        MIO.register(
+            "forecast_daily", model_type=mtype, file=mfile, features=_FEATURES,
+            metrics={k: metrics[k] for k in
+                     ("poisson_deviance", "baseline_poisson_deviance", "mae",
+                      "baseline_mae", "spearman", "beats_baseline")},
+            params=C.FORECAST_DAILY_LGBM,
+            notes=("Per (cell × date) Poisson count model with calendar + lag + "
+                   "static context, temporal holdout (no leakage). Predicts FUTURE "
+                   "violation propensity at day-of-week granularity — never "
+                   "congestion, never hour-of-day (ticket time is upload time)."))
+        print(f"[06_forecast_daily] persisted {mfile} ({mtype}) -> models/")
+    except Exception as e:                  # pragma: no cover - best-effort
+        print(f"[06_forecast_daily] model persistence skipped: {type(e).__name__}: {e}")
+
     print(f"[06_forecast_daily] {model_name} poissonDev={metrics['poisson_deviance']} "
           f"(baseline {metrics['baseline_poisson_deviance']}) "
           f"MAE={metrics['mae']} Spearman={metrics['spearman']} "

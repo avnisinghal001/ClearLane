@@ -34,7 +34,8 @@ REST_KEY = "1c04439bdb5b2f9d9bd3bca144614f5c"
 STATIC_KEY = "dnnjqdkukvlealrrtuvklzwjtkyoshusxdef"
 
 DOW_ORDER = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-MAP_CELLS = 800  # top cells (by PIC) carried into the offline map
+MAP_CELLS = 1600       # representative spread carried into the offline map (low→high)
+MAP_HEAD = 400         # always keep the hottest N; stride-sample the rest for spread
 
 
 def slugify(name: str) -> str:
@@ -66,6 +67,7 @@ def main():
     print("Loading artifacts...")
     pic = pd.read_parquet(SRC / "pic.parquet")
     online = jload("online_state.json")
+    hotspots = jload("hotspots.json")              # carries rank_divergence (stage 04)
     fdaily = jload("forecast_daily.json")
     plan = jload("dispatch_plan.json")
     evaluation = jload("evaluation.json")
@@ -88,10 +90,21 @@ def main():
     # ---- per-cell forecast + emerging lookups -----------------------------
     fc_by_h3 = {c["h3_r10"]: c for c in fdaily.get("cells", [])}
     em_by_h3 = {c["h3_r10"]: c for c in online.get("emerging_cells", [])}
+    # NB rank_divergence (rank_naive − rank_bias) -> the offline M4 reranker's
+    # under-observed signal (mirrors the backend; falls back to drift_z when absent).
+    rd_by_h3 = {c["h3_r10"]: c.get("rank_divergence") for c in hotspots.get("cells", [])}
 
     # ---- choose the cell set carried into the offline map -----------------
-    pic_sorted = pic.sort_values("pic_score", ascending=False)
-    keep = set(pic_sorted.head(MAP_CELLS)["h3_r10"])
+    # Keep a REPRESENTATIVE SPREAD (hottest N + a stratified stride across the rest)
+    # so the offline map spans the full pic_score range (green/quiet → yellow → red),
+    # not just the all-high top cells. Mirrors the live /api/v3/map full-set spread.
+    pic_sorted = pic.sort_values("pic_score", ascending=False).reset_index(drop=True)
+    keep = set(pic_sorted.head(MAP_HEAD)["h3_r10"])
+    tail = pic_sorted.iloc[MAP_HEAD:]
+    need = max(0, MAP_CELLS - MAP_HEAD)
+    if len(tail) and need:
+        step = max(1, len(tail) // need)
+        keep |= set(tail.iloc[::step].head(need)["h3_r10"])
     keep |= set(em_by_h3.keys())
     for r_ in plan.get("routes", []):
         keep |= set(r_.get("stops", []))
@@ -119,6 +132,7 @@ def main():
             "emerging": bool(em),
             "drift_z": r(em.get("drift_z"), 2) if em else None,
             "e_lambda": r(em.get("e_lambda"), 3) if em else None,
+            "rank_divergence": rd_by_h3.get(h3),
         })
     cells.sort(key=lambda c: c["pic_score"] or 0, reverse=True)
 
@@ -309,6 +323,10 @@ def main():
     jdump("causal.json", causal)
     jdump("sim_rl.json", sim)
     jdump("hourly_congestion.json", jload("hourly_congestion.json"))  # stage 13 overlay
+    try:                                              # persisted-model manifest (small)
+        jdump("model_manifest.json", jload("model_manifest.json"))
+    except Exception:
+        print("  - model_manifest.json: skipped (run ml.v3/run_all.py first)")
     jdump("config.json", {"mappls_key": REST_KEY, "static_key": STATIC_KEY, "demo": True})
 
     print(f"\nDone. {len(cells)} map cells, {len(stations)} stations, {len(tickets)} tickets -> {OUT}")
