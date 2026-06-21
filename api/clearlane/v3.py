@@ -576,8 +576,11 @@ MAPPLS_BASE = "https://apis.mappls.com/advancedmaps/v1"
 MAPPLS_REGION, MAPPLS_RTYPE = "ind", 0
 MAPPLS_RES_FREE = "distance_matrix"          # free-flow duration (HTTP 200 verified)
 MAPPLS_RES_ETA = "distance_matrix_eta"       # typical-traffic ETA (HTTP 200 verified)
-MAPPLS_TIMEOUT_S = 6
+MAPPLS_TIMEOUT_S = 2.5                        # tight: calls must fit the function budget
 MAPPLS_FAIL_LIMIT = 3                         # circuit breaker per warm process
+LIVE_BACKOFF_S = 300                          # after a 0-coverage attempt, skip Mappls 5 min
+RERANK_THROTTLE_S = 600                       # re-bake the heavy per-station rerank ≤ every 10 min
+PLAN_THROTTLE_S = 1800                        # re-bake the next-day plan ≤ every 30 min
 LIVE_CONG_TTL_S = 600                        # live congestion freshness window (10 min)
 LIVE_ENRICH_TOP = 60                         # # of top-PIC cells enriched per recompute
 LIVE_OFFSET_M = 240.0                        # short corridor length for the ratio probe
@@ -630,8 +633,17 @@ def _enrich_live_congestion(top_n=LIVE_ENRICH_TOP):
     persist live_congestion.json to Mongo. Best-effort: any failure leaves the map on
     the simulated fallback. Called by the recompute cron — never by a read."""
     global _mappls_fails
-    _mappls_fails = 0                            # reset breaker each scheduled attempt
     key = _mappls_rest_key()
+    # back off when Mappls is down: if the last attempt got 0 live cells recently,
+    # skip the (doomed, slow) calls and stay on the simulation — keeps the cron fast.
+    prev = db.v3_artifact("live_congestion.json") or {}
+    if (key and prev.get("n_live", 0) == 0 and prev.get("ts")
+            and (time.time() - prev["ts"]) < LIVE_BACKOFF_S):
+        print(f"[v3.live] backoff: last attempt 0% live <{LIVE_BACKOFF_S}s ago -> "
+              f"skip Mappls, stay simulated")
+        return {"n_requested": 0, "n_live": 0, "coverage_pct": 0.0,
+                "generated_at": prev.get("generated_at"), "backoff": True}
+    _mappls_fails = 0                            # reset breaker each real attempt
     idx = _indices()
     cand = [c for c in idx["pic_list"][:top_n] if c.get("lat") is not None][:99]
     ratios, ok_n = {}, 0
@@ -651,7 +663,7 @@ def _enrich_live_congestion(top_n=LIVE_ENRICH_TOP):
             return durs[:n] if len(durs) > n else None
 
         free = _align(_dm_durations(MAPPLS_RES_FREE, key, pts))
-        eta = _align(_dm_durations(MAPPLS_RES_ETA, key, pts))
+        eta = _align(_dm_durations(MAPPLS_RES_ETA, key, pts)) if free else None  # fail-fast
         if free and eta and len(free) == len(eta) == n:
             for c, f, e in zip(cand, free, eta):
                 if f and e and e > 0:
@@ -2621,21 +2633,44 @@ def cron_recompute(token: str | None = None,
     _check_cron(token, authorization)
     _require_mongo()
     _ensure_init()
+    now_ts = time.time()
+    meta0 = (db.col("v3_meta").find_one({"_id": "state"}) or {})
+    mr = (db.col("v3_meta").find_one({"_id": "rerank"}) or {})
+    mp = (db.col("v3_meta").find_one({"_id": "plan"}) or {})
     with _lock:
-        live = _enrich_live_congestion()         # real Mappls typical-ETA (sim fallback)
+        # FAST every-minute essentials (fits the function budget): live congestion,
+        # online learning, day-shaped heatmap cache.
+        try:
+            live = _enrich_live_congestion()     # real Mappls typical-ETA (sim fallback)
+        except Exception as e:                   # never let a slow API break the recompute
+            live = {"error": type(e).__name__}
         summary = _recompute("cron")
         summary["live_congestion"] = live
         heat = _rebuild_hourly_cache()           # day-shaped heatmap cache (v2)
-        rerank = _rebuild_rerank_cache()         # M4 dispatch queue cache
-        try:                                     # next-day plan (best-effort)
-            plan = _plan_next_day()
-        except Exception as e:                   # pragma: no cover
-            plan = {"error": type(e).__name__}
-    # THE single recalc: online learning + day-shaped heatmap + dispatch rerank +
-    # next-day plan in one call. Point an every-minute external cron here.
+        # HEAVY steps are THROTTLED so the minute-call stays well under the timeout:
+        # the per-station rerank (~14s) ≤ every 10 min, the next-day plan ≤ every 30 min.
+        rerank = {"skipped": "throttled"}
+        if now_ts - (mr.get("ts") or 0) >= RERANK_THROTTLE_S:
+            try:
+                rerank = _rebuild_rerank_cache()
+                db.col("v3_meta").update_one({"_id": "rerank"},
+                                             {"$set": {"ts": now_ts}}, upsert=True)
+            except Exception as e:               # pragma: no cover
+                rerank = {"error": type(e).__name__}
+        plan = {"skipped": "throttled"}
+        if now_ts - (mp.get("ts") or 0) >= PLAN_THROTTLE_S:
+            try:
+                plan = _plan_next_day()
+                db.col("v3_meta").update_one({"_id": "plan"},
+                                             {"$set": {"ts": now_ts}}, upsert=True)
+            except Exception as e:               # pragma: no cover
+                plan = {"error": type(e).__name__}
+    # THE single recalc: every minute it refreshes live congestion + online learning +
+    # the day-shaped heatmap (fast); the heavy rerank/plan refresh on a slower cadence.
     return ok({"updated": summary["n_cells_updated"],
                "last_calc": summary["last_calc"], "heatmap": heat,
-               "rerank": rerank, "plan": plan, "summary": summary})
+               "rerank": rerank, "plan": plan, "summary": summary,
+               "prev_calc": meta0.get("last_calc")})
 
 
 @router.get("/rerank")
