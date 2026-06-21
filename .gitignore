@@ -32,3 +32,6 @@ backend/data/*.db
 .DS_Store
 .cursor/
 .vercel
+
+ClearLane-ML/
+ClearLane-ML/*
