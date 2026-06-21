@@ -226,17 +226,21 @@ export function ClearLaneMap({
         {panelOpen && (
           <div className="w-60 animate-slide-up rounded-xl border bg-background/97 p-3 text-sm shadow-xl backdrop-blur">
             <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Layers</div>
-            <Toggle icon={<Flame className="h-4 w-4" />} label="Heatmap" checked={showHeat} onChange={setShowHeat} />
+            <Toggle icon={<Flame className="h-4 w-4" />} label="Hourly heatmap" checked={showHeat} onChange={setShowHeat} />
             {trafficAvailable ? (
-              <Toggle icon={<Car className="h-4 w-4" />} label="Live traffic" checked={trafficOn} onChange={setTrafficOn} />
+              <Toggle icon={<Car className="h-4 w-4" />} label="Mappls traffic tiles" checked={trafficOn} onChange={setTrafficOn} />
             ) : (
               <div className="flex items-center justify-between gap-2 rounded-md px-1 py-1.5 text-muted-foreground">
                 <span className="flex items-center gap-2">
-                  <Car className="h-4 w-4" /> Live traffic
+                  <Car className="h-4 w-4" /> Mappls traffic tiles
                 </span>
-                <span className="rounded bg-muted px-1.5 py-0.5 text-[10px]">n/a on fallback basemap</span>
+                <span className="rounded bg-muted px-1.5 py-0.5 text-[10px]">basemap only</span>
               </div>
             )}
+            <p className="px-1 pt-0.5 text-[10px] leading-tight text-muted-foreground">
+              Live-traffic feed isn't enabled on this Mappls account — the hourly heatmap above is the
+              modeled typical-congestion view (use the hour slider).
+            </p>
             {Boolean(routes?.length) && <Toggle icon={<RouteIcon className="h-4 w-4" />} label="Dispatch route" checked={showRoutes} onChange={setShowRoutes} />}
             <div className="mt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Color points by</div>
             <select value={colorMode} onChange={(e) => setColorMode(e.target.value as ColorMode)} className="mt-1 w-full rounded-md border bg-background px-2 py-1.5 text-sm">
