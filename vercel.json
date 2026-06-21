@@ -2,7 +2,7 @@
   "version": 2,
   "builds": [
     {
-      "src": "frontend/package.json",
+      "src": "frontend.v3/package.json",
       "use": "@vercel/static-build",
       "config": { "distDir": "dist" }
     },
@@ -13,7 +13,11 @@
   ],
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/index.py" },
-    { "src": "/", "dest": "/frontend/index.html" },
-    { "src": "/(.*)", "dest": "/frontend/$1" }
+    { "src": "/assets/(.*)", "dest": "/frontend.v3/assets/$1" },
+    { "src": "/(.*\\.(js|css|map|png|jpg|jpeg|svg|ico|json|webmanifest|txt|woff2?))", "dest": "/frontend.v3/$1" },
+    { "src": "/(.*)", "dest": "/frontend.v3/index.html" }
+  ],
+  "crons": [
+    { "path": "/api/v3/cron/recompute", "schedule": "0 3 * * *" }
   ]
 }

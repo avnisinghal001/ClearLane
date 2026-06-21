@@ -1,0 +1,13 @@
+model: LightGBM(poisson)
+n_active_cells: 1590
+panel_rows: 240090
+train_rows: 206700
+test_rows: 33390
+test_window_days: 21
+poisson_deviance: 2.8036
+baseline_poisson_deviance: 3.2153
+mae: 1.2442
+baseline_mae: 1.2644
+spearman: 0.342
+features: ['dow', 'is_weekend', 'month', 'dom', 'is_holiday', 'lag1', 'lag7', 'roll7', 'intensity', 'road_class_wt', 'junction_share', 'repeat_share', 'veh_footprint_mean']
+beats_baseline: True

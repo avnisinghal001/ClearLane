@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none" role="img" aria-label="Police station">
+  <rect width="200" height="200" rx="20" fill="#FFF7ED"/>
+  <circle cx="100" cy="100" r="64" fill="#FFEDD5"/>
+  <!-- shield -->
+  <path d="M100 52 L138 66 V104 C138 128 120 144 100 152 C80 144 62 128 62 104 V66 Z" fill="#fff" stroke="#F97316" stroke-width="4"/>
+  <path d="M100 52 L138 66 V104 C138 128 120 144 100 152 Z" fill="#FFEDD5"/>
+  <!-- route check -->
+  <circle cx="86" cy="96" r="6" fill="#EA580C"/>
+  <circle cx="116" cy="112" r="6" fill="#16A34A"/>
+  <path d="M86 96 L116 112" stroke="#F59E0B" stroke-width="3" stroke-dasharray="3 4"/>
+  <path d="M90 78 l6 6 12 -14" stroke="#16A34A" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>
