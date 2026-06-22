@@ -1,0 +1,81 @@
+column_name,kind,role,phase1_policy
+id,source,primary record key,preserved raw source value
+latitude,source,coordinate,preserved raw source value
+longitude,source,coordinate,preserved raw source value
+location,source,source attribute,preserved raw source value
+vehicle_number,source,anonymized entity identifier,preserved raw source value
+vehicle_type,source,source attribute,preserved raw source value
+description,source,source attribute,preserved raw source value
+violation_type,source,source attribute,preserved raw source value
+offence_code,source,source attribute,preserved raw source value
+created_datetime,source,date-level temporal source,preserved raw source value
+closed_datetime,source,source attribute,preserved raw source value
+modified_datetime,source,source attribute,preserved raw source value
+device_id,source,enforcement exposure identifier,preserved raw source value
+created_by_id,source,officer/creator exposure identifier,preserved raw source value
+center_code,source,source attribute,preserved raw source value
+police_station,source,administrative ownership,preserved raw source value
+data_sent_to_scita,source,source attribute,preserved raw source value
+junction_name,source,operational location context,preserved raw source value
+action_taken_timestamp,source,source attribute,preserved raw source value
+data_sent_to_scita_timestamp,source,source attribute,preserved raw source value
+updated_vehicle_number,source,source attribute,preserved raw source value
+updated_vehicle_type,source,source attribute,preserved raw source value
+validation_status,source,quality/confidence source,preserved raw source value
+validation_timestamp,source,source attribute,preserved raw source value
+source_row_number,derived,phase1 normalized/profiled field,derived without overwriting source columns
+record_id_normalized,derived,phase1 normalized/profiled field,derived without overwriting source columns
+vehicle_number_normalized,derived,phase1 normalized/profiled field,derived without overwriting source columns
+device_id_normalized,derived,phase1 normalized/profiled field,derived without overwriting source columns
+created_by_id_normalized,derived,phase1 normalized/profiled field,derived without overwriting source columns
+center_code_normalized,derived,phase1 normalized/profiled field,derived without overwriting source columns
+latitude_numeric,derived,phase1 normalized/profiled field,derived without overwriting source columns
+longitude_numeric,derived,phase1 normalized/profiled field,derived without overwriting source columns
+coordinate_parse_valid,derived,phase1 normalized/profiled field,derived without overwriting source columns
+coordinate_global_valid,derived,phase1 normalized/profiled field,derived without overwriting source columns
+coordinate_zero_zero,derived,phase1 normalized/profiled field,derived without overwriting source columns
+coordinate_bengaluru_sanity_valid,derived,phase1 normalized/profiled field,derived without overwriting source columns
+possible_coordinate_swap,derived,phase1 normalized/profiled field,derived without overwriting source columns
+created_datetime_parsed,derived,phase1 normalized/profiled field,derived without overwriting source columns
+created_datetime_parse_valid,derived,phase1 normalized/profiled field,derived without overwriting source columns
+closed_datetime_parsed,derived,phase1 normalized/profiled field,derived without overwriting source columns
+closed_datetime_parse_valid,derived,phase1 normalized/profiled field,derived without overwriting source columns
+modified_datetime_parsed,derived,phase1 normalized/profiled field,derived without overwriting source columns
+modified_datetime_parse_valid,derived,phase1 normalized/profiled field,derived without overwriting source columns
+action_taken_timestamp_parsed,derived,phase1 normalized/profiled field,derived without overwriting source columns
+action_taken_timestamp_parse_valid,derived,phase1 normalized/profiled field,derived without overwriting source columns
+data_sent_to_scita_timestamp_parsed,derived,phase1 normalized/profiled field,derived without overwriting source columns
+data_sent_to_scita_timestamp_parse_valid,derived,phase1 normalized/profiled field,derived without overwriting source columns
+validation_timestamp_parsed,derived,phase1 normalized/profiled field,derived without overwriting source columns
+validation_timestamp_parse_valid,derived,phase1 normalized/profiled field,derived without overwriting source columns
+created_date,derived,phase1 normalized/profiled field,derived without overwriting source columns
+created_year,derived,phase1 normalized/profiled field,derived without overwriting source columns
+created_month,derived,phase1 normalized/profiled field,derived without overwriting source columns
+created_day_of_week,derived,phase1 normalized/profiled field,derived without overwriting source columns
+created_is_weekend,derived,phase1 normalized/profiled field,derived without overwriting source columns
+created_hour_diagnostic,derived,phase1 normalized/profiled field,derived without overwriting source columns
+data_sent_to_scita_boolean,derived,phase1 normalized/profiled field,derived without overwriting source columns
+location_normalized,derived,phase1 normalized/profiled field,derived without overwriting source columns
+vehicle_type_normalized,derived,phase1 normalized/profiled field,derived without overwriting source columns
+police_station_normalized,derived,phase1 normalized/profiled field,derived without overwriting source columns
+junction_name_normalized,derived,phase1 normalized/profiled field,derived without overwriting source columns
+validation_status_normalized,derived,phase1 normalized/profiled field,derived without overwriting source columns
+is_validation_known,derived,phase1 normalized/profiled field,derived without overwriting source columns
+is_approved,derived,phase1 normalized/profiled field,derived without overwriting source columns
+is_rejected,derived,phase1 normalized/profiled field,derived without overwriting source columns
+quality_weight_candidate,derived,phase1 normalized/profiled field,derived without overwriting source columns
+violation_labels,derived,phase1 normalized/profiled field,derived without overwriting source columns
+violation_label_count,derived,phase1 normalized/profiled field,derived without overwriting source columns
+contains_parking_related_label,derived,phase1 normalized/profiled field,derived without overwriting source columns
+primary_violation_label,derived,phase1 normalized/profiled field,derived without overwriting source columns
+offence_codes_parsed,derived,phase1 normalized/profiled field,derived without overwriting source columns
+offence_code_count,derived,phase1 normalized/profiled field,derived without overwriting source columns
+offence_code_parse_valid,derived,phase1 normalized/profiled field,derived without overwriting source columns
+has_vehicle_number_correction,derived,phase1 normalized/profiled field,derived without overwriting source columns
+has_vehicle_type_correction,derived,phase1 normalized/profiled field,derived without overwriting source columns
+effective_vehicle_number_candidate,derived,phase1 normalized/profiled field,derived without overwriting source columns
+effective_vehicle_type_candidate,derived,phase1 normalized/profiled field,derived without overwriting source columns
+record_usable_for_spatial_analysis,derived,phase1 normalized/profiled field,derived without overwriting source columns
+record_usable_for_exposure_analysis,derived,phase1 normalized/profiled field,derived without overwriting source columns
+record_usable_for_repeat_offender_analysis,derived,phase1 normalized/profiled field,derived without overwriting source columns
+record_usable_for_quality_analysis,derived,phase1 normalized/profiled field,derived without overwriting source columns

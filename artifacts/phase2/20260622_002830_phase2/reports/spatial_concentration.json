@@ -1,0 +1,26 @@
+{
+  "concentration": [
+    {
+      "cell_count": 68,
+      "citation_count": 102314.0,
+      "citation_share": 0.3428236358458007,
+      "top_percentile": 0.01
+    },
+    {
+      "cell_count": 340,
+      "citation_count": 190761.0,
+      "citation_share": 0.639183099063479,
+      "top_percentile": 0.05
+    },
+    {
+      "cell_count": 680,
+      "citation_count": 230330.0,
+      "citation_share": 0.7717669922431268,
+      "top_percentile": 0.1
+    }
+  ],
+  "ranking_policy": "citation_count desc, device_days desc, h3 id asc",
+  "status": "PASS",
+  "total_cells": 6805,
+  "total_citations": 298445
+}

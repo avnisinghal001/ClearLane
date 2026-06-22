@@ -1,0 +1,65 @@
+{
+  "columns": {
+    "action_taken_timestamp": {
+      "aware_values": 0,
+      "canonical_timezone": "Asia/Kolkata",
+      "invalid_non_null": 0,
+      "naive_values": 0,
+      "raw_non_null": 0,
+      "source_timezone_for_naive": "Asia/Kolkata",
+      "used_utc_true_blindly": false
+    },
+    "closed_datetime": {
+      "aware_values": 0,
+      "canonical_timezone": "Asia/Kolkata",
+      "invalid_non_null": 0,
+      "naive_values": 0,
+      "raw_non_null": 0,
+      "source_timezone_for_naive": "Asia/Kolkata",
+      "used_utc_true_blindly": false
+    },
+    "created_datetime": {
+      "aware_values": 298450,
+      "canonical_timezone": "Asia/Kolkata",
+      "invalid_non_null": 5,
+      "naive_values": 0,
+      "raw_non_null": 298450,
+      "source_timezone_for_naive": "Asia/Kolkata",
+      "used_utc_true_blindly": false
+    },
+    "data_sent_to_scita_timestamp": {
+      "aware_values": 42161,
+      "canonical_timezone": "Asia/Kolkata",
+      "invalid_non_null": 0,
+      "naive_values": 0,
+      "raw_non_null": 42161,
+      "source_timezone_for_naive": "Asia/Kolkata",
+      "used_utc_true_blindly": false
+    },
+    "modified_datetime": {
+      "aware_values": 298450,
+      "canonical_timezone": "Asia/Kolkata",
+      "invalid_non_null": 0,
+      "naive_values": 0,
+      "raw_non_null": 298450,
+      "source_timezone_for_naive": "Asia/Kolkata",
+      "used_utc_true_blindly": false
+    },
+    "validation_timestamp": {
+      "aware_values": 173196,
+      "canonical_timezone": "Asia/Kolkata",
+      "invalid_non_null": 166,
+      "naive_values": 0,
+      "raw_non_null": 173196,
+      "source_timezone_for_naive": "Asia/Kolkata",
+      "used_utc_true_blindly": false
+    }
+  },
+  "policy": {
+    "canonical_operational_timestamp": "created_datetime_parsed",
+    "canonical_timezone": "Asia/Kolkata",
+    "hour_field": "created_hour_diagnostic",
+    "hour_field_is_diagnostic_only": true,
+    "source_timezone_for_naive": "Asia/Kolkata"
+  }
+}

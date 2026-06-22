@@ -1,0 +1,486 @@
+{
+  "station_count": 54,
+  "status": "PASS",
+  "top_stations": [
+    {
+      "citation_count": 34468,
+      "police_station_normalized": "UPPARPET",
+      "top_h3_cells": [
+        {
+          "citation_count": 3211,
+          "h3_res10": "8a60145b5ca7fff"
+        },
+        {
+          "citation_count": 3042,
+          "h3_res10": "8a60145b5517fff"
+        },
+        {
+          "citation_count": 2673,
+          "h3_res10": "8a60145b5537fff"
+        },
+        {
+          "citation_count": 2120,
+          "h3_res10": "8a60145b551ffff"
+        },
+        {
+          "citation_count": 1639,
+          "h3_res10": "8a60145b426ffff"
+        },
+        {
+          "citation_count": 1537,
+          "h3_res10": "8a60145b5527fff"
+        },
+        {
+          "citation_count": 1300,
+          "h3_res10": "8a60145b424ffff"
+        },
+        {
+          "citation_count": 1093,
+          "h3_res10": "8a60145b4257fff"
+        },
+        {
+          "citation_count": 1068,
+          "h3_res10": "8a60145b5507fff"
+        },
+        {
+          "citation_count": 1033,
+          "h3_res10": "8a60145b425ffff"
+        }
+      ],
+      "unique_devices": 127,
+      "unique_h3_cells": 80
+    },
+    {
+      "citation_count": 28044,
+      "police_station_normalized": "SHIVAJINAGAR",
+      "top_h3_cells": [
+        {
+          "citation_count": 4125,
+          "h3_res10": "8a61892e916ffff"
+        },
+        {
+          "citation_count": 2740,
+          "h3_res10": "8a61892e9357fff"
+        },
+        {
+          "citation_count": 1624,
+          "h3_res10": "8a61892e9ab7fff"
+        },
+        {
+          "citation_count": 1604,
+          "h3_res10": "8a61892e9147fff"
+        },
+        {
+          "citation_count": 1560,
+          "h3_res10": "8a61892e9a87fff"
+        },
+        {
+          "citation_count": 1396,
+          "h3_res10": "8a60145b4c8ffff"
+        },
+        {
+          "citation_count": 1396,
+          "h3_res10": "8a61892e9a8ffff"
+        },
+        {
+          "citation_count": 1308,
+          "h3_res10": "8a61892e9a1ffff"
+        },
+        {
+          "citation_count": 1221,
+          "h3_res10": "8a61892e9b9ffff"
+        },
+        {
+          "citation_count": 1210,
+          "h3_res10": "8a61892e9aaffff"
+        }
+      ],
+      "unique_devices": 108,
+      "unique_h3_cells": 116
+    },
+    {
+      "citation_count": 22200,
+      "police_station_normalized": "MALLESHWARAM",
+      "top_h3_cells": [
+        {
+          "citation_count": 2302,
+          "h3_res10": "8a60145b3057fff"
+        },
+        {
+          "citation_count": 1361,
+          "h3_res10": "8a60145b30dffff"
+        },
+        {
+          "citation_count": 1189,
+          "h3_res10": "8a60145b2a47fff"
+        },
+        {
+          "citation_count": 908,
+          "h3_res10": "8a60145b071ffff"
+        },
+        {
+          "citation_count": 793,
+          "h3_res10": "8a60145b30c7fff"
+        },
+        {
+          "citation_count": 759,
+          "h3_res10": "8a60145b376ffff"
+        },
+        {
+          "citation_count": 690,
+          "h3_res10": "8a60145b372ffff"
+        },
+        {
+          "citation_count": 655,
+          "h3_res10": "8a60145b3a47fff"
+        },
+        {
+          "citation_count": 650,
+          "h3_res10": "8a60145b3767fff"
+        },
+        {
+          "citation_count": 601,
+          "h3_res10": "8a60145b3d27fff"
+        }
+      ],
+      "unique_devices": 146,
+      "unique_h3_cells": 180
+    },
+    {
+      "citation_count": 20819,
+      "police_station_normalized": "HAL OLD AIRPORT",
+      "top_h3_cells": [
+        {
+          "citation_count": 3724,
+          "h3_res10": "8a6189209207fff"
+        },
+        {
+          "citation_count": 1448,
+          "h3_res10": "8a618920921ffff"
+        },
+        {
+          "citation_count": 1399,
+          "h3_res10": "8a6189209627fff"
+        },
+        {
+          "citation_count": 696,
+          "h3_res10": "8a6189254527fff"
+        },
+        {
+          "citation_count": 682,
+          "h3_res10": "8a618920a2a7fff"
+        },
+        {
+          "citation_count": 627,
+          "h3_res10": "8a6189209217fff"
+        },
+        {
+          "citation_count": 594,
+          "h3_res10": "8a6189209227fff"
+        },
+        {
+          "citation_count": 563,
+          "h3_res10": "8a618920b0c7fff"
+        },
+        {
+          "citation_count": 559,
+          "h3_res10": "8a618920baaffff"
+        },
+        {
+          "citation_count": 540,
+          "h3_res10": "8a61892092b7fff"
+        }
+      ],
+      "unique_devices": 152,
+      "unique_h3_cells": 258
+    },
+    {
+      "citation_count": 17646,
+      "police_station_normalized": "CITY MARKET",
+      "top_h3_cells": [
+        {
+          "citation_count": 2908,
+          "h3_res10": "8a60145b5987fff"
+        },
+        {
+          "citation_count": 2536,
+          "h3_res10": "8a60145b59a7fff"
+        },
+        {
+          "citation_count": 1721,
+          "h3_res10": "8a60145b59b7fff"
+        },
+        {
+          "citation_count": 1709,
+          "h3_res10": "8a60145b5c77fff"
+        },
+        {
+          "citation_count": 656,
+          "h3_res10": "8a60145b598ffff"
+        },
+        {
+          "citation_count": 631,
+          "h3_res10": "8a618925b28ffff"
+        },
+        {
+          "citation_count": 501,
+          "h3_res10": "8a618925b6effff"
+        },
+        {
+          "citation_count": 398,
+          "h3_res10": "8a618925b287fff"
+        },
+        {
+          "citation_count": 379,
+          "h3_res10": "8a618925b2d7fff"
+        },
+        {
+          "citation_count": 367,
+          "h3_res10": "8a60145b5c0ffff"
+        }
+      ],
+      "unique_devices": 174,
+      "unique_h3_cells": 112
+    },
+    {
+      "citation_count": 14652,
+      "police_station_normalized": "VIJAYANAGARA",
+      "top_h3_cells": [
+        {
+          "citation_count": 1720,
+          "h3_res10": "8a60145a26b7fff"
+        },
+        {
+          "citation_count": 1508,
+          "h3_res10": "8a60145a2687fff"
+        },
+        {
+          "citation_count": 1481,
+          "h3_res10": "8a60145a221ffff"
+        },
+        {
+          "citation_count": 746,
+          "h3_res10": "8a60145b1697fff"
+        },
+        {
+          "citation_count": 694,
+          "h3_res10": "8a60145b1b6ffff"
+        },
+        {
+          "citation_count": 534,
+          "h3_res10": "8a60145b169ffff"
+        },
+        {
+          "citation_count": 462,
+          "h3_res10": "8a601458490ffff"
+        },
+        {
+          "citation_count": 342,
+          "h3_res10": "8a6014586d27fff"
+        },
+        {
+          "citation_count": 342,
+          "h3_res10": "8a6014586c6ffff"
+        },
+        {
+          "citation_count": 299,
+          "h3_res10": "8a60145a3597fff"
+        }
+      ],
+      "unique_devices": 101,
+      "unique_h3_cells": 183
+    },
+    {
+      "citation_count": 10998,
+      "police_station_normalized": "RAJAJINAGAR",
+      "top_h3_cells": [
+        {
+          "citation_count": 1116,
+          "h3_res10": "8a60145b3a6ffff"
+        },
+        {
+          "citation_count": 990,
+          "h3_res10": "8a60145b3a47fff"
+        },
+        {
+          "citation_count": 475,
+          "h3_res10": "8a60145b3207fff"
+        },
+        {
+          "citation_count": 393,
+          "h3_res10": "8a60145b1027fff"
+        },
+        {
+          "citation_count": 348,
+          "h3_res10": "8a6014586d37fff"
+        },
+        {
+          "citation_count": 347,
+          "h3_res10": "8a60145b144ffff"
+        },
+        {
+          "citation_count": 239,
+          "h3_res10": "8a60145b322ffff"
+        },
+        {
+          "citation_count": 229,
+          "h3_res10": "8a60145b1457fff"
+        },
+        {
+          "citation_count": 220,
+          "h3_res10": "8a6014582d97fff"
+        },
+        {
+          "citation_count": 209,
+          "h3_res10": "8a60145b1447fff"
+        }
+      ],
+      "unique_devices": 144,
+      "unique_h3_cells": 253
+    },
+    {
+      "citation_count": 10916,
+      "police_station_normalized": "KODIGEHALLI",
+      "top_h3_cells": [
+        {
+          "citation_count": 3154,
+          "h3_res10": "8a6016964b67fff"
+        },
+        {
+          "citation_count": 1126,
+          "h3_res10": "8a61892cb797fff"
+        },
+        {
+          "citation_count": 516,
+          "h3_res10": "8a61892cb4cffff"
+        },
+        {
+          "citation_count": 394,
+          "h3_res10": "8a61892c96c7fff"
+        },
+        {
+          "citation_count": 351,
+          "h3_res10": "8a61892cb4dffff"
+        },
+        {
+          "citation_count": 308,
+          "h3_res10": "8a61892c96effff"
+        },
+        {
+          "citation_count": 292,
+          "h3_res10": "8a61892c9d4ffff"
+        },
+        {
+          "citation_count": 182,
+          "h3_res10": "8a61892c96cffff"
+        },
+        {
+          "citation_count": 161,
+          "h3_res10": "8a61892c9897fff"
+        },
+        {
+          "citation_count": 159,
+          "h3_res10": "8a61892c9c67fff"
+        }
+      ],
+      "unique_devices": 99,
+      "unique_h3_cells": 258
+    },
+    {
+      "citation_count": 8558,
+      "police_station_normalized": "MAGADI ROAD",
+      "top_h3_cells": [
+        {
+          "citation_count": 2125,
+          "h3_res10": "8a60145a24f7fff"
+        },
+        {
+          "citation_count": 601,
+          "h3_res10": "8a60145b192ffff"
+        },
+        {
+          "citation_count": 440,
+          "h3_res10": "8a60145b529ffff"
+        },
+        {
+          "citation_count": 372,
+          "h3_res10": "8a60145b18a7fff"
+        },
+        {
+          "citation_count": 283,
+          "h3_res10": "8a60145b1927fff"
+        },
+        {
+          "citation_count": 266,
+          "h3_res10": "8a60145a2ce7fff"
+        },
+        {
+          "citation_count": 247,
+          "h3_res10": "8a60145a248ffff"
+        },
+        {
+          "citation_count": 242,
+          "h3_res10": "8a60145a24c7fff"
+        },
+        {
+          "citation_count": 221,
+          "h3_res10": "8a60145b5297fff"
+        },
+        {
+          "citation_count": 187,
+          "h3_res10": "8a60145b106ffff"
+        }
+      ],
+      "unique_devices": 164,
+      "unique_h3_cells": 195
+    },
+    {
+      "citation_count": 6736,
+      "police_station_normalized": "JEEVANBHEEMANAGAR",
+      "top_h3_cells": [
+        {
+          "citation_count": 1127,
+          "h3_res10": "8a61892ec9b7fff"
+        },
+        {
+          "citation_count": 355,
+          "h3_res10": "8a61892ecbaffff"
+        },
+        {
+          "citation_count": 309,
+          "h3_res10": "8a6189253087fff"
+        },
+        {
+          "citation_count": 250,
+          "h3_res10": "8a61892eca4ffff"
+        },
+        {
+          "citation_count": 246,
+          "h3_res10": "8a61892eca6ffff"
+        },
+        {
+          "citation_count": 231,
+          "h3_res10": "8a6189253687fff"
+        },
+        {
+          "citation_count": 223,
+          "h3_res10": "8a6189253567fff"
+        },
+        {
+          "citation_count": 179,
+          "h3_res10": "8a6189253547fff"
+        },
+        {
+          "citation_count": 160,
+          "h3_res10": "8a618925309ffff"
+        },
+        {
+          "citation_count": 150,
+          "h3_res10": "8a61892eca37fff"
+        }
+      ],
+      "unique_devices": 121,
+      "unique_h3_cells": 210
+    }
+  ]
+}

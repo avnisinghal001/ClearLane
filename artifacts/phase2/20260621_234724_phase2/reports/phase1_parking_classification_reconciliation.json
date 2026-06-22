@@ -1,0 +1,18 @@
+{
+  "document_discrepancy_policy": "Do not filter records to reproduce the document claim. Keep both populations and use configs/phase2.yaml to choose production scope.",
+  "parking_related_percentage_document_reference": "97.3",
+  "parking_related_percentage_phase1_reported": 100.0,
+  "parking_related_percentage_recomputed": 100.0,
+  "populations": {
+    "population_all_accepted": {
+      "description": "All Phase 1 accepted rows.",
+      "rows": 298445
+    },
+    "population_parking_classified": {
+      "description": "Rows with contains_parking_related_label == true.",
+      "rows": 298445
+    }
+  },
+  "production_population": "population_all_accepted",
+  "status": "PASS"
+}

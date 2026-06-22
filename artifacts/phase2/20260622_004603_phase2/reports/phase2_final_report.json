@@ -1,0 +1,24 @@
+{
+  "artifact_dir": "/Users/avnisinghal001/Documents/ClearLane/ClearLane/artifacts/phase2/20260622_004603_phase2",
+  "duration_seconds": 49.817,
+  "errors": [],
+  "outputs": {
+    "corrected_hotspot_rankings_csv": "/Users/avnisinghal001/Documents/ClearLane/ClearLane/data/processed/corrected_hotspot_rankings.csv",
+    "h3_exposure": "/Users/avnisinghal001/Documents/ClearLane/ClearLane/data/interim/phase2_h3_exposure.parquet",
+    "h3_features": "/Users/avnisinghal001/Documents/ClearLane/ClearLane/data/processed/phase2_h3_features.parquet",
+    "h3_hotspots": "/Users/avnisinghal001/Documents/ClearLane/ClearLane/data/processed/phase2_h3_hotspots.parquet",
+    "h3_hotspots_csv": "/Users/avnisinghal001/Documents/ClearLane/ClearLane/data/processed/phase2_h3_hotspots.csv",
+    "h3_hotspots_geojson": "/Users/avnisinghal001/Documents/ClearLane/ClearLane/data/processed/phase2_h3_hotspots.geojson",
+    "police_station_hotspot_intelligence_csv": "/Users/avnisinghal001/Documents/ClearLane/ClearLane/data/processed/police_station_hotspot_intelligence.csv",
+    "raw_hotspot_rankings_csv": "/Users/avnisinghal001/Documents/ClearLane/ClearLane/data/processed/raw_hotspot_rankings.csv",
+    "spatial_significance_csv": "/Users/avnisinghal001/Documents/ClearLane/ClearLane/data/processed/spatial_significance.csv",
+    "ticket_h3_mapping": "/Users/avnisinghal001/Documents/ClearLane/ClearLane/data/interim/phase2_ticket_h3_mapping.parquet"
+  },
+  "run_id": "20260622_004603_phase2",
+  "status": "WARN",
+  "warnings": [
+    "PARKING_CLASSIFICATION_DISCREPANCY",
+    "SPATIAL_GRAPH_DISCONNECTED",
+    "SPATIAL_ISLANDS_PRESENT"
+  ]
+}

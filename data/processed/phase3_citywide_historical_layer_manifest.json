@@ -1,0 +1,10 @@
+{
+  "live_traffic_coverage": "WHITEFIELD_DEMO_ONLY",
+  "citywide_historical_coverage": "BENGALURU",
+  "phase2_run_id": "20260622_132248_phase2",
+  "phase2_status": "WARN",
+  "citywide_historical_h3_cells": 6805,
+  "phase2_h3_hotspots_parquet": "/Users/avnisinghal001/Documents/ClearLane/ClearLane/data/processed/phase2_h3_hotspots.parquet",
+  "phase2_h3_hotspots_geojson": "/Users/avnisinghal001/Documents/ClearLane/ClearLane/artifacts/data/processed/phase2_h3_hotspots.geojson",
+  "note": "Phase 3 does not duplicate Phase 2 modelling; this is a pointer to the verified citywide layer."
+}

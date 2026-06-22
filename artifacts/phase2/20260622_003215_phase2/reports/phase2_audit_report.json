@@ -1,0 +1,40 @@
+{
+  "allowed_status_values": [
+    "IMPLEMENTED_CORRECTLY",
+    "IMPLEMENTED_BUT_INCORRECT",
+    "PARTIALLY_IMPLEMENTED",
+    "MISSING",
+    "NOT_APPLICABLE"
+  ],
+  "requirements": {
+    "Gamma credible intervals": "IMPLEMENTED_CORRECTLY",
+    "Gamma-Poisson smoothing": "IMPLEMENTED_CORRECTLY",
+    "GeoJSON and Parquet exports": "IMPLEMENTED_CORRECTLY",
+    "Getis-Ord Gi*": "IMPLEMENTED_CORRECTLY",
+    "H3 resolution-10 assignment": "IMPLEMENTED_CORRECTLY",
+    "H3 resolution-9 parent assignment": "IMPLEMENTED_CORRECTLY",
+    "H3 ring-1 adjacency": "IMPLEMENTED_CORRECTLY",
+    "Local Moran's I, when enabled": "NOT_APPLICABLE",
+    "Negative-Binomial offset model": "IMPLEMENTED_CORRECTLY",
+    "Phase 1 lineage validation": "IMPLEMENTED_CORRECTLY",
+    "Poisson offset model": "IMPLEMENTED_CORRECTLY",
+    "Poisson-versus-NB comparison": "IMPLEMENTED_CORRECTLY",
+    "chronological holdout validation": "IMPLEMENTED_CORRECTLY",
+    "deterministic reproducibility": "IMPLEMENTED_CORRECTLY",
+    "distinct device-date enforcement exposure": "IMPLEMENTED_CORRECTLY",
+    "distinct officer-date alternative exposure": "IMPLEMENTED_CORRECTLY",
+    "minimum exposure eligibility": "IMPLEMENTED_CORRECTLY",
+    "monthly stability": "IMPLEMENTED_CORRECTLY",
+    "optional superzone assignment": "IMPLEMENTED_CORRECTLY",
+    "per-H3 aggregation": "IMPLEMENTED_CORRECTLY",
+    "police-station summaries": "IMPLEMENTED_CORRECTLY",
+    "prior sensitivity": "IMPLEMENTED_CORRECTLY",
+    "production-population selection": "IMPLEMENTED_CORRECTLY",
+    "quality-weight sensitivity": "IMPLEMENTED_CORRECTLY",
+    "raw rate calculation": "IMPLEMENTED_CORRECTLY",
+    "raw-count ranking": "IMPLEMENTED_CORRECTLY",
+    "raw-versus-corrected rank turnover": "IMPLEMENTED_CORRECTLY",
+    "valid H3 geometry generation": "IMPLEMENTED_CORRECTLY"
+  },
+  "status": "PASS"
+}

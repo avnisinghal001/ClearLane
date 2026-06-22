@@ -1,0 +1,19 @@
+                     Generalized Linear Model Regression Results                     
+=====================================================================================
+Dep. Variable:     citation_count_production   No. Observations:                 2707
+Model:                                   GLM   Df Residuals:                     2703
+Model Family:                        Poisson   Df Model:                            3
+Link Function:                           Log   Scale:                          1.0000
+Method:                                 IRLS   Log-Likelihood:                -49310.
+Date:                       Mon, 22 Jun 2026   Deviance:                       83877.
+Time:                               00:32:32   Pearson chi2:                 1.14e+05
+No. Iterations:                            5   Pseudo R-squ. (CS):             0.9990
+Covariance Type:                   nonrobust                                         
+===================================================================================
+                      coef    std err          z      P>|z|      [0.025      0.975]
+-----------------------------------------------------------------------------------
+intercept           1.1504      0.007    176.418      0.000       1.138       1.163
+unique_devices      0.0158      0.001     17.734      0.000       0.014       0.018
+unique_officers    -0.0022      0.001     -2.278      0.023      -0.004      -0.000
+approval_rate      -0.4349      0.015    -29.364      0.000      -0.464      -0.406
+===================================================================================

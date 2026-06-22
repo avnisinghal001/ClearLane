@@ -1,0 +1,10 @@
+{
+  "coordinate_order": "lat,lng passed to h3.latlng_to_cell",
+  "h3_parent_resolution": 9,
+  "h3_resolution": 10,
+  "mapped_spatial_rows": 298445,
+  "source_rows": 298445,
+  "status": "PASS",
+  "unique_h3_res10": 6805,
+  "unique_h3_res9": 2532
+}

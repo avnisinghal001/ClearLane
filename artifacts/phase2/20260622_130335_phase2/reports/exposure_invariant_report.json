@@ -1,0 +1,16 @@
+{
+  "cell_count": 6805,
+  "eligible_cell_count": 2707,
+  "failure_count": 0,
+  "failures": [],
+  "ineligible_cell_count": 4098,
+  "invariants_checked": [
+    "device_days > 0 for exposure rows",
+    "device_days <= citation_count",
+    "officer_days <= citation_count",
+    "unique_devices <= device_days",
+    "unique_officers <= officer_days",
+    "active_dates <= device_days"
+  ],
+  "status": "PASS"
+}

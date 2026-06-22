@@ -1,0 +1,16 @@
+{
+  "accepted_rows": 298445,
+  "conflicting_duplicate_id_rows": 0,
+  "exact_duplicate_rows_removed": 0,
+  "input_rows": 298450,
+  "invalid_coordinate_rows": 0,
+  "invalid_created_datetime_rows": 5,
+  "missing_device_id_rows": 0,
+  "missing_id_rows": 0,
+  "outside_bengaluru_flagged_rows": 0,
+  "possible_coordinate_swap_rows": 0,
+  "quarantined_rows": 5,
+  "row_reconciliation_passed": true,
+  "rows_with_unmapped_violation_labels": 0,
+  "rows_with_unparsed_offence_codes": 0
+}

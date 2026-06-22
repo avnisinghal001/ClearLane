@@ -1,0 +1,8 @@
+{
+  "alpha": 0.05,
+  "no_fake_p_values_for_isolated_cells": true,
+  "not_tested_cell_count": 433,
+  "p_adjustment": "benjamini_hochberg",
+  "status": "PASS",
+  "tested_cell_count": 6372
+}

@@ -1,0 +1,10 @@
+{
+  "bengaluru_box_is_quarantine_rule": false,
+  "coordinate_global_valid_rows": 298450,
+  "coordinate_parse_valid_rows": 298450,
+  "coordinate_zero_zero_rows": 0,
+  "input_rows_after_exact_dedup": 298450,
+  "invalid_coordinate_rows": 0,
+  "outside_bengaluru_sanity_box_rows": 0,
+  "possible_coordinate_swap_rows": 0
+}

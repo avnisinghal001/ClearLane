@@ -1,0 +1,91 @@
+project:
+  name: clearlane
+  phase: phase1
+  random_seed: 42
+
+input:
+  # This is the current source file in this repo. The runner records its absolute
+  # path, size, line count, timestamps, and SHA-256 before/after every run.
+  raw_csv: data/raw/jan to may police violation_anonymized791b166.csv
+  encoding: utf-8
+  delimiter: ","
+
+datetime:
+  source_timezone: Asia/Kolkata
+  canonical_timezone: Asia/Kolkata
+  dayfirst: false
+  preserve_raw: true
+
+coordinates:
+  latitude_column: latitude
+  longitude_column: longitude
+  global_latitude_min: -90
+  global_latitude_max: 90
+  global_longitude_min: -180
+  global_longitude_max: 180
+  flag_zero_zero: true
+  flag_outside_bengaluru: true
+  bengaluru_sanity_box:
+    latitude_min: 12.70
+    latitude_max: 13.30
+    longitude_min: 77.30
+    longitude_max: 77.90
+
+cleaning:
+  trim_strings: true
+  unicode_normalization: NFKC
+  empty_strings_as_null: true
+  preserve_original_columns: true
+  null_tokens: ["", "NULL", "null", "NaN", "nan", "None", "none"]
+
+duplicates:
+  id_column: id
+  remove_exact_duplicate_rows: true
+  quarantine_conflicting_duplicate_ids: true
+
+validation_status:
+  approved: ["approved", "approve", "accepted", "valid"]
+  rejected: ["rejected", "reject", "duplicate", "invalid"]
+  pending: ["pending", "in review", "review", "queued"]
+
+violation_labels:
+  parking_related:
+    - WRONG PARKING
+    - NO PARKING
+    - PARKING IN A MAIN ROAD
+    - MAIN ROAD
+    - PARKING NEAR ROAD CROSSING
+    - ROAD CROSSING
+    - PARKING NEAR TRAFFIC LIGHT
+    - TRAFFIC LIGHT
+    - PARKING ON ZEBRA CROSSING
+    - ZEBRA
+    - DOUBLE PARKING
+    - OPPOSITE PARKED VEHICLE
+    - PARKING NEAR BUS STOP
+    - BUSTOP
+    - PARKING NEAR SCHOOL
+    - SCHOOL
+    - PARKING NEAR HOSPITAL
+    - HOSPITAL
+    - PARKING ON FOOTPATH
+    - FOOTPATH
+    - OTHER THAN BUS STOP
+    - OTHER-THAN-BUS-STOP
+
+outputs:
+  cleaned_parquet: data/interim/violations_cleaned.parquet
+  cleaned_csv: data/interim/violations_cleaned.csv
+  quarantine_dir: data/quarantine
+  artifact_root: artifacts/phase1
+
+document_reference_claims:
+  raw_row_count: 298450
+  date_minimum: "2023-11-09"
+  date_maximum: "2024-04-08"
+  parking_related_percentage: 97.3
+  unique_devices: 3070
+  unique_created_by_ids: 2666
+  repeat_offender_record_percentage: 34.0
+  validation_rejection_percentage: 28.7
+  police_station_count: 54

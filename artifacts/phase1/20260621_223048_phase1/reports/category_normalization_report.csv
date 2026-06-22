@@ -1,0 +1,7 @@
+column,normalized_column,raw_unique_count,normalized_unique_count,raw_null_like_count,normalized_null_count,normalization,notes
+location,location_normalized,10943,10941,3041,3041,NFKC + trim + whitespace collapse + uppercase aliases where applicable,
+vehicle_type,vehicle_type_normalized,22,22,0,0,NFKC + trim + whitespace collapse + uppercase aliases where applicable,
+police_station,police_station_normalized,55,54,5,5,NFKC + trim + whitespace collapse + uppercase aliases where applicable,
+junction_name,junction_name_normalized,170,169,5,5,NFKC + trim + whitespace collapse + uppercase aliases where applicable,
+validation_status,validation_status_normalized,6,4,125254,0,NFKC + trim + whitespace collapse + uppercase aliases where applicable,
+data_sent_to_scita,data_sent_to_scita_boolean,2,2,0,0,explicit boolean aliases true/false/1/0/yes/no/y/n,unknown raw values: []

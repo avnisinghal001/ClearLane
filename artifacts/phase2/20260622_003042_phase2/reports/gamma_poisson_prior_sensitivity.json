@@ -1,0 +1,41 @@
+{
+  "base_prior_strength": 10.0,
+  "comparisons": [
+    {
+      "prior_strength": 2.0,
+      "spearman_rank_correlation": 0.9162798823054521,
+      "top_k": 50,
+      "top_k_overlap": 44,
+      "top_k_overlap_rate": 0.88
+    },
+    {
+      "prior_strength": 5.0,
+      "spearman_rank_correlation": 0.9805044411322905,
+      "top_k": 50,
+      "top_k_overlap": 47,
+      "top_k_overlap_rate": 0.94
+    },
+    {
+      "prior_strength": 10.0,
+      "spearman_rank_correlation": 1.0,
+      "top_k": 50,
+      "top_k_overlap": 50,
+      "top_k_overlap_rate": 1.0
+    },
+    {
+      "prior_strength": 25.0,
+      "spearman_rank_correlation": 0.9755441128129541,
+      "top_k": 50,
+      "top_k_overlap": 42,
+      "top_k_overlap_rate": 0.84
+    },
+    {
+      "prior_strength": 50.0,
+      "spearman_rank_correlation": 0.9455001643039116,
+      "top_k": 50,
+      "top_k_overlap": 40,
+      "top_k_overlap_rate": 0.8
+    }
+  ],
+  "status": "PASS"
+}

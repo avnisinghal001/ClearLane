@@ -1,0 +1,5 @@
+{
+  "enabled": false,
+  "reason": "Local Moran's I is disabled in configs/phase2.yaml.",
+  "status": "NOT_APPLICABLE"
+}

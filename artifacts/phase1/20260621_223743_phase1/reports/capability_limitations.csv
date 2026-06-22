@@ -1,0 +1,7 @@
+capability,required_data,available,phase1_conclusion
+Live traffic modelling,speed/travel-time observations,False,external source required
+Historical dispatch RL,officer trajectories and outcomes,False,impossible
+Hourly violation forecast,reliable incident time,False,prohibited unless later evidence proves timestamp hour is incident time
+Repeat-offender analysis,anonymized vehicle ID,True,available
+Enforcement-bias correction,device/date activity,True,available
+Action-response timing,resolved time / action taken time,False,unavailable

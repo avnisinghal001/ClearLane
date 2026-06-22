@@ -1,0 +1,20 @@
+{
+  "cell_count": 2707,
+  "count_col": "citation_count_production",
+  "maximum": 4125.0,
+  "mean": 104.6727004063539,
+  "median": 30.0,
+  "overdispersed_relative_to_poisson": true,
+  "percentiles": {
+    "0.5": 30.0,
+    "0.75": 79.0,
+    "0.9": 226.0,
+    "0.95": 393.6999999999998,
+    "0.99": 1419.6800000000012
+  },
+  "population": "exposure_eligible_cells",
+  "status": "PASS",
+  "stddev": 275.33140013657686,
+  "variance": 75807.37990116779,
+  "variance_to_mean_ratio": 724.2325802895413
+}

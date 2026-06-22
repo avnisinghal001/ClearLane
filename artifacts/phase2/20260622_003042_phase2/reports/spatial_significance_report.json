@@ -1,0 +1,4689 @@
+{
+  "alpha": 0.05,
+  "captured_library_warnings": [
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide",
+    "invalid value encountered in divide"
+  ],
+  "component_count": 859,
+  "component_results": [
+    {
+      "component_size": 2121,
+      "failed_cell_count": 0,
+      "spatial_component_id": 1,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 236,
+      "failed_cell_count": 0,
+      "spatial_component_id": 2,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 228,
+      "failed_cell_count": 0,
+      "spatial_component_id": 3,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 206,
+      "failed_cell_count": 0,
+      "spatial_component_id": 4,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 205,
+      "failed_cell_count": 0,
+      "spatial_component_id": 5,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 183,
+      "failed_cell_count": 0,
+      "spatial_component_id": 6,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 167,
+      "failed_cell_count": 0,
+      "spatial_component_id": 7,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 150,
+      "failed_cell_count": 0,
+      "spatial_component_id": 8,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 87,
+      "failed_cell_count": 0,
+      "spatial_component_id": 9,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 66,
+      "failed_cell_count": 0,
+      "spatial_component_id": 10,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 64,
+      "failed_cell_count": 0,
+      "spatial_component_id": 11,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 61,
+      "failed_cell_count": 0,
+      "spatial_component_id": 12,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 60,
+      "failed_cell_count": 0,
+      "spatial_component_id": 13,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 58,
+      "failed_cell_count": 0,
+      "spatial_component_id": 14,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 52,
+      "failed_cell_count": 0,
+      "spatial_component_id": 15,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 46,
+      "failed_cell_count": 0,
+      "spatial_component_id": 16,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 41,
+      "failed_cell_count": 0,
+      "spatial_component_id": 17,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 41,
+      "failed_cell_count": 0,
+      "spatial_component_id": 18,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 38,
+      "failed_cell_count": 0,
+      "spatial_component_id": 19,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 37,
+      "failed_cell_count": 0,
+      "spatial_component_id": 20,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 36,
+      "failed_cell_count": 0,
+      "spatial_component_id": 21,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 35,
+      "failed_cell_count": 0,
+      "spatial_component_id": 22,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 34,
+      "failed_cell_count": 0,
+      "spatial_component_id": 23,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 32,
+      "failed_cell_count": 0,
+      "spatial_component_id": 24,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 31,
+      "failed_cell_count": 0,
+      "spatial_component_id": 25,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 30,
+      "failed_cell_count": 0,
+      "spatial_component_id": 26,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 29,
+      "failed_cell_count": 0,
+      "spatial_component_id": 27,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 29,
+      "failed_cell_count": 0,
+      "spatial_component_id": 28,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 28,
+      "failed_cell_count": 0,
+      "spatial_component_id": 29,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 28,
+      "failed_cell_count": 0,
+      "spatial_component_id": 30,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 26,
+      "failed_cell_count": 0,
+      "spatial_component_id": 31,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 25,
+      "failed_cell_count": 0,
+      "spatial_component_id": 32,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 23,
+      "failed_cell_count": 0,
+      "spatial_component_id": 33,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 22,
+      "failed_cell_count": 0,
+      "spatial_component_id": 34,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 21,
+      "failed_cell_count": 0,
+      "spatial_component_id": 35,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 20,
+      "failed_cell_count": 0,
+      "spatial_component_id": 36,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 20,
+      "failed_cell_count": 0,
+      "spatial_component_id": 37,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 19,
+      "failed_cell_count": 0,
+      "spatial_component_id": 38,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 19,
+      "failed_cell_count": 0,
+      "spatial_component_id": 39,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 19,
+      "failed_cell_count": 0,
+      "spatial_component_id": 40,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 18,
+      "failed_cell_count": 0,
+      "spatial_component_id": 41,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 17,
+      "failed_cell_count": 0,
+      "spatial_component_id": 42,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 17,
+      "failed_cell_count": 0,
+      "spatial_component_id": 43,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 17,
+      "failed_cell_count": 0,
+      "spatial_component_id": 44,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 15,
+      "failed_cell_count": 0,
+      "spatial_component_id": 45,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 15,
+      "failed_cell_count": 0,
+      "spatial_component_id": 46,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 15,
+      "failed_cell_count": 0,
+      "spatial_component_id": 47,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 14,
+      "failed_cell_count": 0,
+      "spatial_component_id": 48,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 14,
+      "failed_cell_count": 0,
+      "spatial_component_id": 49,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 14,
+      "failed_cell_count": 0,
+      "spatial_component_id": 50,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 14,
+      "failed_cell_count": 0,
+      "spatial_component_id": 51,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 14,
+      "failed_cell_count": 0,
+      "spatial_component_id": 52,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 14,
+      "failed_cell_count": 0,
+      "spatial_component_id": 53,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 13,
+      "failed_cell_count": 0,
+      "spatial_component_id": 54,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 13,
+      "failed_cell_count": 0,
+      "spatial_component_id": 55,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 13,
+      "failed_cell_count": 0,
+      "spatial_component_id": 56,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 12,
+      "failed_cell_count": 0,
+      "spatial_component_id": 57,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 12,
+      "failed_cell_count": 0,
+      "spatial_component_id": 58,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 12,
+      "failed_cell_count": 0,
+      "spatial_component_id": 59,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 12,
+      "failed_cell_count": 0,
+      "spatial_component_id": 60,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 12,
+      "failed_cell_count": 0,
+      "spatial_component_id": 61,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 12,
+      "failed_cell_count": 0,
+      "spatial_component_id": 62,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 12,
+      "failed_cell_count": 0,
+      "spatial_component_id": 63,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 12,
+      "failed_cell_count": 0,
+      "spatial_component_id": 64,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 11,
+      "failed_cell_count": 0,
+      "spatial_component_id": 65,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 11,
+      "failed_cell_count": 0,
+      "spatial_component_id": 66,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 11,
+      "failed_cell_count": 0,
+      "spatial_component_id": 67,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 11,
+      "failed_cell_count": 0,
+      "spatial_component_id": 68,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 11,
+      "failed_cell_count": 0,
+      "spatial_component_id": 69,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 11,
+      "failed_cell_count": 0,
+      "spatial_component_id": 70,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 11,
+      "failed_cell_count": 0,
+      "spatial_component_id": 71,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 11,
+      "failed_cell_count": 0,
+      "spatial_component_id": 72,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 10,
+      "failed_cell_count": 0,
+      "spatial_component_id": 73,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 10,
+      "failed_cell_count": 0,
+      "spatial_component_id": 74,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 10,
+      "failed_cell_count": 0,
+      "spatial_component_id": 75,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 10,
+      "failed_cell_count": 0,
+      "spatial_component_id": 76,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 10,
+      "failed_cell_count": 0,
+      "spatial_component_id": 77,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 10,
+      "failed_cell_count": 0,
+      "spatial_component_id": 78,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 10,
+      "failed_cell_count": 0,
+      "spatial_component_id": 79,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 10,
+      "failed_cell_count": 0,
+      "spatial_component_id": 80,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 9,
+      "failed_cell_count": 0,
+      "spatial_component_id": 81,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 9,
+      "failed_cell_count": 0,
+      "spatial_component_id": 82,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 9,
+      "failed_cell_count": 0,
+      "spatial_component_id": 83,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 9,
+      "failed_cell_count": 0,
+      "spatial_component_id": 84,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 9,
+      "failed_cell_count": 0,
+      "spatial_component_id": 85,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 9,
+      "failed_cell_count": 0,
+      "spatial_component_id": 86,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 9,
+      "failed_cell_count": 0,
+      "spatial_component_id": 87,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 9,
+      "failed_cell_count": 0,
+      "spatial_component_id": 88,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 8,
+      "failed_cell_count": 0,
+      "spatial_component_id": 89,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 8,
+      "failed_cell_count": 0,
+      "spatial_component_id": 90,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 8,
+      "failed_cell_count": 0,
+      "spatial_component_id": 91,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 8,
+      "failed_cell_count": 0,
+      "spatial_component_id": 92,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 8,
+      "failed_cell_count": 0,
+      "spatial_component_id": 93,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 8,
+      "failed_cell_count": 0,
+      "spatial_component_id": 94,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 8,
+      "failed_cell_count": 0,
+      "spatial_component_id": 95,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 8,
+      "failed_cell_count": 0,
+      "spatial_component_id": 96,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 7,
+      "failed_cell_count": 0,
+      "spatial_component_id": 97,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 6,
+      "failed_cell_count": 1,
+      "spatial_component_id": 98,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 7,
+      "failed_cell_count": 0,
+      "spatial_component_id": 99,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 7,
+      "failed_cell_count": 0,
+      "spatial_component_id": 100,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 7,
+      "failed_cell_count": 0,
+      "spatial_component_id": 101,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 7,
+      "failed_cell_count": 0,
+      "spatial_component_id": 102,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 7,
+      "failed_cell_count": 0,
+      "spatial_component_id": 103,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 7,
+      "failed_cell_count": 0,
+      "spatial_component_id": 104,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 7,
+      "failed_cell_count": 0,
+      "spatial_component_id": 105,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 7,
+      "failed_cell_count": 0,
+      "spatial_component_id": 106,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 7,
+      "failed_cell_count": 0,
+      "spatial_component_id": 107,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 7,
+      "failed_cell_count": 0,
+      "spatial_component_id": 108,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 7,
+      "failed_cell_count": 0,
+      "spatial_component_id": 109,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 7,
+      "failed_cell_count": 0,
+      "spatial_component_id": 110,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 7,
+      "failed_cell_count": 0,
+      "spatial_component_id": 111,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 7,
+      "failed_cell_count": 0,
+      "spatial_component_id": 112,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 7,
+      "failed_cell_count": 0,
+      "spatial_component_id": 113,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 7,
+      "failed_cell_count": 0,
+      "spatial_component_id": 114,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 7,
+      "failed_cell_count": 0,
+      "spatial_component_id": 115,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 6,
+      "failed_cell_count": 0,
+      "spatial_component_id": 116,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 6,
+      "failed_cell_count": 0,
+      "spatial_component_id": 117,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 6,
+      "failed_cell_count": 0,
+      "spatial_component_id": 118,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 6,
+      "failed_cell_count": 0,
+      "spatial_component_id": 119,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 6,
+      "failed_cell_count": 0,
+      "spatial_component_id": 120,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 6,
+      "failed_cell_count": 0,
+      "spatial_component_id": 121,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 6,
+      "failed_cell_count": 0,
+      "spatial_component_id": 122,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 6,
+      "failed_cell_count": 0,
+      "spatial_component_id": 123,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 6,
+      "failed_cell_count": 0,
+      "spatial_component_id": 124,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 6,
+      "failed_cell_count": 0,
+      "spatial_component_id": 125,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 6,
+      "failed_cell_count": 0,
+      "spatial_component_id": 126,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 6,
+      "failed_cell_count": 0,
+      "spatial_component_id": 127,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 5,
+      "failed_cell_count": 1,
+      "spatial_component_id": 128,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 6,
+      "failed_cell_count": 0,
+      "spatial_component_id": 129,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 6,
+      "failed_cell_count": 0,
+      "spatial_component_id": 130,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 6,
+      "failed_cell_count": 0,
+      "spatial_component_id": 131,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 6,
+      "failed_cell_count": 0,
+      "spatial_component_id": 132,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 6,
+      "failed_cell_count": 0,
+      "spatial_component_id": 133,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 6,
+      "failed_cell_count": 0,
+      "spatial_component_id": 134,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 6,
+      "failed_cell_count": 0,
+      "spatial_component_id": 135,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 6,
+      "failed_cell_count": 0,
+      "spatial_component_id": 136,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 6,
+      "failed_cell_count": 0,
+      "spatial_component_id": 137,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 6,
+      "failed_cell_count": 0,
+      "spatial_component_id": 138,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 6,
+      "failed_cell_count": 0,
+      "spatial_component_id": 139,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 6,
+      "failed_cell_count": 0,
+      "spatial_component_id": 140,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 6,
+      "failed_cell_count": 0,
+      "spatial_component_id": 141,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 6,
+      "failed_cell_count": 0,
+      "spatial_component_id": 142,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 6,
+      "failed_cell_count": 0,
+      "spatial_component_id": 143,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 5,
+      "failed_cell_count": 0,
+      "spatial_component_id": 144,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 5,
+      "failed_cell_count": 0,
+      "spatial_component_id": 145,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 4,
+      "failed_cell_count": 1,
+      "spatial_component_id": 146,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 5,
+      "failed_cell_count": 0,
+      "spatial_component_id": 147,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 4,
+      "failed_cell_count": 1,
+      "spatial_component_id": 148,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 5,
+      "failed_cell_count": 0,
+      "spatial_component_id": 149,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 5,
+      "failed_cell_count": 0,
+      "spatial_component_id": 150,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 4,
+      "failed_cell_count": 1,
+      "spatial_component_id": 151,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 5,
+      "failed_cell_count": 0,
+      "spatial_component_id": 152,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 5,
+      "failed_cell_count": 0,
+      "spatial_component_id": 153,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 4,
+      "failed_cell_count": 1,
+      "spatial_component_id": 154,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 4,
+      "failed_cell_count": 1,
+      "spatial_component_id": 155,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 5,
+      "failed_cell_count": 0,
+      "spatial_component_id": 156,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 4,
+      "failed_cell_count": 1,
+      "spatial_component_id": 157,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 5,
+      "failed_cell_count": 0,
+      "spatial_component_id": 158,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 5,
+      "failed_cell_count": 0,
+      "spatial_component_id": 159,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 5,
+      "failed_cell_count": 0,
+      "spatial_component_id": 160,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 5,
+      "failed_cell_count": 0,
+      "spatial_component_id": 161,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 5,
+      "failed_cell_count": 0,
+      "spatial_component_id": 162,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 4,
+      "failed_cell_count": 1,
+      "spatial_component_id": 163,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 5,
+      "spatial_component_id": 164,
+      "status": "COMPONENT_CONSTANT_VALUE"
+    },
+    {
+      "component_size": 5,
+      "failed_cell_count": 0,
+      "spatial_component_id": 165,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 2,
+      "spatial_component_id": 166,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 4,
+      "failed_cell_count": 0,
+      "spatial_component_id": 167,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 3,
+      "failed_cell_count": 1,
+      "spatial_component_id": 168,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 3,
+      "failed_cell_count": 1,
+      "spatial_component_id": 169,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 3,
+      "failed_cell_count": 1,
+      "spatial_component_id": 170,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 4,
+      "failed_cell_count": 0,
+      "spatial_component_id": 171,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 3,
+      "failed_cell_count": 1,
+      "spatial_component_id": 172,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 3,
+      "failed_cell_count": 1,
+      "spatial_component_id": 173,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 2,
+      "spatial_component_id": 174,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 4,
+      "failed_cell_count": 0,
+      "spatial_component_id": 175,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 2,
+      "spatial_component_id": 176,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 4,
+      "failed_cell_count": 0,
+      "spatial_component_id": 177,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 4,
+      "failed_cell_count": 0,
+      "spatial_component_id": 178,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 4,
+      "failed_cell_count": 0,
+      "spatial_component_id": 179,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 4,
+      "failed_cell_count": 0,
+      "spatial_component_id": 180,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 2,
+      "spatial_component_id": 181,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 2,
+      "spatial_component_id": 182,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 2,
+      "spatial_component_id": 183,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 3,
+      "failed_cell_count": 1,
+      "spatial_component_id": 184,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 4,
+      "failed_cell_count": 0,
+      "spatial_component_id": 185,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 4,
+      "failed_cell_count": 0,
+      "spatial_component_id": 186,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 3,
+      "failed_cell_count": 1,
+      "spatial_component_id": 187,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 3,
+      "failed_cell_count": 1,
+      "spatial_component_id": 188,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 4,
+      "failed_cell_count": 0,
+      "spatial_component_id": 189,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 2,
+      "spatial_component_id": 190,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 4,
+      "failed_cell_count": 0,
+      "spatial_component_id": 191,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 2,
+      "spatial_component_id": 192,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 4,
+      "failed_cell_count": 0,
+      "spatial_component_id": 193,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 3,
+      "failed_cell_count": 1,
+      "spatial_component_id": 194,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 2,
+      "spatial_component_id": 195,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 4,
+      "failed_cell_count": 0,
+      "spatial_component_id": 196,
+      "status": "TESTED"
+    },
+    {
+      "component_size": 4,
+      "spatial_component_id": 197,
+      "status": "COMPONENT_CONSTANT_VALUE"
+    },
+    {
+      "component_size": 3,
+      "failed_cell_count": 1,
+      "spatial_component_id": 198,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 3,
+      "failed_cell_count": 1,
+      "spatial_component_id": 199,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "captured_warnings": [
+        "invalid value encountered in divide"
+      ],
+      "component_size": 3,
+      "spatial_component_id": 200,
+      "status": "SPATIAL_STAT_FAILED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 1,
+      "spatial_component_id": 201,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 3,
+      "spatial_component_id": 202,
+      "status": "COMPONENT_CONSTANT_VALUE"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 1,
+      "spatial_component_id": 203,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 1,
+      "spatial_component_id": 204,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 1,
+      "spatial_component_id": 205,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "captured_warnings": [
+        "invalid value encountered in divide"
+      ],
+      "component_size": 3,
+      "spatial_component_id": 206,
+      "status": "SPATIAL_STAT_FAILED"
+    },
+    {
+      "captured_warnings": [
+        "invalid value encountered in divide"
+      ],
+      "component_size": 3,
+      "spatial_component_id": 207,
+      "status": "SPATIAL_STAT_FAILED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 1,
+      "spatial_component_id": 208,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "captured_warnings": [
+        "invalid value encountered in divide"
+      ],
+      "component_size": 3,
+      "spatial_component_id": 209,
+      "status": "SPATIAL_STAT_FAILED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 1,
+      "spatial_component_id": 210,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 1,
+      "spatial_component_id": 211,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 1,
+      "spatial_component_id": 212,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "captured_warnings": [
+        "invalid value encountered in divide"
+      ],
+      "component_size": 3,
+      "spatial_component_id": 213,
+      "status": "SPATIAL_STAT_FAILED"
+    },
+    {
+      "captured_warnings": [
+        "invalid value encountered in divide"
+      ],
+      "component_size": 3,
+      "spatial_component_id": 214,
+      "status": "SPATIAL_STAT_FAILED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 1,
+      "spatial_component_id": 215,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 1,
+      "spatial_component_id": 216,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "captured_warnings": [
+        "invalid value encountered in divide"
+      ],
+      "component_size": 3,
+      "spatial_component_id": 217,
+      "status": "SPATIAL_STAT_FAILED"
+    },
+    {
+      "component_size": 3,
+      "spatial_component_id": 218,
+      "status": "COMPONENT_CONSTANT_VALUE"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 1,
+      "spatial_component_id": 219,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "captured_warnings": [
+        "invalid value encountered in divide"
+      ],
+      "component_size": 3,
+      "spatial_component_id": 220,
+      "status": "SPATIAL_STAT_FAILED"
+    },
+    {
+      "component_size": 3,
+      "spatial_component_id": 221,
+      "status": "COMPONENT_CONSTANT_VALUE"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 1,
+      "spatial_component_id": 222,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "captured_warnings": [
+        "invalid value encountered in divide"
+      ],
+      "component_size": 3,
+      "spatial_component_id": 223,
+      "status": "SPATIAL_STAT_FAILED"
+    },
+    {
+      "captured_warnings": [
+        "invalid value encountered in divide"
+      ],
+      "component_size": 3,
+      "spatial_component_id": 224,
+      "status": "SPATIAL_STAT_FAILED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 1,
+      "spatial_component_id": 225,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 1,
+      "spatial_component_id": 226,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 1,
+      "spatial_component_id": 227,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 1,
+      "spatial_component_id": 228,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 1,
+      "spatial_component_id": 229,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 1,
+      "spatial_component_id": 230,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 1,
+      "spatial_component_id": 231,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 1,
+      "spatial_component_id": 232,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "captured_warnings": [
+        "invalid value encountered in divide"
+      ],
+      "component_size": 3,
+      "spatial_component_id": 233,
+      "status": "SPATIAL_STAT_FAILED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 1,
+      "spatial_component_id": 234,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "captured_warnings": [
+        "invalid value encountered in divide"
+      ],
+      "component_size": 3,
+      "spatial_component_id": 235,
+      "status": "SPATIAL_STAT_FAILED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 1,
+      "spatial_component_id": 236,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 1,
+      "spatial_component_id": 237,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 1,
+      "spatial_component_id": 238,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 1,
+      "spatial_component_id": 239,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 1,
+      "spatial_component_id": 240,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 1,
+      "spatial_component_id": 241,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "captured_warnings": [
+        "invalid value encountered in divide"
+      ],
+      "component_size": 3,
+      "spatial_component_id": 242,
+      "status": "SPATIAL_STAT_FAILED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 1,
+      "spatial_component_id": 243,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "captured_warnings": [
+        "invalid value encountered in divide"
+      ],
+      "component_size": 3,
+      "spatial_component_id": 244,
+      "status": "SPATIAL_STAT_FAILED"
+    },
+    {
+      "captured_warnings": [
+        "invalid value encountered in divide"
+      ],
+      "component_size": 3,
+      "spatial_component_id": 245,
+      "status": "SPATIAL_STAT_FAILED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 1,
+      "spatial_component_id": 246,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 1,
+      "spatial_component_id": 247,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 1,
+      "spatial_component_id": 248,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 1,
+      "spatial_component_id": 249,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "captured_warnings": [
+        "invalid value encountered in divide"
+      ],
+      "component_size": 3,
+      "spatial_component_id": 250,
+      "status": "SPATIAL_STAT_FAILED"
+    },
+    {
+      "captured_warnings": [
+        "invalid value encountered in divide"
+      ],
+      "component_size": 3,
+      "spatial_component_id": 251,
+      "status": "SPATIAL_STAT_FAILED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 1,
+      "spatial_component_id": 252,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 1,
+      "spatial_component_id": 253,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 1,
+      "spatial_component_id": 254,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 1,
+      "spatial_component_id": 255,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 1,
+      "spatial_component_id": 256,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "captured_warnings": [
+        "invalid value encountered in divide"
+      ],
+      "component_size": 3,
+      "spatial_component_id": 257,
+      "status": "SPATIAL_STAT_FAILED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 1,
+      "spatial_component_id": 258,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "component_size": 2,
+      "failed_cell_count": 1,
+      "spatial_component_id": 259,
+      "status": "PARTIALLY_TESTED"
+    },
+    {
+      "captured_warnings": [
+        "invalid value encountered in divide"
+      ],
+      "component_size": 3,
+      "spatial_component_id": 260,
+      "status": "SPATIAL_STAT_FAILED"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 261,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 262,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 263,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 264,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 265,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 266,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 267,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 268,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 269,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 270,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 271,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 272,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 273,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 274,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 275,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 276,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 277,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 278,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 279,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 280,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 281,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 282,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 283,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 284,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 285,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 286,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 287,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 288,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 289,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 290,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 291,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 292,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 293,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 294,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 295,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 296,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 297,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 298,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 299,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 300,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 301,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 302,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 303,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 304,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 305,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 306,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 307,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 308,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 309,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 310,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 311,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 312,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 313,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 314,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 315,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 316,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 317,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 318,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 319,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 320,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 321,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 322,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 323,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 324,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 325,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 326,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 327,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 328,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 329,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 330,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 331,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 332,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 333,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 334,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 335,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 336,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 337,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 338,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 339,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 340,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 341,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 342,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 343,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 344,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 345,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 346,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 347,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 348,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 349,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 350,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 351,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 352,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 353,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 354,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 355,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 356,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 357,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 358,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 359,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 360,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 361,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 362,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 363,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 364,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 365,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 366,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 367,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 368,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 369,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 370,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 371,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 372,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 373,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 374,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 375,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 376,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 377,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 378,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 379,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 380,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 381,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 382,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 383,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 384,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 385,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 386,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 387,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 388,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 389,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 390,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 391,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 392,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 393,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 394,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 395,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 396,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 397,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 398,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 399,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 400,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 401,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 402,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 403,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 404,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 405,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 406,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 407,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 408,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 409,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 410,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 411,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 412,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 413,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 414,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 415,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 416,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 417,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 418,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 419,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 420,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 421,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 422,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 423,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 424,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 425,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 2,
+      "spatial_component_id": 426,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 427,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 428,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 429,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 430,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 431,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 432,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 433,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 434,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 435,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 436,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 437,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 438,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 439,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 440,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 441,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 442,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 443,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 444,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 445,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 446,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 447,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 448,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 449,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 450,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 451,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 452,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 453,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 454,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 455,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 456,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 457,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 458,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 459,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 460,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 461,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 462,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 463,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 464,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 465,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 466,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 467,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 468,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 469,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 470,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 471,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 472,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 473,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 474,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 475,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 476,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 477,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 478,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 479,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 480,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 481,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 482,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 483,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 484,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 485,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 486,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 487,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 488,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 489,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 490,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 491,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 492,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 493,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 494,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 495,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 496,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 497,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 498,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 499,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 500,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 501,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 502,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 503,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 504,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 505,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 506,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 507,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 508,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 509,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 510,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 511,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 512,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 513,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 514,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 515,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 516,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 517,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 518,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 519,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 520,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 521,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 522,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 523,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 524,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 525,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 526,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 527,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 528,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 529,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 530,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 531,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 532,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 533,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 534,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 535,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 536,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 537,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 538,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 539,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 540,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 541,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 542,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 543,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 544,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 545,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 546,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 547,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 548,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 549,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 550,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 551,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 552,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 553,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 554,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 555,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 556,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 557,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 558,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 559,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 560,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 561,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 562,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 563,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 564,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 565,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 566,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 567,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 568,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 569,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 570,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 571,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 572,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 573,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 574,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 575,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 576,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 577,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 578,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 579,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 580,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 581,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 582,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 583,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 584,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 585,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 586,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 587,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 588,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 589,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 590,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 591,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 592,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 593,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 594,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 595,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 596,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 597,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 598,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 599,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 600,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 601,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 602,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 603,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 604,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 605,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 606,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 607,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 608,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 609,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 610,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 611,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 612,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 613,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 614,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 615,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 616,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 617,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 618,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 619,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 620,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 621,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 622,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 623,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 624,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 625,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 626,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 627,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 628,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 629,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 630,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 631,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 632,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 633,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 634,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 635,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 636,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 637,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 638,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 639,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 640,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 641,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 642,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 643,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 644,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 645,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 646,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 647,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 648,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 649,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 650,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 651,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 652,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 653,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 654,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 655,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 656,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 657,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 658,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 659,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 660,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 661,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 662,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 663,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 664,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 665,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 666,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 667,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 668,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 669,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 670,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 671,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 672,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 673,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 674,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 675,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 676,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 677,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 678,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 679,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 680,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 681,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 682,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 683,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 684,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 685,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 686,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 687,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 688,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 689,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 690,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 691,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 692,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 693,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 694,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 695,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 696,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 697,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 698,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 699,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 700,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 701,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 702,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 703,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 704,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 705,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 706,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 707,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 708,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 709,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 710,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 711,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 712,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 713,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 714,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 715,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 716,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 717,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 718,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 719,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 720,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 721,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 722,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 723,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 724,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 725,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 726,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 727,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 728,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 729,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 730,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 731,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 732,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 733,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 734,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 735,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 736,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 737,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 738,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 739,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 740,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 741,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 742,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 743,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 744,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 745,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 746,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 747,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 748,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 749,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 750,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 751,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 752,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 753,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 754,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 755,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 756,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 757,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 758,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 759,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 760,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 761,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 762,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 763,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 764,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 765,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 766,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 767,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 768,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 769,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 770,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 771,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 772,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 773,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 774,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 775,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 776,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 777,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 778,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 779,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 780,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 781,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 782,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 783,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 784,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 785,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 786,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 787,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 788,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 789,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 790,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 791,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 792,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 793,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 794,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 795,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 796,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 797,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 798,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 799,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 800,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 801,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 802,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 803,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 804,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 805,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 806,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 807,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 808,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 809,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 810,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 811,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 812,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 813,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 814,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 815,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 816,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 817,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 818,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 819,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 820,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 821,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 822,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 823,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 824,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 825,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 826,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 827,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 828,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 829,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 830,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 831,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 832,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 833,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 834,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 835,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 836,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 837,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 838,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 839,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 840,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 841,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 842,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 843,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 844,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 845,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 846,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 847,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 848,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 849,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 850,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 851,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 852,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 853,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 854,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 855,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 856,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 857,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 858,
+      "status": "COMPONENT_TOO_SMALL"
+    },
+    {
+      "component_size": 1,
+      "spatial_component_id": 859,
+      "status": "COMPONENT_TOO_SMALL"
+    }
+  ],
+  "hotspot_label_counts": {
+    "HOT_90": 29,
+    "HOT_95": 44,
+    "HOT_99": 117,
+    "NOT_HOT": 3388,
+    "NOT_SIGNIFICANT": 2310,
+    "NOT_TESTED": 917
+  },
+  "include_self_for_gistar": true,
+  "island_weight": 0,
+  "method": "per_connected_component_gistar",
+  "minimum_component_size": 3,
+  "no_fake_p_values_for_isolated_cells": true,
+  "not_tested_cell_count": 917,
+  "p_adjustment": "benjamini_hochberg_valid_tested_cells_only",
+  "permutations": 0,
+  "random_seed": 42,
+  "raw_and_adjusted_p_values_retained": true,
+  "status": "WARN",
+  "tested_cell_count": 5888,
+  "warnings": [
+    "SPATIAL_GRAPH_DISCONNECTED",
+    "SPATIAL_ISLANDS_PRESENT"
+  ],
+  "weight_transform": "B"
+}
