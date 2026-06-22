@@ -1,0 +1,10 @@
+{
+  "base_corrected_top_k_count": 50,
+  "method": "rank quality_weighted_citation_count / device_days and compare with Gamma-Poisson corrected rank",
+  "overlap_count": 19,
+  "overlap_percentage": 38.0,
+  "quality_weighted_top_k_count": 50,
+  "status": "PASS",
+  "top_k": 50,
+  "turnover_percentage": 62.0
+}

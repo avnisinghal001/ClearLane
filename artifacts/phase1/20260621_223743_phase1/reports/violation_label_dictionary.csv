@@ -1,0 +1,28 @@
+label,count,parking_related,mapping_version
+WRONG PARKING,164977,True,configs/phase1.yaml:violation_labels.parking_related
+NO PARKING,139050,True,configs/phase1.yaml:violation_labels.parking_related
+PARKING IN A MAIN ROAD,23943,True,configs/phase1.yaml:violation_labels.parking_related
+DEFECTIVE NUMBER PLATE,7848,False,configs/phase1.yaml:violation_labels.parking_related
+PARKING ON FOOTPATH,3757,True,configs/phase1.yaml:violation_labels.parking_related
+PARKING NEAR BUSTOP/SCHOOL/HOSPITAL ETC,2403,False,configs/phase1.yaml:violation_labels.parking_related
+DOUBLE PARKING,2037,True,configs/phase1.yaml:violation_labels.parking_related
+PARKING NEAR ROAD CROSSING,1687,True,configs/phase1.yaml:violation_labels.parking_related
+REFUSE TO GO FOR HIRE,887,False,configs/phase1.yaml:violation_labels.parking_related
+PARKING NEAR TRAFFIC LIGHT OR ZEBRA CROSS,525,False,configs/phase1.yaml:violation_labels.parking_related
+PARKING OPPOSITE TO ANOTHER PARKED VEHICLE,486,False,configs/phase1.yaml:violation_labels.parking_related
+USING BLACK FILM/OTHER MATERIALS,248,False,configs/phase1.yaml:violation_labels.parking_related
+PARKING OTHER THAN BUS STOP,242,False,configs/phase1.yaml:violation_labels.parking_related
+DEMANDING EXCESS FARE,240,False,configs/phase1.yaml:violation_labels.parking_related
+WITHOUT SIDE MIRROR,47,False,configs/phase1.yaml:violation_labels.parking_related
+H T V PROHIBITED,31,False,configs/phase1.yaml:violation_labels.parking_related
+OBSTRUCTING DRIVER,16,False,configs/phase1.yaml:violation_labels.parking_related
+AGAINST ONE WAY/NO ENTRY,9,False,configs/phase1.yaml:violation_labels.parking_related
+FAIL TO USE SAFETY BELTS,8,False,configs/phase1.yaml:violation_labels.parking_related
+VIOLATING LANE DISIPLINE,5,False,configs/phase1.yaml:violation_labels.parking_related
+RIDER NOT WEARING HELMET,2,False,configs/phase1.yaml:violation_labels.parking_related
+2W/3W - USING MOBILE PHONE,2,False,configs/phase1.yaml:violation_labels.parking_related
+OTHER - USING MOBILE PHONE,1,False,configs/phase1.yaml:violation_labels.parking_related
+CARRYING LENGHTY MATERIAL,1,False,configs/phase1.yaml:violation_labels.parking_related
+JUMPING TRAFFIC SIGNAL,1,False,configs/phase1.yaml:violation_labels.parking_related
+U TURN PROHIBITED,1,False,configs/phase1.yaml:violation_labels.parking_related
+STOPING ON WHITE/STOP LINE,1,False,configs/phase1.yaml:violation_labels.parking_related

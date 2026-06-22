@@ -1,0 +1,39 @@
+{
+  "duration_seconds": 48.208,
+  "errors": [],
+  "outputs": {
+    "artifact_dir": "/Users/avnisinghal001/Documents/ClearLane/ClearLane/artifacts/phase1/20260621_223743_phase1",
+    "cleaned_csv": "/Users/avnisinghal001/Documents/ClearLane/ClearLane/data/interim/violations_cleaned.csv",
+    "cleaned_parquet": "/Users/avnisinghal001/Documents/ClearLane/ClearLane/data/interim/violations_cleaned.parquet",
+    "quarantine_dir": "/Users/avnisinghal001/Documents/ClearLane/ClearLane/data/quarantine"
+  },
+  "phase1_excludes_later_ml": [
+    "H3",
+    "Mappls",
+    "PIC",
+    "forecasting",
+    "dispatch",
+    "online learning"
+  ],
+  "run_id": "20260621_223743_phase1",
+  "status": "PASS",
+  "summary": {
+    "accepted_rows": 298445,
+    "conflicting_duplicate_id_rows": 0,
+    "exact_duplicate_rows_removed": 0,
+    "hour_axis_conclusion": "HOUR_AXIS_SUSPICIOUS",
+    "input_rows": 298450,
+    "invalid_coordinate_rows": 0,
+    "invalid_created_datetime_rows": 5,
+    "missing_device_id_rows": 0,
+    "missing_id_rows": 0,
+    "outside_bengaluru_flagged_rows": 0,
+    "parking_related_percentage": 100.0,
+    "possible_coordinate_swap_rows": 0,
+    "quarantined_rows": 5,
+    "row_reconciliation_passed": true,
+    "rows_with_unmapped_violation_labels": 0,
+    "rows_with_unparsed_offence_codes": 0
+  },
+  "warnings": []
+}

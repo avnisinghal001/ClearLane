@@ -1,0 +1,14 @@
+{
+  "approved_count": 115400,
+  "counts": {
+    "APPROVED": 115400,
+    "REJECTED": 50074,
+    "UNKNOWN": 125249,
+    "UNMAPPED": 7722
+  },
+  "pending_count": 0,
+  "rejected_count": 50074,
+  "rejected_percentage_among_recognized_validated_records": 30.2609,
+  "unknown_count": 125249,
+  "unmapped_count": 7722
+}

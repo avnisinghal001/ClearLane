@@ -1,0 +1,39 @@
+{
+  "checksum_source": "checksums/dataset_checksums.json",
+  "cleaned_parquet": "/Users/avnisinghal001/Documents/ClearLane/ClearLane/data/interim/violations_cleaned.parquet",
+  "forbidden_inputs_used": [],
+  "loaded_column_count": 80,
+  "phase1_artifact_dir": "/Users/avnisinghal001/Documents/ClearLane/ClearLane/artifacts/phase1/20260621_223048_phase1",
+  "phase1_cleaned_parquet_sha256": "0505f81b0195a69bb3b1d0642dad254b53bce90b3da2b1a098f200bbe1062682",
+  "phase1_expected_accepted_rows": 298445,
+  "phase1_run_id": "20260621_223048_phase1",
+  "phase1_status": "PASS",
+  "phase2_loaded_rows": 298445,
+  "required_columns_checked": [
+    "latitude_numeric",
+    "longitude_numeric",
+    "created_date",
+    "device_id",
+    "created_by_id",
+    "vehicle_number_normalized",
+    "vehicle_type_normalized",
+    "violation_labels",
+    "primary_violation_label",
+    "contains_parking_related_label",
+    "police_station_normalized",
+    "junction_name_normalized",
+    "validation_status_normalized",
+    "is_approved",
+    "is_rejected",
+    "record_usable_for_spatial_analysis",
+    "record_usable_for_exposure_analysis"
+  ],
+  "required_reports_checked": [
+    "phase1_final_report.json",
+    "row_reconciliation.json",
+    "data_dictionary.csv",
+    "document_claims_comparison.csv"
+  ],
+  "row_reconciliation_passed": true,
+  "status": "PASS"
+}

@@ -1,0 +1,27 @@
+{
+  "completed_at": "2026-06-21T22:38:32.142466+05:30",
+  "config_path": "/Users/avnisinghal001/Documents/ClearLane/ClearLane/configs/phase1.yaml",
+  "errors": [],
+  "git_commit": "568c6a5c9ef636ea9d48e5718ad81f7d659bdb0d",
+  "input_absolute_path": "/Users/avnisinghal001/Documents/ClearLane/ClearLane/data/raw/jan to may police violation_anonymized791b166.csv",
+  "input_modified_at": "2026-06-16T20:12:32.592762",
+  "input_path": "data/raw/jan to may police violation_anonymized791b166.csv",
+  "input_physical_line_count": 298451,
+  "input_sha256_after": "6e4b7ad2e4c713a65fe4f6a9782461f19911fad70d25132cb7aed0fa3c656438",
+  "input_sha256_before": "6e4b7ad2e4c713a65fe4f6a9782461f19911fad70d25132cb7aed0fa3c656438",
+  "input_size_bytes": 109589874,
+  "pandas_version": "3.0.3",
+  "phase": "phase1",
+  "python_version": "3.14.5 (main, May 10 2026, 10:21:34) [Clang 21.0.0 (clang-2100.0.123.102)]",
+  "raw_file_unchanged": true,
+  "run_id": "20260621_223743_phase1",
+  "started_at": "2026-06-21T22:37:43.798563+05:30",
+  "status": "PASS",
+  "timestamp_assumptions": {
+    "canonical_timezone": "Asia/Kolkata",
+    "created_datetime_is_incident_time": "not assumed",
+    "hour_is_diagnostic_only": true,
+    "source_timezone_for_naive_values": "Asia/Kolkata"
+  },
+  "warnings": []
+}

@@ -1,0 +1,39 @@
+{
+  "coverage": 0.8908845981140547,
+  "method": "chronological_ticket_level_split",
+  "spearman_train_rank_vs_later_activity": 0.2384561134806773,
+  "split_date": "2024-02-23",
+  "status": "PASS",
+  "temporal_leakage_prevention": "Priors and rankings are fitted on the early period before comparing with later observed activity.",
+  "test_date_min_inclusive": "2024-02-23",
+  "test_rows": 84678,
+  "top_k_metrics": [
+    {
+      "ndcg": 0.457804193449149,
+      "precision": 0.2,
+      "recall": 0.2,
+      "top_k": 10
+    },
+    {
+      "ndcg": 0.45473042469615377,
+      "precision": 0.28,
+      "recall": 0.28,
+      "top_k": 25
+    },
+    {
+      "ndcg": 0.509034080638222,
+      "precision": 0.34,
+      "recall": 0.34,
+      "top_k": 50
+    },
+    {
+      "ndcg": 0.575334280704822,
+      "precision": 0.39,
+      "recall": 0.39,
+      "top_k": 100
+    }
+  ],
+  "train_date_max_exclusive": "2024-02-23",
+  "train_fraction": 0.7,
+  "train_rows": 213767
+}

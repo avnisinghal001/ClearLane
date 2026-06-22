@@ -1,0 +1,87 @@
+project:
+  name: clearlane
+  phase: phase2
+  random_seed: 42
+
+phase1:
+  # Resolve the newest Phase 1 artifact whose final report is PASS and whose
+  # row reconciliation passed. The lineage gate still requires an exact
+  # cleaned-Parquet checksum and accepted-row match before Phase 2 continues.
+  run_id: latest
+  artifact_dir:
+  cleaned_parquet: data/interim/violations_cleaned.parquet
+  required_status: PASS
+  require_row_reconciliation: true
+
+population:
+  # Phase 1 recomputed 100.0% parking-classified rows while the reference
+  # document claimed 97.3%. Phase 2 keeps both populations and defaults to
+  # all accepted rows rather than filtering records to match the old claim.
+  production_population: population_all_accepted
+  allowed_populations:
+    - population_all_accepted
+    - population_parking_classified
+
+spatial:
+  resolution: 10
+  parent_resolution: 9
+  coordinate_crs: EPSG:4326
+
+exposure:
+  minimum_device_days: 5
+  primary_exposure: device_days
+  alternative_exposure: officer_days
+
+raw_baseline:
+  top_k_values: [10, 25, 50, 100]
+  concentration_percentiles: [0.01, 0.05, 0.10]
+
+gamma_poisson:
+  prior_strength: 10.0
+  credible_interval: 0.95
+  sensitivity_prior_strengths: [2.0, 5.0, 10.0, 25.0, 50.0]
+  sensitivity_top_k: 50
+
+negative_binomial:
+  fit_enabled: true
+  maxiter: 200
+  feature_columns:
+    - unique_devices
+    - unique_officers
+    - approval_rate
+
+spatial_significance:
+  enabled: true
+  minimum_present_neighbors: 1
+  minimum_component_size: 3
+  permutations: 999
+  random_seed: 42
+  weight_transform: B
+  include_self_for_gistar: true
+  p_adjustment: benjamini_hochberg
+  local_moran_enabled: false
+
+stability:
+  folds: 5
+  seed: 42
+  top_k_values: [25, 50, 100]
+  monthly_top_k_values: [10, 25, 50, 100]
+  holdout_train_fraction: 0.70
+
+superzones:
+  enabled: false
+  definitions_path: data/reference/superzones.geojson
+  fail_when_claimed_but_missing: true
+
+outputs:
+  artifact_root: artifacts/phase2
+  ticket_h3_mapping: data/interim/phase2_ticket_h3_mapping.parquet
+  h3_exposure: data/interim/phase2_h3_exposure.parquet
+  h3_features: data/processed/phase2_h3_features.parquet
+  h3_hotspots: data/processed/phase2_h3_hotspots.parquet
+  h3_hotspots_csv: data/processed/phase2_h3_hotspots.csv
+  h3_hotspots_geojson: data/processed/phase2_h3_hotspots.geojson
+  raw_hotspot_rankings_csv: data/processed/raw_hotspot_rankings.csv
+  corrected_hotspot_rankings_csv: data/processed/corrected_hotspot_rankings.csv
+  spatial_significance_csv: data/processed/spatial_significance.csv
+  police_station_hotspot_intelligence_csv: data/processed/police_station_hotspot_intelligence.csv

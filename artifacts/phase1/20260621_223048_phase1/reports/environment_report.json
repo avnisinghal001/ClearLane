@@ -1,0 +1,40 @@
+{
+  "missing": [],
+  "packages": {
+    "PyYAML": {
+      "available": true,
+      "version": "6.0.3"
+    },
+    "matplotlib": {
+      "available": true,
+      "version": "3.11.0"
+    },
+    "numpy": {
+      "available": true,
+      "version": "2.4.6"
+    },
+    "pandas": {
+      "available": true,
+      "version": "3.0.3"
+    },
+    "pyarrow": {
+      "available": true,
+      "version": "24.0.0"
+    },
+    "pydantic": {
+      "available": true,
+      "version": "2.13.4"
+    },
+    "pytest": {
+      "available": true,
+      "version": "9.1.1"
+    }
+  },
+  "phase1_requires_h3_or_ml_stack": false,
+  "phase1_requires_mappls": false,
+  "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+  "python": "3.14.5 (main, May 10 2026, 10:21:34) [Clang 21.0.0 (clang-2100.0.123.102)]",
+  "python_executable": "/Users/avnisinghal001/Documents/ClearLane/ClearLane/.venv/bin/python",
+  "status": "PASS",
+  "uv_available": true
+}

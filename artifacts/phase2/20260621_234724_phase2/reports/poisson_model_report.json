@@ -1,0 +1,27 @@
+{
+  "aic": 98628.52166669277,
+  "bic": 62513.50971374183,
+  "deviance": 83876.93048456928,
+  "model_spec": {
+    "count_col": "citation_count_production",
+    "exposure_col": "device_days",
+    "exposure_used_as_normal_feature": false,
+    "feature_columns": [
+      "unique_devices",
+      "unique_officers",
+      "approval_rate"
+    ],
+    "log_exposure_used_as_normal_feature": false,
+    "offset_expression": "log(device_days)",
+    "uses_offset": true
+  },
+  "model_type": "poisson_glm_offset",
+  "nobs": 2707,
+  "params": {
+    "approval_rate": -0.4349129400654896,
+    "intercept": 1.1504307064698016,
+    "unique_devices": 0.01577218641308101,
+    "unique_officers": -0.0021759956955143076
+  },
+  "status": "PASS"
+}

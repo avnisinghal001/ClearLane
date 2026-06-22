@@ -1,0 +1,213 @@
+project:
+  name: clearlane
+  phase: phase3
+  timezone: Asia/Kolkata
+  random_seed: 42
+
+phase2:
+  artifact_root: artifacts/phase2
+  resolution_mode: latest_completed_verified_full_run
+  hotspot_parquet: data/processed/phase2_h3_hotspots.parquet
+  require_checksum_match: true
+
+  allowed_statuses:
+    - PASS
+    - WARN
+
+  allowed_warnings:
+    - PARKING_CLASSIFICATION_DISCREPANCY
+    - SPATIAL_GRAPH_DISCONNECTED
+    - SPATIAL_ISLANDS_PRESENT
+
+region:
+  region_id: whitefield_demo
+  historical_station_column: mode_police_station
+  historical_station_value: WHITEFIELD
+
+  approximate_demo_bbox:
+    minimum_latitude: 12.93
+    maximum_latitude: 13.00
+    minimum_longitude: 77.70
+    maximum_longitude: 77.77
+
+  explicitly_excluded_h3:
+    - h3_res10: 8a6189276627fff
+      reason: OUTSIDE_WHITEFIELD_DEMO_REGION
+
+selection:
+  eligibility_column: eligible_for_corrected_ranking
+  require_eligible: true
+
+  preferred_spatial_status:
+    - TESTED
+
+  allow_fallback_spatial_status:
+    - COMPONENT_TOO_SMALL
+    - INSUFFICIENT_NEIGHBORS
+    - SPATIAL_STAT_FAILED
+
+  rank_column: corrected_rank
+  propensity_column: normalized_propensity
+
+  primary_count: 20
+  reserve_count: 10
+  deterministic_tie_column: h3_res10
+
+segments:
+  physical_segments_per_h3: 1
+
+  directions:
+    - A_TO_B
+    - B_TO_A
+
+  target_length_m: 450
+  minimum_length_m: 200
+  maximum_length_m: 900
+
+  candidate_bearings_deg:
+    - 0
+    - 45
+    - 90
+
+  maximum_candidates_per_h3: 3
+  maximum_midpoint_distance_from_h3_m: 250
+  maximum_route_detour_ratio: 3.0
+  maximum_geometry_length_difference_ratio: 0.30
+
+  snap_to_road:
+    enabled: true
+    required: false
+
+  reverse_geocode:
+    enabled: true
+    required: false
+
+  segment_algorithm_version: phase3-seg-v1
+
+mappls:
+  base_url: https://route.mappls.com/route
+  route_base_url: https://route.mappls.com/route
+  search_base_url: https://search.mappls.com/search
+  oauth_token_url: https://outpost.mappls.com/api/security/oauth/token
+  default_region: ind
+
+  authentication:
+    primary_mode: static_rest_key
+    rest_key_env: MAPPLS_REST_KEY
+
+    oauth_optional: true
+    client_id_env: MAPPLS_CLIENT_ID
+    client_secret_env: MAPPLS_CLIENT_SECRET
+    access_token_env: MAPPLS_ACCESS_TOKEN
+
+  capability_priority:
+    reference_duration:
+      - distance_matrix
+      - route_adv
+
+    live_duration:
+      - distance_matrix_eta
+      - route_eta
+
+  unavailable_optional_products:
+    - distance_matrix_traffic
+    - route_traffic
+    - predictive_traffic
+    - native_traffic_tiles
+
+  request:
+    timeout_seconds: 20
+    maximum_attempts: 3
+    backoff_initial_seconds: 1
+    backoff_maximum_seconds: 15
+
+    matrix_physical_segments_per_batch: 10
+    maximum_route_eta_fallbacks_per_cycle: 3
+
+api_budget:
+  maximum_prepare_requests_per_run: 150
+  maximum_requests_per_poll_cycle: 8
+  maximum_route_eta_fallbacks_per_cycle: 3
+  maximum_requests_per_day: 400
+  stop_before_budget_exceeded: true
+
+polling:
+  interval_minutes: 15
+  observation_bucket_minutes: 15
+  maximum_observation_age_minutes: 20
+  allow_partial_cycle: true
+
+quality:
+  minimum_distance_m: 50
+  maximum_distance_m: 2000
+  minimum_duration_seconds: 3
+  maximum_duration_seconds: 3600
+
+  maximum_distance_change_ratio: 0.35
+  maximum_travel_time_index: 10.0
+
+baseline:
+  preferred_method: rolling_p10
+  trailing_days: 28
+  percentile: 0.10
+
+  minimum_valid_samples: 20
+  minimum_distinct_dates: 2
+  minimum_distinct_hours: 3
+
+  allow_provisional_mappls_non_traffic: true
+  update_only_from_valid_live_eta: true
+
+congestion:
+  formula: one_minus_inverse_tti
+
+  severity_labels:
+    normal:
+      minimum: 0.00
+      maximum: 0.15
+    moderate:
+      minimum: 0.15
+      maximum: 0.35
+    high:
+      minimum: 0.35
+      maximum: 0.55
+    severe:
+      minimum: 0.55
+      maximum: 1.00
+
+  directional_aggregation: maximum
+  retain_mean_severity: true
+
+pic:
+  historical_propensity_column: normalized_propensity
+  live_congestion_column: congestion_severity
+  formula: multiplication
+
+  require_valid_live_observation: true
+  require_usable_baseline: true
+  rank_only_same_completed_cycle: true
+
+localized_anomaly:
+  enabled: true
+  neighbor_definition: h3_ring_1
+  minimum_valid_monitored_neighbors: 2
+  formula: current_minus_neighbor_median
+
+confidence:
+  methodology_version: phase3-confidence-v1
+
+storage:
+  observations_root: data/live/mappls_traffic_observations
+  partition_by_date: true
+  idempotency_enabled: true
+  sanitized_responses_enabled: true
+
+replay:
+  fixture_root: tests/phase3/fixtures/mappls
+  data_mode_label: REPLAY
+
+outputs:
+  artifact_root: artifacts/phase3
+  interim_dir: data/interim
+  live_dir: data/live
+  processed_dir: data/processed

@@ -1,0 +1,13 @@
+claim_name,document_reference_value,recomputed_value,absolute_difference,relative_difference,status,explanation
+raw_row_count,298450,298450,0.0,0.0,MATCH,Numeric comparison against configured document reference.
+date_minimum,2023-11-09,2023-11-10,,,DIFFERENT,String/date comparison against configured document reference.
+date_maximum,2024-04-08,2024-04-08,,,MATCH,String/date comparison against configured document reference.
+parking_related_percentage,97.3,100.0,2.7,2.774923,DIFFERENT,Numeric comparison against configured document reference.
+unique_devices,3070,3070,0.0,0.0,MATCH,Numeric comparison against configured document reference.
+unique_created_by_ids,2666,2666,0.0,0.0,MATCH,Numeric comparison against configured document reference.
+repeat_offender_record_percentage,34.0,34.2241,0.2241,0.659118,CLOSE,Numeric comparison against configured document reference.
+maximum_records_for_one_vehicle,,55,,,DIFFERENT,No document reference value configured for this claim.
+validation_rejection_percentage,28.7,30.2609,1.5609,5.438676,DIFFERENT,Numeric comparison against configured document reference.
+percentage_from_15_00_to_midnight,,1.4444,,,DIFFERENT,No document reference value configured for this claim.
+police_station_count,54,54,0.0,0.0,MATCH,Numeric comparison against configured document reference.
+junction_count,,169,,,DIFFERENT,No document reference value configured for this claim.

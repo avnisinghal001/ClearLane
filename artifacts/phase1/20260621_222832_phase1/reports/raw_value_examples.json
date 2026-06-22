@@ -1,0 +1,244 @@
+{
+  "action_taken_timestamp": [],
+  "center_code": [
+    "9",
+    "82",
+    "26",
+    "3",
+    "16",
+    "14",
+    "30",
+    "2",
+    "15",
+    "28"
+  ],
+  "closed_datetime": [],
+  "created_by_id": {
+    "bottom_frequency_count": 1,
+    "sample_anonymized_values": [
+      "FKUS...#197633a7c4",
+      "FKUS...#1d07264012",
+      "FKUS...#1989c00962",
+      "FKUS...#7f095ef3f2",
+      "FKUS...#45da22f0fb"
+    ],
+    "top_frequency_count": 4099,
+    "unique_count": 2666
+  },
+  "created_datetime": [
+    "2023-11-20 00:28:46+00",
+    "2023-11-24 22:46:46+00",
+    "2023-11-20 00:27:46+00",
+    "2023-11-16 06:47:46+00",
+    "2023-11-22 04:56:46+00",
+    "2023-11-28 07:04:46+00",
+    "2023-11-28 06:55:46+00",
+    "2023-11-28 06:35:46+00",
+    "2023-11-28 06:56:46+00",
+    "2023-11-28 06:57:46+00"
+  ],
+  "data_sent_to_scita": [
+    "TRUE",
+    "FALSE"
+  ],
+  "data_sent_to_scita_timestamp": [
+    "2024-04-01 17:45:48.438875+00",
+    "2024-04-01 17:45:48.456546+00",
+    "2024-04-01 17:51:36.704312+00",
+    "2024-04-01 18:01:17.554447+00",
+    "2024-04-01 18:02:20.13201+00",
+    "2024-04-01 18:12:33.131887+00",
+    "2024-04-01 18:06:26.890834+00",
+    "2024-04-01 18:06:26.940261+00",
+    "2024-04-01 18:08:27.547166+00",
+    "2024-04-01 18:09:28.530081+00"
+  ],
+  "description": [],
+  "device_id": {
+    "bottom_frequency_count": 1,
+    "sample_anonymized_values": [
+      "FKDE...#286b622fda",
+      "FKDE...#f54a2b3a3c",
+      "FKDE...#0361872f77",
+      "FKDE...#b945e5ebbb",
+      "FKDE...#54fc8534fa"
+    ],
+    "top_frequency_count": 4344,
+    "unique_count": 3070
+  },
+  "id": {
+    "bottom_frequency_count": 1,
+    "sample_anonymized_values": [
+      "FKID...#fd39f4ef47",
+      "FKID...#6534383278",
+      "FKID...#8fc27f92ea",
+      "FKID...#2368ad7270",
+      "FKID...#8b5b4279a6"
+    ],
+    "top_frequency_count": 1,
+    "unique_count": 298450
+  },
+  "junction_name": [
+    "No Junction",
+    "BTP044 - Sagar Theatre Junction",
+    "BTP051 - Safina Plaza Junction",
+    "BTP205 - Modi Hospital Junction",
+    "BTP043 - Upparpet Junction",
+    "BTP034 - LRDE Junction",
+    "BTP040 - Elite Junction",
+    "BTP038 - Mysore Bank Junction",
+    "BTP032 - Windsor Circle",
+    "BTP027 - Modi Bridge Junction"
+  ],
+  "latitude": [
+    "12.9255567",
+    "12.9054633",
+    "12.9254492",
+    "12.956521",
+    "12.9777667",
+    "12.9816772",
+    "12.9955535",
+    "12.9978696",
+    "12.9954021",
+    "12.9954054"
+  ],
+  "location": [
+    "18th Main Road, Block 2, Koramangala, Bengaluru, Karnataka. Pin-560068 (India)",
+    "Sarjapura Main Road, The Grove, Janatha Colony, Doddakannelli, Bengaluru, Karnataka. Pin-560035 (India)",
+    "Koramangala 2nd Block, Kormangala West, Bengaluru South City Corporation, Bengaluru, Bangalore South, Bengaluru Urban, Karnataka, 560034, India",
+    "6th Cross Road, Manasa Layout, Nagarbhavi, Bengaluru, Karnataka. Pin-560072 (India)",
+    "Kalidasa Road, Gandhinagar, Nehru Nagar, Bengaluru Central City Corporation, Bengaluru, Bangalore North, Bengaluru Urban, Karnataka, 560009, India",
+    "Dispensary Road, Tasker Town, Shivaji Nagar, Bengaluru, Karnataka. Pin-560001 (India)",
+    "1st Cross Road, Silver Enclave, Frazer Town, Bengaluru, Karnataka. Pin-560005 (India)",
+    "Padmabhushan Dr MC Modi Road, Adarsha Layout, Basaveshwara Nagar, Bengaluru, Karnataka. Pin-560079 (India)",
+    "Coles Road, Silver Enclave, Frazer Town, Bengaluru, Karnataka. Pin-560005 (India)",
+    "Sri ML Subbaraju Road, Mahatma Gandhi Circle, Shivaji Nagar, Bengaluru, Karnataka. Pin-560001 (India)"
+  ],
+  "longitude": [
+    "77.618665",
+    "77.7007781",
+    "77.6185035",
+    "77.5186178",
+    "77.5805453",
+    "77.6081248",
+    "77.6137265",
+    "77.5438903",
+    "77.6139993",
+    "77.6140177"
+  ],
+  "modified_datetime": [
+    "2023-11-28 04:48:04.582978+00",
+    "2023-11-24 23:00:24.115257+00",
+    "2023-11-28 04:47:02.33776+00",
+    "2023-11-18 04:46:57.216868+00",
+    "2023-11-28 02:44:50.46737+00",
+    "2023-11-28 07:06:06.684969+00",
+    "2023-11-28 07:05:56.378259+00",
+    "2023-11-28 07:04:59.161864+00",
+    "2023-11-28 07:04:24.450788+00",
+    "2023-11-28 07:03:59.927111+00"
+  ],
+  "offence_code": [
+    "[112,104]",
+    "[113]",
+    "[112,107]",
+    "[112]",
+    "[112,113,111,109,108,107]",
+    "[113,112,111,109,108,107]",
+    "[107,112]",
+    "[107,113,111]",
+    "[107,113]",
+    "[113,112,111,109,108,107,116]"
+  ],
+  "police_station": [
+    "Madiwala",
+    "Bellandur",
+    "Byatarayanapura",
+    "Upparpet",
+    "Shivajinagar",
+    "Pulikeshinagar(F.Town)",
+    "Vijayanagara",
+    "Cubbon Park",
+    "K.R. Pura",
+    "City Market"
+  ],
+  "updated_vehicle_number": [
+    "FKN00GL0000",
+    "FKN00GL0002",
+    "FKN00GL0003",
+    "FKN00GL0004",
+    "FKN00GL0005",
+    "FKN00GL0006",
+    "FKN00GL0007",
+    "FKN00GL0008",
+    "FKN00GL0009",
+    "FKN00GL0010"
+  ],
+  "updated_vehicle_type": [
+    "MAXI-CAB",
+    "SCOOTER",
+    "TANKER",
+    "PASSENGER AUTO",
+    "CAR",
+    "MOTOR CYCLE",
+    "VAN",
+    "LGV",
+    "OTHERS",
+    "JEEP"
+  ],
+  "validation_status": [
+    "approved",
+    "rejected",
+    "processing",
+    "duplicate",
+    "created1"
+  ],
+  "validation_timestamp": [
+    "2023-11-30 03:08:24.818+00",
+    "2023-11-30 03:08:56.998+00",
+    "2023-11-18 23:35:12.428+00",
+    "2023-11-30 03:11:32.796+00",
+    "2023-11-30 04:32:19.24+00",
+    "2023-11-30 04:32:20.585+00",
+    "2023-11-30 04:32:49.436+00",
+    "2023-11-30 04:34:24.617+00",
+    "2023-11-30 04:34:21.682+00",
+    "2023-12-22 23:03:56.908+00"
+  ],
+  "vehicle_number": {
+    "bottom_frequency_count": 1,
+    "sample_anonymized_values": [
+      "FKN0...#85bb96f191",
+      "FKN0...#326c6d50ed",
+      "FKN0...#04a1dabf28",
+      "FKN0...#586354ad6a",
+      "FKN0...#3ae8b2f1ac"
+    ],
+    "top_frequency_count": 55,
+    "unique_count": 231890
+  },
+  "vehicle_type": [
+    "CAR",
+    "SCOOTER",
+    "TANKER",
+    "PASSENGER AUTO",
+    "MOTOR CYCLE",
+    "GOODS AUTO",
+    "VAN",
+    "LGV",
+    "MOPED",
+    "MAXI-CAB"
+  ],
+  "violation_type": [
+    "[\"WRONG PARKING\",\"PARKING NEAR ROAD CROSSING\"]",
+    "[\"NO PARKING\"]",
+    "[\"WRONG PARKING\",\"PARKING IN A MAIN ROAD\"]",
+    "[\"WRONG PARKING\"]",
+    "[\"WRONG PARKING\",\"NO PARKING\",\"PARKING NEAR BUSTOP/SCHOOL/HOSPITAL ETC\",\"DOUBLE PARKING\",\"PARKING OPPOSITE TO ANOTHER PARKED VEHICLE\",\"PARKING IN A MAIN ROAD\"]",
+    "[\"NO PARKING\",\"WRONG PARKING\",\"PARKING NEAR BUSTOP/SCHOOL/HOSPITAL ETC\",\"DOUBLE PARKING\",\"PARKING OPPOSITE TO ANOTHER PARKED VEHICLE\",\"PARKING IN A MAIN ROAD\"]",
+    "[\"PARKING IN A MAIN ROAD\",\"WRONG PARKING\"]",
+    "[\"PARKING IN A MAIN ROAD\",\"NO PARKING\",\"PARKING NEAR BUSTOP/SCHOOL/HOSPITAL ETC\"]",
+    "[\"PARKING IN A MAIN ROAD\",\"NO PARKING\"]",
+    "[\"NO PARKING\",\"WRONG PARKING\",\"PARKING NEAR BUSTOP/SCHOOL/HOSPITAL ETC\",\"DOUBLE PARKING\",\"PARKING OPPOSITE TO ANOTHER PARKED VEHICLE\",\"PARKING IN A MAIN ROAD\",\"DEFECTIVE NUMBER PLATE\"]"
+  ]
+}

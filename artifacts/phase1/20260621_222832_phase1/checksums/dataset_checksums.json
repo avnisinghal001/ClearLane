@@ -1,0 +1,6 @@
+{
+  "cleaned_csv_sha256": "6dbaa6b94c4cbdbbfc641e0338bf513a771dfeeb6fefbbb8814315dec3bec926",
+  "cleaned_dataframe_fingerprint": "105d4515dbb55897e1eb7065eb90a76b23943408a20218956143edf0711a7c9a",
+  "cleaned_parquet_sha256": "0505f81b0195a69bb3b1d0642dad254b53bce90b3da2b1a098f200bbe1062682",
+  "raw_sha256": "6e4b7ad2e4c713a65fe4f6a9782461f19911fad70d25132cb7aed0fa3c656438"
+}

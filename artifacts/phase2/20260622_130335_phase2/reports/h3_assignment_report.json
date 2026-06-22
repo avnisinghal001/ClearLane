@@ -1,0 +1,17 @@
+{
+  "coordinate_order": "lat,lng passed to h3.latlng_to_cell",
+  "coordinates_rounded_before_h3": false,
+  "correct_h3_res9_parent_rows": 298445,
+  "failure_count": 0,
+  "failures": [],
+  "h3_parent_resolution": 9,
+  "h3_resolution": 10,
+  "incorrect_h3_res9_parent_rows": 0,
+  "mapped_spatial_rows": 298445,
+  "row_count_reconciled": true,
+  "source_rows": 298445,
+  "status": "PASS",
+  "unique_h3_res10": 6805,
+  "unique_h3_res9": 2532,
+  "valid_h3_res10_cells": true
+}

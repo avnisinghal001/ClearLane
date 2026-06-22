@@ -1,0 +1,33 @@
+{
+  "alternative_exposure": "distinct(created_by_id, created_date) per H3",
+  "cell_count": 6805,
+  "eligible_cell_count": 2707,
+  "failure_count": 0,
+  "failures": [],
+  "independent_recompute": {
+    "checked_columns": [
+      "h3_res10",
+      "device_days",
+      "officer_days",
+      "unique_devices_exposure",
+      "unique_officers_exposure",
+      "active_dates",
+      "eligible_for_corrected_ranking"
+    ],
+    "failure_count": 0,
+    "failures": [],
+    "minimum_device_days": 5,
+    "status": "PASS"
+  },
+  "ineligible_cell_count": 4098,
+  "invariants_checked": [
+    "device_days > 0 for exposure rows",
+    "device_days <= citation_count",
+    "officer_days <= citation_count",
+    "unique_devices <= device_days",
+    "unique_officers <= officer_days",
+    "active_dates <= device_days"
+  ],
+  "primary_exposure": "distinct(device_id, created_date) per H3",
+  "status": "PASS"
+}

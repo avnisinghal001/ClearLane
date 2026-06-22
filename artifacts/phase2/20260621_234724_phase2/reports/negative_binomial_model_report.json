@@ -1,0 +1,27 @@
+{
+  "aic": 25824.46814326075,
+  "bic": -20583.006066030084,
+  "deviance": 780.4147047973698,
+  "model_spec": {
+    "count_col": "citation_count_production",
+    "exposure_col": "device_days",
+    "exposure_used_as_normal_feature": false,
+    "feature_columns": [
+      "unique_devices",
+      "unique_officers",
+      "approval_rate"
+    ],
+    "log_exposure_used_as_normal_feature": false,
+    "offset_expression": "log(device_days)",
+    "uses_offset": true
+  },
+  "model_type": "negative_binomial_glm_offset",
+  "nobs": 2707,
+  "params": {
+    "approval_rate": -0.2041505625117382,
+    "intercept": 0.9055788427497129,
+    "unique_devices": 0.020418815004519465,
+    "unique_officers": -0.0030116986902913507
+  },
+  "status": "PASS"
+}

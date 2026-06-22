@@ -1,0 +1,8 @@
+{
+  "cell_count": 6805,
+  "mean_count": 43.856722997795735,
+  "positive_observation_limitation": "Input contains observed citation locations only; zero-citation H3 cells outside the observed support are not inferred.",
+  "status": "PASS",
+  "variance_count": 32606.087493374904,
+  "variance_to_mean_ratio": 743.4683958264211
+}
