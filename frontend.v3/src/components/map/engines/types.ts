@@ -32,6 +32,15 @@ export interface PolylineSpec {
   color: string;
 }
 
+// A live-traffic road segment: a SOLID, themed line following the real street
+// (Mappls Route ADV geometry), coloured by congestion severity in our P1–P4 ramp.
+export interface TrafficLineSpec {
+  id: string;
+  points: [number, number][];
+  color: string;
+  tooltip?: string;
+}
+
 // Dashed, unfilled overlay ring (e.g. an evening blind-spot marker).
 export interface RingSpec {
   id: string;
@@ -73,6 +82,7 @@ export interface MapEngine {
   setHeat(points: HeatPoint[], on: boolean): void;
   setPins(pins: PinSpec[]): void;
   setPolylines(lines: PolylineSpec[]): void;
+  setTrafficLines?(lines: TrafficLineSpec[]): void; // live-traffic road segments (optional)
   setRings(rings: RingSpec[]): void;
   setDots(dots: DotSpec[]): void;
   setTraffic(on: boolean): void;
@@ -86,6 +96,7 @@ export interface InitOptions {
   zoom: number;
   restKey: string | null;
   staticKey: string | null;
+  disableMappls?: boolean; // USE_MAPPLE=false => skip MapMyIndia/Mappls, CARTO basemap only
 }
 
 export interface Attempt {

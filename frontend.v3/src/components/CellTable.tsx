@@ -32,17 +32,17 @@ const META: Record<CellTableVariant, { title: string; icon: typeof ListChecks; c
   priority: {
     title: "Priority queue",
     icon: ListChecks,
-    caption: "Ranked by operational priority (historical PIC + decaying live boost). PIC is MODELED from tickets — never measured congestion.",
+    caption: "Ranked by where to act now — chronic pressure plus a short live boost from fresh reports. Estimated from tickets — not measured congestion.",
   },
   flow: {
-    title: "Flow impact",
+    title: "Road impact",
     icon: Waypoints,
-    caption: "Obstruction pressure scaled by static road context (junction, road class, metro/commercial proximity). A MODELED flow-impact proxy — not measured congestion.",
+    caption: "How much a blockage here could disrupt movement — parking pressure weighted by road type and nearby metro/markets. An estimate — not measured congestion.",
   },
   blind: {
     title: "Evening blind spots",
     icon: MoonStar,
-    caption: "High-priority but under-observed cells (NB rank-divergence / drift / emerging) — most likely missed in the modeled evening window. A discovery signal, not a confirmed hotspot.",
+    caption: "Busy spots that look lightly patrolled — most likely missed during the evening rush. A lead to check, not a confirmed hotspot.",
   },
 };
 
@@ -119,7 +119,7 @@ export function CellTable({
           header: "Junction",
           cell: ({ row }) => <span className="num text-[12px]">{Math.round((flow?.get(row.original.h3_r10)?.junction ?? 0) * 100)}%</span>,
         },
-        { id: "pic", header: "PIC", cell: ({ row }) => <span className="num text-[12px]">{Math.round(row.original.pic_score)}</span> },
+        { id: "pic", header: "Pressure", cell: ({ row }) => <span className="num text-[12px]">{Math.round(row.original.pic_score)}</span> },
         focusCol,
       ];
     }
@@ -140,13 +140,13 @@ export function CellTable({
             return (
               <div className="flex flex-wrap gap-1">
                 {isBlindSpot(c) && <Badge variant="warning" className="font-normal">evening blind spot</Badge>}
-                {c.emerging && <Badge variant="modeled" className="font-normal">emerging</Badge>}
-                {underObserved(c) && (c.rank_divergence ?? 0) >= 90 && <Badge variant="secondary" className="font-normal">under-observed</Badge>}
+                {c.emerging && <Badge variant="modeled" className="font-normal">rising</Badge>}
+                {underObserved(c) && (c.rank_divergence ?? 0) >= 90 && <Badge variant="secondary" className="font-normal">lightly patrolled</Badge>}
               </div>
             );
           },
         },
-        { id: "pic", header: "PIC", cell: ({ row }) => <span className="num text-[12px] font-semibold">{Math.round(row.original.pic_score)}</span> },
+        { id: "pic", header: "Pressure", cell: ({ row }) => <span className="num text-[12px] font-semibold">{Math.round(row.original.pic_score)}</span> },
         focusCol,
       ];
     }
@@ -165,7 +165,7 @@ export function CellTable({
         ),
       },
       idCol,
-      { id: "pic", header: "PIC", cell: ({ row }) => <span className="num text-[12px]">{Math.round(row.original.pic_score)}</span> },
+      { id: "pic", header: "Pressure", cell: ({ row }) => <span className="num text-[12px]">{Math.round(row.original.pic_score)}</span> },
       {
         id: "peak",
         header: "Peak / wk",
@@ -192,7 +192,7 @@ export function CellTable({
       </CardHeader>
       <CardContent className="space-y-3">
         <DataTable columns={columns} data={rows} pageSize={10} dense empty="No cells in scope." />
-        <p className="text-[11px] leading-tight text-muted-foreground">{meta.caption} Cell/station-level only — never per officer.</p>
+        <p className="text-[11px] leading-tight text-muted-foreground">{meta.caption} Area-level only — never per officer.</p>
       </CardContent>
     </Card>
   );

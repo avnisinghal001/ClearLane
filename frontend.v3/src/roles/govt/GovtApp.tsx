@@ -8,7 +8,7 @@ import { AppShell, type NavItem } from "@/components/AppShell";
 import { ClearLaneMap, type MapPin } from "@/components/map/ClearLaneMap";
 import { IncidentReporter, type IncidentReporterHandle } from "@/components/IncidentReporter";
 import type { TimeValue } from "@/components/TimeControl";
-import { DateLens } from "./DateLens";
+import { TimeControl } from "@/components/TimeControl";
 import { CellDrawer } from "@/components/CellDrawer";
 import { CellTable } from "@/components/CellTable";
 import { AiNextPicks } from "@/components/AiNextPicks";
@@ -182,7 +182,7 @@ export function GovtApp() {
             lens={{ badge: data?.badge, nEmerging: data?.n_emerging, nAdjusted: data?.n_adjusted, learningAdjusted: data?.learning_adjusted }}
           />
           <div className="absolute left-2 top-2 z-[500] w-[min(20rem,calc(100%-4.5rem))]">
-            <DateLens value={time} onChange={setTime} allDay={allDay} onAllDayChange={setAllDay} />
+            <TimeControl value={time} onChange={setTime} allDay={allDay} onAllDayChange={setAllDay} />
             <div className="mt-2">
               <Badge variant={data?.source === "forecast" ? "modeled" : "live"}>{data?.source === "forecast" ? "Forecast" : "Live"}</Badge>
             </div>

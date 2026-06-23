@@ -95,7 +95,7 @@ export function CitizenApp() {
   const nav: NavItem[] = [
     { key: "map", label: "Map", icon: <MapIcon className="h-5 w-5" /> },
     { key: "report", label: "Report", icon: <Megaphone className="h-5 w-5" /> },
-    { key: "reports", label: "My reports", icon: <ListChecks className="h-5 w-5" /> },
+    { key: "reports", label: "Your reports", icon: <ListChecks className="h-5 w-5" /> },
   ];
 
   function onNav(k: string) {
@@ -125,6 +125,7 @@ export function CitizenApp() {
           <ClearLaneMap
             cells={data?.cells ?? []}
             source={data?.source ?? "live"}
+            audience="citizen"
             userLocation={cityCoords}
             flyTo={flyTo}
             onCellClick={setSelected}
@@ -146,7 +147,7 @@ export function CitizenApp() {
 
           {/* time lens */}
           <div className="absolute left-2 top-2 z-[500] w-[min(20rem,calc(100%-4.5rem))]">
-            <TimeControl value={time} onChange={setTime} />
+            <TimeControl value={time} onChange={setTime} plain />
             <div className="mt-2 flex items-center gap-2">
               <Badge variant={data?.source === "forecast" ? "modeled" : "live"}>
                 {data?.source === "forecast" ? "Forecast" : "Live"}
@@ -159,8 +160,8 @@ export function CitizenApp() {
               the map anywhere). Shimmer sweep; vertical writing-mode rotates the label. */}
           <button
             onClick={() => openReport()}
-            aria-label="Report incident"
-            title="Report incident — or long-press the map"
+            aria-label="Report a parking problem"
+            title="Report a parking problem — or long-press the map"
             className="group fixed right-0 top-1/2 z-[610] flex -translate-y-1/2 items-center gap-2 overflow-hidden rounded-l-xl bg-primary py-4 pl-2 pr-1.5 font-semibold text-primary-foreground shadow-lg ring-1 ring-black/10 transition-[padding] hover:pl-2.5 [writing-mode:vertical-rl]"
           >
             <span
@@ -168,20 +169,20 @@ export function CitizenApp() {
               className="pointer-events-none absolute inset-0 animate-shimmer bg-gradient-to-b from-transparent via-white/40 to-transparent"
             />
             <Megaphone className="h-4 w-4 rotate-90" />
-            <span className="text-sm tracking-wide">Report incident</span>
+            <span className="text-sm tracking-wide">Report a problem</span>
           </button>
         </div>
       ) : (
         <div className="mx-auto max-w-4xl space-y-4 p-4 sm:p-6">
           <div>
-            <h2 className="text-xl font-bold">My reports</h2>
-            <p className="text-sm text-muted-foreground">Track the verification status of parking problems you've reported.</p>
+            <h2 className="text-xl font-bold">Your reports</h2>
+            <p className="text-sm text-muted-foreground">See what happened to the parking problems you reported.</p>
           </div>
           <MyReports tickets={myReports} />
         </div>
       )}
 
-      <CellDrawer cell={selected} cells={data?.cells ?? []} side={isMobile ? "bottom" : "right"} onClose={() => setSelected(null)}>
+      <CellDrawer cell={selected} cells={data?.cells ?? []} audience="citizen" side={isMobile ? "bottom" : "right"} onClose={() => setSelected(null)}>
         {selected && (
           <div className="flex gap-2">
             <Button

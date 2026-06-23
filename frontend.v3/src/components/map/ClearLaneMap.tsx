@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useMapKeys } from "@/hooks/useConfig";
 import { initBestMap, PROVIDER_TOTAL, type MapEngine } from "./engines";
-import type { CircleSpec, DotSpec, HeatPoint, PinSpec, PolylineSpec, RingSpec } from "./engines/types";
+import type { CircleSpec, DotSpec, HeatPoint, PinSpec, PolylineSpec, RingSpec, TrafficLineSpec } from "./engines/types";
 import { circleColor, heatPoints, type ColorMode } from "./layers";
 
 const BLR: [number, number] = [12.9716, 77.5946];
@@ -48,7 +48,18 @@ interface Props {
   sizeMode?: "intensity" | "pressure"; // "pressure" = all-day PIC (hour-independent)
   bottomSafe?: boolean; // lift bottom controls above a mobile bottom nav (citizen)
   className?: string;
+  audience?: "citizen" | "ops"; // "citizen" = plain lens chip (no ML counts)
   lens?: { badge?: string; nEmerging?: number; nAdjusted?: number; learningAdjusted?: boolean };
+  // Live-traffic layer (police): show the toggle in the Layers accordion, render the
+  // severity-coloured road segments, and call back when the toggle/zone-count changes
+  // so the owner can (re)fetch. Avni's Phase-3 congestion brought onto the main map.
+  liveTrafficEnabled?: boolean;
+  liveTrafficDefaultOn?: boolean; // start with the live layer ON (police default)
+  liveTraffic?: { segments: TrafficLineSpec[]; loading?: boolean; live?: boolean; coveragePct?: number };
+  // h3 -> severity colour: when the live layer is on, recolour these hotspot dots by
+  // live congestion severity (Avni's dot technique) instead of their tier colour.
+  liveSeverityByCell?: Record<string, string>;
+  onLiveTraffic?: (on: boolean, zones: number) => void;
 }
 
 const COLOR_OPTIONS: { value: ColorMode; label: string }[] = [
@@ -79,12 +90,18 @@ export function ClearLaneMap({
   sizeMode = "intensity",
   bottomSafe = false,
   className,
+  audience = "ops",
   lens,
+  liveTrafficEnabled = false,
+  liveTrafficDefaultOn = false,
+  liveTraffic,
+  liveSeverityByCell,
+  onLiveTraffic,
 }: Props) {
   const bottomCls = bottomSafe ? "bottom-[5.5rem] md:bottom-3" : "bottom-3";
   const containerRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<MapEngine | null>(null);
-  const { restKey, staticKey, ready } = useMapKeys();
+  const { restKey, staticKey, useMappls, ready } = useMapKeys();
   const isMobile = useIsMobile();
 
   const [info, setInfo] = useState<{ label: string; priority: number; supportsTraffic: boolean } | null>(null);
@@ -111,6 +128,11 @@ export function ClearLaneMap({
   const [showHeat, setShowHeat] = useState(defaultHeat);
   const [trafficOn, setTrafficOn] = useState(false);
   const [showRoutes, setShowRoutes] = useState(Boolean(routes?.length));
+  // live-traffic layer (police): toggle + police-controlled zone count (10..20)
+  const [liveOn, setLiveOn] = useState(liveTrafficDefaultOn);
+  const [liveZones, setLiveZones] = useState(15);
+  const onLiveTrafficRef = useRef(onLiveTraffic);
+  onLiveTrafficRef.current = onLiveTraffic;
 
   // keep latest callbacks/flags without re-subscribing the map click handler
   const pickRef = useRef(pickMode);
@@ -131,7 +153,7 @@ export function ClearLaneMap({
     if (!ready || !containerRef.current) return;
     let cancelled = false;
     setStatus("loading");
-    initBestMap({ container: containerRef.current, center: BLR, zoom: defaultZoom, restKey, staticKey })
+    initBestMap({ container: containerRef.current, center: BLR, zoom: defaultZoom, restKey, staticKey, disableMappls: !useMappls })
       .then(({ engine }) => {
         if (cancelled) {
           engine.destroy();
@@ -153,7 +175,7 @@ export function ClearLaneMap({
       engineRef.current?.destroy();
       engineRef.current = null;
     };
-  }, [ready, restKey, staticKey, defaultZoom]);
+  }, [ready, restKey, staticKey, useMappls, defaultZoom]);
 
   // ---- replay animation timer (weekday cycle Mon→Sun) ---------------------
   useEffect(() => {
@@ -192,24 +214,33 @@ export function ClearLaneMap({
     const engine = engineRef.current;
     if (!engine || status !== "ready") return;
 
-    const fillOf = (c: Cell): string => (replayOn ? tierColor(cellTier(c)) : circleColor(c, colorMode, flowMap));
+    // When the live layer is on AND we're on the live "now" lens, monitored cells are
+    // coloured by LIVE severity (Avni's dot technique). Scrub to another day/time and
+    // the live override lifts so the dots follow the time-modeled colour instead —
+    // live traffic only exists for "now" (and is never re-fetched on a time change).
+    const liveSev = (c: Cell): string | undefined =>
+      liveOn && source === "live" ? liveSeverityByCell?.[c.h3_r10] : undefined;
+    const fillOf = (c: Cell): string => liveSev(c) ?? (replayOn ? tierColor(cellTier(c)) : circleColor(c, colorMode, flowMap));
 
     const circleSpecs: CircleSpec[] = display.map((c) => {
       const lift = c.learn_lift ?? 0;
       const expanding = lift >= 0.15;
       const blind = isBlindSpot(c);
+      const onLive = Boolean(liveSev(c));
       const fill = fillOf(c);
-      const ring = c.emerging ? "#b91c1c" : expanding ? "#f59e0b" : blind ? "#d97706" : fill;
+      // live-monitored cells get a white casing + heavier weight so they read as the
+      // live severity dots; otherwise the usual emerging/expanding/blind ring.
+      const ring = onLive ? "#ffffff" : c.emerging ? "#b91c1c" : expanding ? "#f59e0b" : blind ? "#d97706" : fill;
       const liftTip = lift > 0.08 ? ` · ▲ expanding +${Math.round(lift * 100)}%` : lift < -0.08 ? ` · ▼ cooling ${Math.round(lift * 100)}%` : "";
       return {
         id: c.h3_r10,
         lat: c.lat,
         lon: c.lon,
-        radius: radiusOf(c) + (c.emerging ? 3 : expanding ? 1.5 : 0),
+        radius: radiusOf(c) + (onLive ? 3 : c.emerging ? 3 : expanding ? 1.5 : 0),
         color: ring,
         fillColor: fill,
-        weight: c.emerging ? 2.5 : expanding ? 1.6 : blind ? 1.4 : 0.6,
-        tooltip: `${c.police_station || "—"} · ${cellTier(c)} · PIC ${Math.round(c.pic_score)}${blind ? " · ◎ blind spot" : ""}${c.emerging ? " · ◆ emerging" : ""}${liftTip}`,
+        weight: onLive ? 2 : c.emerging ? 2.5 : expanding ? 1.6 : blind ? 1.4 : 0.6,
+        tooltip: `${c.police_station || "—"} · ${cellTier(c)} · PIC ${Math.round(c.pic_score)}${onLive ? " · ● live congestion" : ""}${blind ? " · ◎ blind spot" : ""}${c.emerging ? " · ◆ emerging" : ""}${liftTip}`,
         onClick: () => onCellRef.current?.(c),
       };
     });
@@ -221,7 +252,7 @@ export function ClearLaneMap({
     if (import.meta.env.DEV)
       // eslint-disable-next-line no-console
       console.log(`[ClearLaneMap] engine=${engine.label} cells_in=${cells.length} display=${display.length} circles_drawn=${showHeat ? 0 : circleSpecs.length} heat_pts=${showHeat ? heatSpecs.length : 0} mode=${colorMode}`);
-  }, [display, cells, source, colorMode, showHeat, status, replayOn, radiusOf, flowMap]);
+  }, [display, cells, source, colorMode, showHeat, status, replayOn, radiusOf, flowMap, liveOn, liveSeverityByCell]);
 
   // ---- evening blind-spot rings (dashed) ----------------------------------
   useEffect(() => {
@@ -306,11 +337,27 @@ export function ClearLaneMap({
     }
   }, [userLocation, status]);
 
-  // ---- traffic ------------------------------------------------------------
+  // ---- traffic tiles ------------------------------------------------------
   useEffect(() => {
     const engine = engineRef.current;
     if (engine && status === "ready" && engine.supportsTraffic) engine.setTraffic(trafficOn);
   }, [trafficOn, status]);
+
+  // ---- live-traffic layer: tell the owner to (re)fetch (debounced) --------
+  useEffect(() => {
+    if (!liveTrafficEnabled) return;
+    const t = setTimeout(() => onLiveTrafficRef.current?.(liveOn, liveZones), 400);
+    return () => clearTimeout(t);
+  }, [liveOn, liveZones, liveTrafficEnabled]);
+
+  // ---- live-traffic layer: draw the severity-coloured road segments -------
+  // Only on the live "now" lens — scrubbing to a forecast day hides the live streets
+  // (no re-fetch; the billed API is only hit via the toggle / zone slider).
+  useEffect(() => {
+    const engine = engineRef.current;
+    if (!engine || status !== "ready") return;
+    engine.setTrafficLines?.(liveOn && source === "live" ? liveTraffic?.segments ?? [] : []);
+  }, [liveOn, liveTraffic, status, source]);
 
   // ---- keep sized on layout/viewport changes ------------------------------
   useEffect(() => {
@@ -353,6 +400,14 @@ export function ClearLaneMap({
       showRoutes={showRoutes}
       setShowRoutes={setShowRoutes}
       info={info}
+      liveTrafficEnabled={liveTrafficEnabled}
+      liveOn={liveOn}
+      setLiveOn={setLiveOn}
+      liveZones={liveZones}
+      setLiveZones={setLiveZones}
+      liveLoading={Boolean(liveTraffic?.loading)}
+      liveIsLive={Boolean(liveTraffic?.live)}
+      liveCoverage={liveTraffic?.coveragePct ?? 0}
     />
   );
 
@@ -375,16 +430,26 @@ export function ClearLaneMap({
         </div>
       )}
 
-      {/* lens status chip — what the heatmap is showing + how many zones are moving */}
-      {lens?.badge && status === "ready" && (
+      {/* lens status chip — what the heatmap is showing. Citizens get a plain
+          label; operational roles (police/govt) see how many zones are moving. */}
+      {status === "ready" && (audience === "citizen" || lens?.badge) && (
         <div className="pointer-events-none absolute left-1/2 top-3 z-[500] flex max-w-[min(90%,38rem)] -translate-x-1/2 flex-wrap items-center justify-center gap-x-2 gap-y-0.5 rounded-full border bg-background/95 px-3 py-1 text-[11px] shadow-md backdrop-blur">
-          <span className={cn("inline-flex items-center gap-1 font-medium", lens.learningAdjusted ? "text-primary" : "text-muted-foreground")}>
-            {lens.learningAdjusted ? <Sparkles className="h-3 w-3" /> : <History className="h-3 w-3" />}
-            {lens.badge}
-          </span>
-          {lens.learningAdjusted && ((lens.nAdjusted ?? 0) > 0 || (lens.nEmerging ?? 0) > 0) ? (
-            <span className="text-muted-foreground">▲ {lens.nAdjusted ?? 0} adjusting · ◆ {lens.nEmerging ?? 0} emerging</span>
-          ) : null}
+          {audience === "citizen" ? (
+            <span className={cn("inline-flex items-center gap-1 font-medium", lens?.learningAdjusted ? "text-primary" : "text-muted-foreground")}>
+              {lens?.learningAdjusted ? <Sparkles className="h-3 w-3" /> : <History className="h-3 w-3" />}
+              {source === "forecast" ? "Forecast for the day" : "Parking hotspots near you"}
+            </span>
+          ) : (
+            <>
+              <span className={cn("inline-flex items-center gap-1 font-medium", lens?.learningAdjusted ? "text-primary" : "text-muted-foreground")}>
+                {lens?.learningAdjusted ? <Sparkles className="h-3 w-3" /> : <History className="h-3 w-3" />}
+                {lens?.badge}
+              </span>
+              {lens?.learningAdjusted && ((lens.nAdjusted ?? 0) > 0 || (lens.nEmerging ?? 0) > 0) ? (
+                <span className="text-muted-foreground">▲ {lens.nAdjusted ?? 0} adjusting · ◆ {lens.nEmerging ?? 0} emerging</span>
+              ) : null}
+            </>
+          )}
         </div>
       )}
 
@@ -600,11 +665,63 @@ interface PanelProps {
   showRoutes: boolean;
   setShowRoutes: (v: boolean) => void;
   info: { label: string; priority: number; supportsTraffic: boolean } | null;
+  liveTrafficEnabled: boolean;
+  liveOn: boolean;
+  setLiveOn: (v: boolean) => void;
+  liveZones: number;
+  setLiveZones: (v: number) => void;
+  liveLoading: boolean;
+  liveIsLive: boolean;
+  liveCoverage: number;
 }
 
 function LayersPanel(p: PanelProps) {
   return (
-    <Accordion type="multiple" defaultValue={["view", "overlays", "color"]} className="w-full">
+    <Accordion type="multiple" defaultValue={["traffic", "view", "overlays", "color"]} className="w-full">
+      {p.liveTrafficEnabled && (
+        <AccordionItem value="traffic">
+          <AccordionTrigger>Live traffic</AccordionTrigger>
+          <AccordionContent>
+            <ToggleRow
+              label="Show live traffic"
+              hint="busy streets · updates every 15 min"
+              checked={p.liveOn}
+              onChange={p.setLiveOn}
+            />
+            {p.liveOn && (
+              <>
+                <div className="flex items-center gap-2 py-1.5">
+                  <span className="text-[13px]">Monitored zones</span>
+                  <input
+                    type="range"
+                    min={10}
+                    max={20}
+                    step={1}
+                    value={p.liveZones}
+                    onChange={(e) => p.setLiveZones(+e.target.value)}
+                    className="flex-1 accent-primary"
+                    aria-label="Monitored zones (10–20)"
+                  />
+                  <span className="num w-6 text-right text-xs font-semibold">{p.liveZones}</span>
+                </div>
+                <p className="text-[10px] leading-tight text-muted-foreground">
+                  {p.liveLoading
+                    ? "Polling live traffic…"
+                    : p.liveIsLive
+                      ? `Live · ${p.liveCoverage}% of zones (Mappls Route ADV/ETA). Severity = 1 − free-flow / live ETA.`
+                      : "Simulated fallback (Mappls quota/off). Severity = modeled day×hour."}
+                </p>
+                <div className="mt-1 flex items-center gap-2 text-[10px] text-muted-foreground">
+                  <span>busy</span>
+                  <span className="h-1.5 flex-1 rounded-full" style={{ background: "linear-gradient(90deg,#16a34a,#facc15,#f97316,#dc2626)" }} />
+                  <span>severe</span>
+                </div>
+              </>
+            )}
+          </AccordionContent>
+        </AccordionItem>
+      )}
+
       <AccordionItem value="view">
         <AccordionTrigger>View mode</AccordionTrigger>
         <AccordionContent>

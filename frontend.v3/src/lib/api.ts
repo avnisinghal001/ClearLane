@@ -15,6 +15,7 @@ import type {
   DispatchQueue,
   ForceMeta,
   Kpis,
+  LiveTrafficPayload,
   MapPayload,
   Officer,
   ResolveInput,
@@ -78,6 +79,7 @@ async function tryLive<T>(path: string, opts?: RequestInit): Promise<T | null> {
 export interface AppConfig {
   mappls_key: string | null; // REST key — engine 1 (map_load)
   static_key?: string | null; // static/JS key — engine 2 (Mappls v3 access_token)
+  use_mappls?: boolean; // backend USE_MAPPLE flag — false => skip MapMyIndia/Mappls, use CARTO
   demo?: boolean;
 }
 
@@ -395,6 +397,22 @@ export async function removeGovtStation(slug: string): Promise<{ ok: boolean; er
   } catch {
     return { ok: false, error: "Backend unavailable." };
   }
+}
+
+// Police-only LIVE traffic for a station's own jurisdiction (lazy, Mongo-TTL cached
+// on the backend). `zones` is police-controlled (clamped 10..20 server-side); `refresh`
+// bypasses the TTL cache and re-polls Mappls. Needs the live backend — there is no
+// offline demo for live traffic, so the caller renders an explicit "unavailable" state.
+export async function getPoliceLiveTraffic(
+  station: string,
+  zones = 20,
+  refresh = false,
+): Promise<LiveTrafficPayload> {
+  const qs = new URLSearchParams({ station, zones: String(zones) });
+  if (refresh) qs.set("refresh", "1");
+  const r = await fetch(`${BASE}/api/v3/police/live-traffic?${qs}`, { headers: authHeader() });
+  if (!r.ok) throw new Error(String(r.status));
+  return (await r.json()) as LiveTrafficPayload;
 }
 
 export async function getDispatchPlan(): Promise<DispatchPlan> {

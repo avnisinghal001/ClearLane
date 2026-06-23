@@ -68,9 +68,9 @@ export function ReportSheet({
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
       <SheetContent side="bottom" className="rounded-t-2xl">
         <SheetHeader className="px-5">
-          <SheetTitle>Report illegal parking</SheetTitle>
+          <SheetTitle>Report a parking problem</SheetTitle>
           <SheetDescription>
-            These labelled fields are what the police station sees when verifying your report.
+            Tell us what you see. These details help the local police verify and act on it.
           </SheetDescription>
         </SheetHeader>
 
@@ -100,7 +100,7 @@ export function ReportSheet({
           </div>
 
           <div className="space-y-1.5">
-            <Label>Category</Label>
+            <Label>Type of problem</Label>
             <Select value={category} onValueChange={setCategory}>
               <SelectTrigger>
                 <SelectValue placeholder="What's the problem?" />
@@ -165,7 +165,7 @@ export function ReportSheet({
 
           <Button className="w-full" disabled={!canSubmit} onClick={submit}>
             {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-            Submit report
+            Send report
           </Button>
         </div>
       </SheetContent>

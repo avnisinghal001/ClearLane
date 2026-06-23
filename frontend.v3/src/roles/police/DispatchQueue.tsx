@@ -72,7 +72,7 @@ export function DispatchQueue({ stationName, onFocus }: { stationName: string; o
       },
       {
         accessorKey: "rerank_score",
-        header: "Rerank",
+        header: "Priority",
         cell: ({ row }) => {
           const r = row.original;
           return (
@@ -95,14 +95,14 @@ export function DispatchQueue({ stationName, onFocus }: { stationName: string; o
           <div className="min-w-0">
             <div className="font-mono text-xs text-muted-foreground">{row.original.h3_r10.slice(0, 10)}…</div>
             <div className="text-[11px] text-muted-foreground">
-              PIC {Math.round(row.original.pressure)} · {row.original.road_class ?? "—"}
+              Pressure {Math.round(row.original.pressure)} · {row.original.road_class ?? "—"}
             </div>
           </div>
         ),
       },
       {
         id: "components",
-        header: "Blend",
+        header: "Factors",
         cell: ({ row }) => <ComponentBar comp={row.original.components} />,
       },
       {
@@ -120,7 +120,7 @@ export function DispatchQueue({ stationName, onFocus }: { stationName: string; o
       },
       {
         accessorKey: "operational_priority",
-        header: "Op.",
+        header: "Now",
         cell: ({ row }) => <span className="num font-semibold">{Math.round(row.original.operational_priority)}</span>,
       },
       {
@@ -151,7 +151,7 @@ export function DispatchQueue({ stationName, onFocus }: { stationName: string; o
       <CardHeader className="pb-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Radio className="h-4 w-4 text-primary" /> M4 dispatch queue
+            <Radio className="h-4 w-4 text-primary" /> Where to deploy now
           </CardTitle>
           <div className="flex items-center gap-2">
             {/* live-vs-simulated indicator on the congestion/traffic signal */}
@@ -177,17 +177,17 @@ export function DispatchQueue({ stationName, onFocus }: { stationName: string; o
           empty={loading ? "Loading reranked queue…" : "No reranked cells for this station."}
         />
         <p className="text-[11px] leading-tight text-muted-foreground">
-          M4 rerank = forecast · pressure · under-observed · congestion · reachability (transparent linear blend).
-          <span className="font-medium"> Pressure is MODELED from tickets — never a live congestion measurement.</span>{" "}
+          Ranked by what needs attention now — recent trend, how chronic the spot is, evening blind-spots, congestion, and how fast a patrol can reach it.
+          <span className="font-medium"> Pressure is estimated from tickets — not a live congestion measurement.</span>{" "}
           {q?.fallback === "simulated"
-            ? "Congestion stress is a SIMULATED time/day model (live Mappls ETA not provisioned)."
-            : "Congestion stress from live Mappls ETA."}{" "}
+            ? "Congestion is a simulated time/day estimate (live Mappls ETA not provisioned)."
+            : "Congestion from live Mappls ETA."}{" "}
           {q?.source === "rerank-cache"
-            ? `Served from the hourly rerank cache${q?.last_rerank ? ` · updated ${relativeTime(new Date(q.last_rerank * 1000).toISOString())}` : ""}.`
+            ? `Updated from the hourly cache${q?.last_rerank ? ` · ${relativeTime(new Date(q.last_rerank * 1000).toISOString())}` : ""}.`
             : q?.source === "offline-compose"
               ? "Composed offline from the demo bundle."
               : "Computed live."}{" "}
-          Cell-level only — never per officer.
+          Area-level only — never per officer.
         </p>
       </CardContent>
     </Card>

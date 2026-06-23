@@ -25,6 +25,18 @@ export const TIER_HEX: Record<Tier, string> = {
 };
 export const tierColor = (t: Tier) => TIER_HEX[t];
 
+// Live-traffic congestion severity (0..1, Mappls TTI-derived) -> our P1..P4 ramp, so
+// the live "busy streets" layer is coloured in the SAME theme as everything else
+// (NORMAL green -> MODERATE yellow -> HIGH orange -> SEVERE red).
+export function severityTier(sev: number | null | undefined): Tier {
+  const s = sev ?? 0;
+  if (s >= 0.55) return "P1";
+  if (s >= 0.35) return "P2";
+  if (s >= 0.15) return "P3";
+  return "P4";
+}
+export const severityColor = (sev: number | null | undefined) => tierColor(severityTier(sev));
+
 // PIC score (0..100) → priority tier. Fixed cuts so "Simple view" (P1/P2) and the
 // command metrics read consistently across roles. Prefers the server-served `tier`
 // (api/clearlane/v3._pic_tier uses the SAME cuts) and falls back to pic_score.
@@ -227,4 +239,61 @@ export function intervention(c: Cell): Intervention {
     return { action: "Targeted enforcement sweep", window };
   }
   return { action: "Monitor", window: "—" };
+}
+
+// --------------------------------------------------------------------------- //
+// Plain-language presentation helpers (product polish). These translate the same
+// MODELED signals above into human copy for the citizen/police detail card —
+// they NEVER introduce a new claim. Aggregation stays cell-level only.
+// --------------------------------------------------------------------------- //
+export type ChipTone = "destructive" | "warning" | "modeled" | "secondary" | "success";
+export interface WhyChip {
+  label: string;
+  tone: ChipTone;
+}
+
+const TIER_WORD: Record<Tier, string> = { P1: "High", P2: "Elevated", P3: "Moderate", P4: "Low" };
+const TIER_BLURB: Record<Tier, string> = {
+  P1: "One of the worst parking spots in this area — needs regular enforcement.",
+  P2: "A recurring problem spot worth patrolling.",
+  P3: "Some parking trouble here, but not a top priority.",
+  P4: "Mostly clear — only occasional parking issues.",
+};
+
+export interface PriorityLabel {
+  tier: Tier;
+  word: string; // High / Elevated / Moderate / Low
+  blurb: string;
+  color: string;
+}
+
+export function priorityLabel(c: Cell): PriorityLabel {
+  const tier = cellTier(c);
+  return { tier, word: TIER_WORD[tier], blurb: TIER_BLURB[tier], color: tierColor(tier) };
+}
+
+// Human "why it's flagged" chips, derived only from signals we actually have.
+// Order = most useful first; capped so the card stays scannable.
+export function whyFlagged(c: Cell): WhyChip[] {
+  const chips: WhyChip[] = [];
+  const tier = cellTier(c);
+  const hot = tier === "P1" || tier === "P2";
+
+  if (c.emerging) chips.push({ label: "Rising activity", tone: "warning" });
+  else if ((c.drift_z ?? 0) >= 1) chips.push({ label: "Picking up lately", tone: "warning" });
+
+  if (isBlindSpot(c)) chips.push({ label: "Evening blind spot", tone: "modeled" });
+
+  if (hot && recurrenceScore(c) >= 60) chips.push({ label: "Chronic hotspot", tone: "destructive" });
+
+  if (c.road_class === "ring_road" || c.road_class === "arterial")
+    chips.push({ label: "Major-road choke point", tone: "secondary" });
+  else if (c.road_class === "commercial") chips.push({ label: "Busy market area", tone: "secondary" });
+
+  if (c.peak_dow) chips.push({ label: `Worst on ${c.peak_dow}`, tone: "secondary" });
+
+  if (!chips.length)
+    chips.push(hot ? { label: "Frequent violations", tone: "destructive" } : { label: "Occasional violations", tone: "secondary" });
+
+  return chips.slice(0, 4);
 }

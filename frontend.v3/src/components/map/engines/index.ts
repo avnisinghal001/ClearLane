@@ -34,7 +34,10 @@ function resetContainer(el: HTMLElement) {
 export async function initBestMap(o: InitOptions): Promise<InitResult> {
   const attempts: Attempt[] = [];
   let lastErr: unknown;
-  for (const p of PROVIDERS) {
+  // USE_MAPPLE=false (backend) -> render on the CARTO/Leaflet basemap only (Avni's map),
+  // skipping the MapMyIndia + Mappls SDK engines entirely.
+  const providers = o.disableMappls ? PROVIDERS.filter((p) => p.priority === 3) : PROVIDERS;
+  for (const p of providers) {
     resetContainer(o.container);
     try {
       const engine = await p.init(o);

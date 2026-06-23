@@ -84,6 +84,52 @@ export interface MapPayload {
   dow_order?: string[];
 }
 
+// Police-only LIVE-traffic layer (GET /api/v3/police/live-traffic). Lazy, per-station,
+// Mongo-TTL cached. Severity = clip(1 − free_flow/typical_eta, 0, 1) (Avni's Phase-3
+// math); zones without a live value fall back to the SIMULATED day×hour severity.
+export interface LiveTrafficZone {
+  h3_r10: string;
+  lat: number;
+  lon: number;
+  pic_score: number;
+  road_class?: string | null;
+  congestion_severity: number; // 0..1
+  congestion_label: "NORMAL" | "MODERATE" | "HIGH" | "SEVERE" | null;
+  color: string; // band colour (matches Avni's dashboard)
+  travel_time_index: number | null; // typical_eta / free_flow (>1 = slower than baseline)
+  delay_seconds: number | null; // max(0, eta − free)
+  congestion_source: "live" | "simulated";
+  severity_method?: "route_eta" | "distance_matrix" | "simulated"; // how severity was derived
+  segment: [number, number][]; // road-following corridor [[lat,lon], …] (Route ADV; straight fallback)
+  segment_source?: "route_adv" | "straight";
+}
+
+export interface LiveTrafficPayload {
+  station: string;
+  station_slug: string;
+  n_zones: number;
+  requested_zones: number;
+  min_zones: number;
+  max_zones: number;
+  congestion_source: "live" | "simulated";
+  live_eta: boolean;
+  n_live: number;
+  coverage_pct: number;
+  n_road_geometry?: number;
+  road_geometry_pct?: number;
+  mean_severity: number | null;
+  max_severity: number | null;
+  hour: number;
+  dow: string;
+  ttl_s: number;
+  generated_at: string;
+  colors: Record<string, string>;
+  cached: boolean;
+  age_s: number;
+  zones: LiveTrafficZone[];
+  note: string;
+}
+
 export interface Station {
   station: string;
   slug: string;

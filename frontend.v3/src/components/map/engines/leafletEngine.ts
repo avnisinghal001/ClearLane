@@ -1,7 +1,7 @@
 // Shared Leaflet adapter — powers BOTH engine 1 (MapMyIndia map_load, using the
 // global `L` the script exposes) and engine 3 (bundled Leaflet + OSM/Carto). The
 // only difference is which `L` instance and map are passed in.
-import { HEAT_GRADIENT, type CircleSpec, type DotSpec, type EngineId, type HeatPoint, type MapEngine, type PinSpec, type PolylineSpec, type RingSpec } from "./types";
+import { HEAT_GRADIENT, type CircleSpec, type DotSpec, type EngineId, type HeatPoint, type MapEngine, type PinSpec, type PolylineSpec, type RingSpec, type TrafficLineSpec } from "./types";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -53,6 +53,7 @@ export function createLeafletEngine(cfg: LeafletEngineConfig): MapEngine {
   const ringLayer = L.layerGroup().addTo(map); // blind-spot rings (above circles)
   const pinLayer = L.layerGroup().addTo(map);
   const lineLayer = L.layerGroup().addTo(map);
+  const trafficLayer = L.layerGroup().addTo(map); // live-traffic road segments (top overlay)
   let heat: any = null;
   let traffic: any = null;
 
@@ -128,6 +129,26 @@ export function createLeafletEngine(cfg: LeafletEngineConfig): MapEngine {
       for (const ln of lines) {
         if (ln.points.length < 2) continue;
         L.polyline(ln.points, { color: ln.color, weight: 3, opacity: 0.85, dashArray: "6 4" }).addTo(lineLayer);
+      }
+    },
+    // Live-traffic road segments: a dark casing under a SOLID themed core (severity
+    // colour), following the real street geometry — the "busy streets" layer. Works on
+    // every Leaflet basemap (CARTO engine 3 AND MapMyIndia engine 1 share this adapter).
+    setTrafficLines(lines: TrafficLineSpec[]) {
+      trafficLayer.clearLayers();
+      for (const ln of lines) {
+        if (!ln.points || ln.points.length < 2) continue;
+        try {
+          L.polyline(ln.points, withRenderer({ color: "#0b1220", weight: 7, opacity: 0.5,
+            lineCap: "round", lineJoin: "round", interactive: false })).addTo(trafficLayer);
+          const core = L.polyline(ln.points, withRenderer({ color: ln.color, weight: 4.5,
+            opacity: 0.95, lineCap: "round", lineJoin: "round" }));
+          if (ln.tooltip && typeof core.bindTooltip === "function")
+            core.bindTooltip(ln.tooltip, { sticky: true });
+          core.addTo(trafficLayer);
+        } catch {
+          /* skip a single bad segment rather than losing the layer */
+        }
       }
     },
     setRings(rings: RingSpec[]) {

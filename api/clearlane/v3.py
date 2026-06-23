@@ -734,6 +734,322 @@ def _congestion_source(when, hour, dow):
 
 
 # --------------------------------------------------------------------------- #
+# POLICE LIVE-TRAFFIC LAYER (lazy, per-station, Mongo-TTL cached) — Avni's Phase 3
+# congestion math (severity = clip(1 − free_flow/typical_eta, 0, 1)) brought into the
+# police RBAC view. STRICTLY the station's own jurisdiction (its top 10..20 cells,
+# count police-controlled), fetched ON DEMAND (no cron): the first request for a
+# (station, zone-count) computes 2 batched Mappls Distance-Time-Matrix calls
+# (free-flow + typical ETA), caches the result in MongoDB with a TTL, and every later
+# request inside the window is a single Mongo read. Mappls down/quota/no-key -> the
+# SIMULATED day×hour severity (never blank, always labelled). Cell/zone-level only —
+# never per officer; never real-time tiles; never derived from ticket data.
+# --------------------------------------------------------------------------- #
+LIVE_TRAFFIC_COLL = "v3_live_traffic"
+LIVE_TRAFFIC_VERSION = "v2-route-geom"    # bump to invalidate older cached payloads on read
+LIVE_TRAFFIC_TTL_S = 900                  # 15-min freshness window (Mongo TTL + read guard)
+LIVE_TRAFFIC_MIN_ZONES = 10
+LIVE_TRAFFIC_MAX_ZONES = 20
+LIVE_TRAFFIC_TIMEOUT_S = 6.0              # lazy/cached -> can afford more than the read budget
+# Avni's congestion-severity bands + the Phase-3 dashboard colours (frontend.phase3
+# app.js SEV_COLORS), so the police layer looks 1:1 with her standalone dashboard.
+LIVE_TRAFFIC_BANDS = [("NORMAL", 0.0, 0.15), ("MODERATE", 0.15, 0.35),
+                      ("HIGH", 0.35, 0.55), ("SEVERE", 0.55, 1.01)]
+LIVE_TRAFFIC_COLORS = {"NORMAL": "#2ea043", "MODERATE": "#d29922",
+                       "HIGH": "#db6d28", "SEVERE": "#f85149"}
+
+
+def _sev_label(sev):
+    if sev is None or not math.isfinite(sev):
+        return None
+    for label, lo, hi in LIVE_TRAFFIC_BANDS:
+        if lo <= sev < hi:
+            return label
+    return "SEVERE" if sev >= 0.55 else "NORMAL"
+
+
+def _dm_full(resource, key, pts):
+    """Full pairwise Distance-Time Matrix (durations[i][j] seconds) for `pts` via ONE
+    Mappls advancedmaps call (no sources/destinations restriction). Returns the NxN
+    durations matrix or None. Honors the same circuit breaker as _dm_durations so a
+    dead host stops firing doomed requests for the rest of the warm process."""
+    global _mappls_fails
+    if _mappls_fails >= MAPPLS_FAIL_LIMIT:
+        return None
+    coords = ";".join(f"{lon:.5f},{lat:.5f}" for lat, lon in pts)
+    url = (f"{MAPPLS_BASE}/{key}/{resource}/driving/{coords}"
+           f"?rtype={MAPPLS_RTYPE}&region={MAPPLS_REGION}")
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "clearlane/3"})
+        with urllib.request.urlopen(req, timeout=LIVE_TRAFFIC_TIMEOUT_S) as r:
+            data = json.loads(r.read().decode("utf-8"))
+        durs = (data.get("results") or {}).get("durations")
+        if durs and len(durs) == len(pts):
+            return durs
+        _mappls_fails += 1
+        return None
+    except Exception as e:                       # 401/403 quota / timeout / parse
+        _mappls_fails += 1
+        print(f"[v3.live-traffic] Mappls {resource} failed ({type(e).__name__}); "
+              f"fails={_mappls_fails}/{MAPPLS_FAIL_LIMIT} -> simulated fallback")
+        return None
+
+
+def _station_zones(station, n):
+    """Top-n jurisdiction cells for a station, ranked by historical priority
+    (pic_score else intensity). `n` is clamped to [MIN, MAX] zones. Returns a list of
+    {h3_r10, lat, lon, pic_score, road_class} — the cells we probe for live traffic."""
+    idx = _indices()
+    slug = force.slugify(station or "")
+    rows = []
+    for h, (lat, lon, st) in idx["coords"].items():
+        if lat is None or lon is None or force.slugify(st or "") != slug:
+            continue
+        picrec = idx["pic"].get(h) or {}
+        rows.append({
+            "h3_r10": h, "lat": lat, "lon": lon,
+            "pic_score": round(_hist_priority(h), 1),
+            "road_class": picrec.get("road_class") or (idx["hot"].get(h) or {}).get("road_class"),
+        })
+    rows.sort(key=lambda r: -r["pic_score"])
+    n = max(LIVE_TRAFFIC_MIN_ZONES, min(LIVE_TRAFFIC_MAX_ZONES, int(n)))
+    return rows[:n]
+
+
+LIVE_TRAFFIC_SEG_HALF_M = 230.0           # corridor half-length each side of the centroid
+LIVE_TRAFFIC_SEG_BEARING = 90.0           # endpoint placement (E–W); Route ADV then snaps to roads
+
+
+def _decode_polyline(encoded, precision=5):
+    """Decode a Google/OSRM encoded polyline -> [[lat, lon], …]. Mappls Route ADV
+    returns geometry as an encoded polyline at precision 5 (Avni verified). Pure
+    stdlib so the API package stays self-contained on Vercel."""
+    if not encoded or not isinstance(encoded, str):
+        return []
+    factor = float(10 ** precision)
+    index = lat = lng = 0
+    n = len(encoded)
+    out = []
+    try:
+        while index < n:
+            for is_lat in (True, False):
+                shift = result = 0
+                while True:
+                    b = ord(encoded[index]) - 63
+                    index += 1
+                    result |= (b & 0x1F) << shift
+                    shift += 5
+                    if b < 0x20:
+                        break
+                d = ~(result >> 1) if (result & 1) else (result >> 1)
+                if is_lat:
+                    lat += d
+                else:
+                    lng += d
+            out.append([round(lat / factor, 6), round(lng / factor, 6)])
+    except Exception:                            # malformed tail -> keep what decoded
+        pass
+    return out
+
+
+def _route_call(key, resource, a, b):
+    """One Mappls route call (advancedmaps path-key form), resource in {route_adv,
+    route_eta}. Returns (duration_s, road_points) — duration in seconds and the decoded
+    road geometry [[lat,lon], …]. Either may be None on failure. route_adv = non-traffic
+    REFERENCE duration; route_eta = traffic ETA. Same shape for both (parse_route)."""
+    if not key:
+        return None, None
+    coords = f"{a[1]:.6f},{a[0]:.6f};{b[1]:.6f},{b[0]:.6f}"   # lng,lat;lng,lat
+    url = (f"{MAPPLS_BASE}/{key}/{resource}/driving/{coords}"
+           f"?region={MAPPLS_REGION}&overview=full&steps=false")
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "clearlane/3"})
+        with urllib.request.urlopen(req, timeout=LIVE_TRAFFIC_TIMEOUT_S) as r:
+            data = json.loads(r.read().decode("utf-8"))
+        routes = data.get("routes") or []
+        if not routes or str(data.get("code", "")).lower() not in ("ok", "okay"):
+            return None, None
+        r0 = routes[0]
+        dur = r0.get("duration")
+        geom = r0.get("geometry")
+        pts = _decode_polyline(geom) if isinstance(geom, str) else None
+        return (float(dur) if dur is not None else None,
+                pts if (pts and len(pts) >= 2) else None)
+    except Exception:                            # 401/quota/timeout -> caller falls back
+        return None, None
+
+
+def _route_segment(key, a, b):
+    """Avni's per-corridor live signal: Route ADV (non-traffic REFERENCE duration + the
+    road geometry that makes the blue line follow real streets) and Route ETA (live
+    traffic duration). Returns {ref_s, eta_s, points}; any field may be None."""
+    ref_s, pts = _route_call(key, "route_adv", a, b)
+    eta_s, pts2 = _route_call(key, "route_eta", a, b)
+    return {"ref_s": ref_s, "eta_s": eta_s, "points": pts or pts2}
+
+
+def _compute_live_traffic(zones_rows):
+    """Per-zone LIVE congestion + a road-following corridor for the police map.
+
+    SEVERITY (clip(1 − reference/live, 0, 1) = clip(1 − 1/TTI, 0, 1)) is resolved in
+    Avni's Phase-3 order:
+      1) ROUTE method (primary) — Route ADV non-traffic REFERENCE duration vs Route ETA
+         live-traffic duration, per corridor (parallelized). This also yields the real
+         road geometry, so the blue line follows actual streets.
+      2) DISTANCE-MATRIX (fallback) — batched free-flow vs typical-ETA, used only for
+         zones the route product couldn't resolve (and only if its quota is alive).
+      3) SIMULATED day×hour severity — last resort so the map is never blank.
+    Geometry falls back to a full-length straight corridor only if no route points came
+    back. Returns (zone_dicts, source, n_live)."""
+    key = _mappls_rest_key()
+    hour, dow = _ist_hour(), _ist_dow()
+    # centred corridor endpoints (half each side) — severity is measured a<->b
+    ends = [(_offset_point(z["lat"], z["lon"], LIVE_TRAFFIC_SEG_HALF_M, LIVE_TRAFFIC_SEG_BEARING),
+             _offset_point(z["lat"], z["lon"], LIVE_TRAFFIC_SEG_HALF_M, LIVE_TRAFFIC_SEG_BEARING + 180.0))
+            for z in zones_rows]
+
+    # 1) PRIMARY — Avni's route_adv + route_eta per corridor (parallel)
+    seg = [{} for _ in zones_rows]
+    if key and zones_rows:
+        try:
+            from concurrent.futures import ThreadPoolExecutor
+            with ThreadPoolExecutor(max_workers=min(8, len(ends))) as ex:
+                seg = list(ex.map(lambda ab: _route_segment(key, ab[0], ab[1]), ends))
+        except Exception:                        # pragma: no cover - thread pool issue
+            seg = [{} for _ in zones_rows]
+
+    # 2) FALLBACK severity — batched Distance Matrix, only if some zone lacks a route ETA
+    dm_free = dm_eta = None
+    if key and zones_rows and any(not (s.get("ref_s") and s.get("eta_s")) for s in seg):
+        pts = []
+        for a, b in ends:
+            pts.append(a)
+            pts.append(b)
+        dm_free = _dm_full(MAPPLS_RES_FREE, key, pts)
+        dm_eta = _dm_full(MAPPLS_RES_ETA, key, pts) if dm_free else None
+
+    out, n_live = [], 0
+    for i, z in enumerate(zones_rows):
+        a, b = ends[i]
+        s = seg[i] or {}
+        sev = tti = delay_s = None
+        method = None
+        ref_s, eta_s = s.get("ref_s"), s.get("eta_s")
+        if ref_s and eta_s and ref_s > 0 and eta_s > 0:          # (1) Avni route method
+            sev = max(0.0, min(1.0, 1.0 - ref_s / eta_s))
+            tti = eta_s / ref_s
+            delay_s = round(max(0.0, eta_s - ref_s), 1)
+            method = "route_eta"
+        if sev is None and dm_free and dm_eta:                   # (2) distance-matrix fallback
+            try:
+                f, e = float(dm_free[2 * i][2 * i + 1]), float(dm_eta[2 * i][2 * i + 1])
+                if f > 0 and e > 0:
+                    sev = max(0.0, min(1.0, 1.0 - f / e))
+                    tti = e / f
+                    delay_s = round(max(0.0, e - f), 1)
+                    method = "distance_matrix"
+            except Exception:
+                sev = None
+        live = sev is not None
+        if live:
+            n_live += 1
+        else:                                                    # (3) simulated last resort
+            sev = float(_sim_severity(None, z["h3_r10"], hour, dow))
+            method = "simulated"
+        label = _sev_label(sev)
+        road = s.get("points") if (s.get("points") and len(s["points"]) >= 2) else None
+        segment = road or [[round(a[0], 6), round(a[1], 6)], [round(b[0], 6), round(b[1], 6)]]
+        out.append({
+            **z,
+            "congestion_severity": round(sev, 4),
+            "congestion_label": label,
+            "color": LIVE_TRAFFIC_COLORS.get(label, "#6e7681"),
+            "travel_time_index": round(tti, 3) if tti else None,
+            "delay_seconds": delay_s,
+            "congestion_source": "live" if live else "simulated",
+            "severity_method": method,
+            "segment": segment,
+            "segment_source": "route_adv" if road else "straight",
+        })
+    return out, ("live" if n_live else "simulated"), n_live
+
+
+@router.get("/police/live-traffic")
+def v3_police_live_traffic(
+        station: str = Query(..., description="police station name (jurisdiction)"),
+        zones: int = Query(LIVE_TRAFFIC_MAX_ZONES, ge=1, le=60),
+        refresh: bool = Query(False, description="bypass the TTL cache and re-poll Mappls"),
+        authorization: str | None = Header(default=None)):
+    """LAZY, per-station LIVE-traffic congestion for the police view.
+
+    Only this station's own top jurisdiction cells (10..20, the count is
+    police-controlled by the `zones` slider) get Avni's Phase-3 severity
+    (clip(1 − free_flow/typical_eta)) from 2 batched Mappls Distance-Time-Matrix calls,
+    cached in MongoDB with a TTL. Inside the window every call is a single Mongo read;
+    on Mappls quota/down/no-key each zone falls back to the SIMULATED day×hour severity
+    (never blank, always labelled). HONEST: never real-time tiles, never from ticket
+    data; severity is duration-based (a travel-time index). Zone-level only."""
+    _ensure_init()
+    sess = _session_for(authorization)
+    if sess and not _scope_ok(sess, station):
+        raise HTTPException(403, "Out of jurisdiction for this station.")
+    n = max(LIVE_TRAFFIC_MIN_ZONES, min(LIVE_TRAFFIC_MAX_ZONES, zones))
+    slug = force.slugify(station or "")
+    cache_id = f"{slug}:{n}"
+    coll = db.col(LIVE_TRAFFIC_COLL) if db.mongo_enabled() else None
+
+    if coll is not None and not refresh:         # TTL-cache read (fresh within window)
+        try:
+            doc = coll.find_one({"_id": cache_id})
+        except Exception:                        # pragma: no cover - network hiccup
+            doc = None
+        if (doc and (time.time() - (doc.get("ts") or 0)) <= LIVE_TRAFFIC_TTL_S
+                and (doc.get("payload") or {}).get("v") == LIVE_TRAFFIC_VERSION):
+            p = doc["payload"]
+            p["cached"] = True
+            p["age_s"] = round(time.time() - doc["ts"], 1)
+            return ok(p)
+
+    zones_rows = _station_zones(station, n)
+    if not zones_rows:
+        raise HTTPException(404, f"No jurisdiction cells for station {station!r}.")
+    cells, source, n_live = _compute_live_traffic(zones_rows)
+    n_road = sum(1 for c in cells if c.get("segment_source") == "route_adv")
+    sevs = [c["congestion_severity"] for c in cells if c["congestion_severity"] is not None]
+    payload = {
+        "v": LIVE_TRAFFIC_VERSION,
+        "station": station, "station_slug": slug,
+        "n_zones": len(cells), "requested_zones": n,
+        "min_zones": LIVE_TRAFFIC_MIN_ZONES, "max_zones": LIVE_TRAFFIC_MAX_ZONES,
+        "congestion_source": source, "live_eta": bool(n_live), "n_live": n_live,
+        "coverage_pct": round(100.0 * n_live / len(cells), 1) if cells else 0.0,
+        "n_road_geometry": n_road,
+        "road_geometry_pct": round(100.0 * n_road / len(cells), 1) if cells else 0.0,
+        "mean_severity": round(sum(sevs) / len(sevs), 4) if sevs else None,
+        "max_severity": round(max(sevs), 4) if sevs else None,
+        "hour": _ist_hour(), "dow": _ist_dow(),
+        "ttl_s": LIVE_TRAFFIC_TTL_S, "generated_at": _now_iso(),
+        "colors": LIVE_TRAFFIC_COLORS, "cached": False, "age_s": 0.0,
+        "zones": cells,
+        "note": ("Per-zone LIVE congestion severity (1 − reference/live) for this "
+                 "station's top jurisdiction cells only. Primary source = Mappls Route "
+                 "ADV (non-traffic reference duration + real road geometry) vs Route ETA "
+                 "(live-traffic duration) — Avni's Phase-3 method; the Distance-Time "
+                 "Matrix is the fallback, then a SIMULATED day×hour model. Not from ticket "
+                 "data; severity is duration-based (a travel-time index)."),
+    }
+    if coll is not None:
+        try:
+            coll.replace_one({"_id": cache_id}, {
+                "_id": cache_id, "ts": time.time(),
+                "expireAt": datetime.datetime.now(datetime.timezone.utc)
+                + datetime.timedelta(seconds=LIVE_TRAFFIC_TTL_S),
+                "payload": payload}, upsert=True)
+        except Exception:                        # pragma: no cover
+            pass
+    return ok(payload)
+
+
+# --------------------------------------------------------------------------- #
 # WHOLE-MAP cache (Mongo) — keyed by lens (when:dow:hour:limit) + a version stamp
 # (recompute last_calc + live-congestion freshness). So scrubbing to a (day,hour)
 # already seen is a single Mongo read; a miss computes then caches. Best-effort:
@@ -944,18 +1260,49 @@ def _rerank_reason_codes(comp, *, emerging, under_candidate, sig_hot, on_route,
     return out[:RERANK_REASON_TOP_N + 2] or ["top modeled enforcement priority"]
 
 
+def _live_severity_map():
+    """{h3: severity in [0,1]} of FRESH live congestion from EVERY live source, so the
+    dispatch reranker uses REAL congestion in `live_delay` wherever we actually have it
+    (and simulated only per cell where we don't):
+      * the cron city-wide enrichment (live_congestion.json, distance_matrix), and
+      * the lazy POLICE live-traffic cache (v3_live_traffic, Route ADV/ETA) — only the
+        zones whose congestion_source == 'live'.
+    The police layer (Route ADV/ETA) is the one actually provisioned on this account, so
+    once an operator opens Live traffic for a station those zones rerank on real data."""
+    out: dict[str, float] = {}
+    lc = _live_congestion()
+    if lc.get("fresh"):
+        for h, sev in (lc.get("cells") or {}).items():
+            try:
+                out[h] = float(sev)
+            except Exception:                    # pragma: no cover
+                pass
+    if db.mongo_enabled():
+        try:
+            now = time.time()
+            for doc in db.col(LIVE_TRAFFIC_COLL).find():
+                if (now - (doc.get("ts") or 0)) > LIVE_TRAFFIC_TTL_S:
+                    continue
+                for z in (doc.get("payload") or {}).get("zones", []) or []:
+                    if z.get("congestion_source") == "live" and z.get("congestion_severity") is not None:
+                        out[z["h3_r10"]] = float(z["congestion_severity"])
+        except Exception:                        # pragma: no cover - network hiccup
+            pass
+    return out
+
+
 def _rerank_rows(station=None, when="now", hour=None, now=None, limit=60):
     """Compute the M4-reranked queue for a station (slug or name) or city-wide
-    (station=None). Returns (meta, rows). HONEST: live_delay would use the live
-    Mappls ETA if provisioned; here it falls back to the SIMULATED time/day
-    congestion severity, and cong_source is labelled accordingly."""
+    (station=None). Returns (meta, rows). HONEST: `live_delay` uses the REAL live
+    congestion severity per cell wherever a fresh live source has it (Route ADV/ETA via
+    the police layer, or the cron distance-matrix enrichment); cells without live data
+    fall back to the SIMULATED time/day severity, and EACH row is labelled accordingly."""
     idx = _indices()
     now = now or time.time()
     hour_used = hour if hour is not None else _ist_hour()
     dow = _ist_dow()                          # the queue is a deploy-now/next tool
     w = RERANK_WEIGHTS
-    live_avail, _reason = _live_eta_status()
-    cong_source = "live" if live_avail else "simulated"
+    live_map = _live_severity_map()           # {h3: real live severity} (may be empty)
     slug = force.slugify(station) if station else None
 
     states = {}
@@ -1002,7 +1349,15 @@ def _rerank_rows(station=None, when="now", hour=None, now=None, limit=60):
         base_sev = picrec.get("congestion_severity")
         if base_sev is None:
             base_sev = hotrec.get("congestion_severity")
-        live_delay_norm = _sim_severity(base_sev, cell, hour_used, dow)   # sim stress proxy
+        # REAL live severity for this cell if a fresh live source has it; else SIMULATED.
+        live_sev = live_map.get(cell)
+        if live_sev is not None:
+            live_delay_norm = max(0.0, min(1.0, live_sev))
+            cell_live = True
+        else:
+            live_delay_norm = _sim_severity(base_sev, cell, hour_used, dow)   # sim stress proxy
+            cell_live = False
+        cell_source = "live" if cell_live else "simulated"
 
         comp = {
             "forecast": w["forecast"] * forecast_norm,
@@ -1048,7 +1403,7 @@ def _rerank_rows(station=None, when="now", hour=None, now=None, limit=60):
             "under_observed_candidate": under_candidate, "rank_divergence": rank_div,
             "emerging": emerging, "drift_z": drift_z, "sig_hot": sig_hot, "on_route": on_route,
             "assoc_score": round(live_delay_norm * 100.0, 1),     # v1 live-stress %
-            "congestion_source": cong_source, "live_enriched": live_avail,
+            "congestion_source": cell_source, "live_enriched": cell_live,
             "eta_min": eta_min, "reach_km": reach_km,
             "eta_source": ("haversine_estimate" if eta_min is not None else "unavailable"),
             # the three-number separation (operational layer)
@@ -1057,13 +1412,18 @@ def _rerank_rows(station=None, when="now", hour=None, now=None, limit=60):
             "operational_priority": round(_clamp(hist + boost), 1),
             "reason_codes": _rerank_reason_codes(
                 comp, emerging=emerging, under_candidate=under_candidate, sig_hot=sig_hot,
-                on_route=on_route, live_delay_norm=live_delay_norm, cong_source=cong_source),
+                on_route=on_route, live_delay_norm=live_delay_norm, cong_source=cell_source),
         })
 
     rows.sort(key=lambda r: -r["rerank_raw"])
     rows = rows[:limit]
     for i, r in enumerate(rows, 1):
         r["dispatch_rank"] = i
+
+    # honest mix: how many of the SHOWN rows reranked on real live congestion
+    n_live_used = sum(1 for r in rows if r["congestion_source"] == "live")
+    live_avail = n_live_used > 0
+    cong_source = "live" if live_avail else "simulated"
 
     ctr = _station_centroids().get(slug) if slug else None
     meta = {
@@ -1072,15 +1432,18 @@ def _rerank_rows(station=None, when="now", hour=None, now=None, limit=60):
         "scope": "station" if slug else "city",
         "when": when, "hour": hour_used, "dow": dow, "horizon": "deploy_now",
         "congestion_source": cong_source, "live_eta": live_avail,
+        "n_live_cells": n_live_used, "n_cells": len(rows),
+        "live_coverage_pct": round(100.0 * n_live_used / len(rows), 1) if rows else 0.0,
         "traffic_mode": ("live" if live_avail else "simulated"),
-        "fallback": (None if live_avail else "simulated"),
+        "fallback": ("simulated" if n_live_used < len(rows) else None),
         "weights": w, "reason_legend": _RERANK_REASON, "count": len(rows),
         "note": ("M4 rerank = forecast·pressure·under_observed·live_delay·reachability "
                  "(transparent linear blend). 'pressure' is MODELED from tickets, NOT "
-                 "measured congestion; live_delay uses " +
-                 ("live Mappls ETA" if live_avail else "the SIMULATED time/day congestion "
-                  "model (live ETA not provisioned)") +
-                 ". Cell/station-level only — never per officer."),
+                 "measured congestion. live_delay uses REAL live congestion per cell "
+                 f"where a fresh live source has it ({n_live_used}/{len(rows)} shown cells "
+                 "= Route ADV/ETA or distance-matrix); the rest fall back to the SIMULATED "
+                 "time/day model, and each row is labelled congestion_source accordingly. "
+                 "Cell/station-level only — never per officer."),
     }
     return meta, rows
 
@@ -1312,6 +1675,9 @@ def init_db():
         db.col("v3_tickets").create_index("assigned_officer")
         db.col("v3_tickets").create_index("assigned_badge")
         db.col("v3_cell_state").create_index("updated_ts")
+        # police live-traffic cache: Mongo auto-evicts each station snapshot once its
+        # per-doc expireAt passes (expireAfterSeconds=0 = "expire AT that timestamp").
+        db.col(LIVE_TRAFFIC_COLL).create_index("expireAt", expireAfterSeconds=0)
         db.col("v3_meta").update_one({"_id": "lock"},
                                      {"$setOnInsert": {"until": 0.0}}, upsert=True)
     except Exception:                    # pragma: no cover - first-run races

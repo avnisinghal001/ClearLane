@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Map as MapIcon, ListChecks, Flame, Plus, Radio, Waypoints, MoonStar, Shield } from "lucide-react";
 import { AppShell, type NavItem } from "@/components/AppShell";
 import { ClearLaneMap, type MapPin } from "@/components/map/ClearLaneMap";
+import type { TrafficLineSpec } from "@/components/map/engines/types";
 import { TimeControl, type TimeValue } from "@/components/TimeControl";
 import { CellDrawer } from "@/components/CellDrawer";
 import { CellTable } from "@/components/CellTable";
@@ -21,10 +22,11 @@ import { ForceCommand } from "./ForceCommand";
 import { useMapData } from "@/hooks/useMapData";
 import { useRoster } from "@/hooks/useRoster";
 import { useIsMobile } from "@/hooks/useMediaQuery";
-import { getDispatchPlan, getStations, getTickets, patchTicket, postTicket } from "@/lib/api";
+import { getDispatchPlan, getPoliceLiveTraffic, getStations, getTickets, patchTicket, postTicket } from "@/lib/api";
 import { getAuth, logout } from "@/lib/auth";
 import { num } from "@/lib/format";
-import type { Cell, DispatchPlan, ResolveInput, Station, Ticket, TicketInput } from "@/lib/types";
+import { severityColor } from "@/lib/signals";
+import type { Cell, DispatchPlan, LiveTrafficPayload, ResolveInput, Station, Ticket, TicketInput } from "@/lib/types";
 
 type Tab = "map" | "dispatch" | "queue" | "force" | "hotspots" | "flow" | "blind";
 
@@ -33,6 +35,9 @@ const KIND_PIN: Record<string, string> = {
   police_ticket: "#2563eb",
   chalan: "#9333ea",
 };
+
+// Police map: show the station's TOP-N hotspot points (by PIC), not the whole set.
+const MAP_TOP_N = 30;
 
 export function PoliceApp() {
   const navigate = useNavigate();
@@ -76,6 +81,54 @@ export function PoliceApp() {
 
   const route = useMemo(() => plan?.routes.find((r) => r.station === stationName) ?? null, [plan, stationName]);
 
+  // ---- live-traffic layer (Avni's Phase-3 congestion, on the main map) ------
+  // Lazy: only fetches when the operator turns the layer on in the Layers accordion.
+  // The backend caches per (station, zones) for 15 min, so toggling is cheap.
+  const [traffic, setTraffic] = useState<LiveTrafficPayload | null>(null);
+  const [trafficLoading, setTrafficLoading] = useState(false);
+  const trafficReq = useRef(0);
+  const handleLiveTraffic = useCallback(
+    (on: boolean, zones: number) => {
+      if (!on || !stationName) {
+        setTraffic(null);
+        return;
+      }
+      const id = ++trafficReq.current;
+      setTrafficLoading(true);
+      getPoliceLiveTraffic(stationName, zones, false)
+        .then((d) => trafficReq.current === id && setTraffic(d))
+        .catch(() => trafficReq.current === id && setTraffic(null))
+        .finally(() => trafficReq.current === id && setTrafficLoading(false));
+    },
+    [stationName],
+  );
+  const trafficSegments = useMemo<TrafficLineSpec[]>(
+    () =>
+      (traffic?.zones ?? []).map((z) => ({
+        id: `tr-${z.h3_r10}`,
+        points: z.segment,
+        color: severityColor(z.congestion_severity),
+        tooltip:
+          `${z.congestion_label ?? "—"} · severity ${(z.congestion_severity ?? 0).toFixed(2)}` +
+          (z.travel_time_index != null ? ` · TTI ${z.travel_time_index.toFixed(2)}×` : "") +
+          ` · ${z.congestion_source}`,
+      })),
+    [traffic],
+  );
+  // h3 -> live severity colour, so the monitored hotspot dots recolour by congestion
+  // (Avni's dot technique) when the live layer is on.
+  const liveSeverityByCell = useMemo<Record<string, string>>(
+    () => Object.fromEntries((traffic?.zones ?? []).map((z) => [z.h3_r10, severityColor(z.congestion_severity)])),
+    [traffic],
+  );
+
+  // Declutter the map: show the station's TOP-30 hotspot points by PIC (the full cell
+  // set still feeds the tables/drawer). Police map only — citizen/govt unaffected.
+  const mapCells = useMemo(
+    () => [...cells].sort((a, b) => (b.pic_score ?? 0) - (a.pic_score ?? 0)).slice(0, MAP_TOP_N),
+    [cells],
+  );
+
   // station roster (live or offline seed) — shared by Force Command + the ticket
   // "assign officer" dropdown so an assignee always comes from this station's roster.
   const rosterApi = useRoster(slug || null, { name: stationName, lat: station?.lat, lon: station?.lon, nZones: cells.length || station?.n_cells });
@@ -117,12 +170,12 @@ export function PoliceApp() {
   }
 
   const nav: NavItem[] = [
-    { key: "map", label: "Command map", icon: <MapIcon className="h-5 w-5" /> },
+    { key: "map", label: "Map", icon: <MapIcon className="h-5 w-5" /> },
     { key: "force", label: "Force Command", icon: <Shield className="h-5 w-5" /> },
-    { key: "dispatch", label: "Dispatch AI", icon: <Radio className="h-5 w-5" /> },
-    { key: "queue", label: "Priority queue", icon: <ListChecks className="h-5 w-5" /> },
+    { key: "dispatch", label: "Where to deploy", icon: <Radio className="h-5 w-5" /> },
+    { key: "queue", label: "Tickets", icon: <ListChecks className="h-5 w-5" /> },
     { key: "hotspots", label: "Hotspots", icon: <Flame className="h-5 w-5" /> },
-    { key: "flow", label: "Flow impact", icon: <Waypoints className="h-5 w-5" /> },
+    { key: "flow", label: "Road impact", icon: <Waypoints className="h-5 w-5" /> },
     { key: "blind", label: "Blind spots", icon: <MoonStar className="h-5 w-5" /> },
   ];
 
@@ -149,16 +202,22 @@ export function PoliceApp() {
       {tab === "map" && (
         <div className="absolute inset-0">
           <ClearLaneMap
-            cells={cells}
+            cells={mapCells}
             source={data?.source ?? "live"}
             flyTo={flyTo}
             onCellClick={setSelected}
+            defaultColorMode="pic"
             onLongPress={(ll) => reportRef.current?.openAt(ll)}
             routes={route ? [route] : undefined}
             pins={pins}
             evidence={evidence}
             defaultZoom={13}
             lens={{ badge: data?.badge, nEmerging: data?.n_emerging, nAdjusted: data?.n_adjusted, learningAdjusted: data?.learning_adjusted }}
+            liveTrafficEnabled
+            liveTrafficDefaultOn
+            liveTraffic={{ segments: trafficSegments, loading: trafficLoading, live: Boolean(traffic?.live_eta), coveragePct: traffic?.coverage_pct ?? 0 }}
+            liveSeverityByCell={liveSeverityByCell}
+            onLiveTraffic={handleLiveTraffic}
           />
           <div className="absolute left-2 top-2 z-[500] w-[min(20rem,calc(100%-4.5rem))]">
             <TimeControl value={time} onChange={setTime} />
@@ -230,7 +289,7 @@ export function PoliceApp() {
         </div>
       )}
 
-      <CellDrawer cell={selected} cells={cells} side={isMobile ? "bottom" : "right"} onClose={() => setSelected(null)}>
+      <CellDrawer cell={selected} cells={cells} audience="police" side={isMobile ? "bottom" : "right"} onClose={() => setSelected(null)}>
         {selected && (
           <Button
             className="w-full"
