@@ -1,4 +1,4 @@
-# ClearLane — Methodology & Honesty Statement
+# TraFix — Methodology & Honesty Statement
 
 This is the judge-facing writeup. Every claim below is either computed from the
 provided dataset or explicitly labelled an assumption. Nothing is fabricated.

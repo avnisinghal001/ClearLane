@@ -1,4 +1,4 @@
-# ClearLane — Interactive Element Audit (connected vs cosmetic)
+# TraFix — Interactive Element Audit (connected vs cosmetic)
 
 One-page status of every interactive control. "Connected" = it changes real state
 or data; "Cosmetic" = display only. Captured after the Tier 0–2 additive work.

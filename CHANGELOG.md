@@ -1,4 +1,4 @@
-# Changelog — ClearLane AI
+# Changelog — TraFix AI
 
 All notable changes to this project. Honesty contract is intact throughout: we
 never claim to measure congestion, never rank individual officers, and the
@@ -51,7 +51,7 @@ operational / force layers never modify the historical ML scores.
 - New dark **glass / JARVIS** design system (ambient glow, blur panels, refined tokens).
 - **Collapsible icon sidebar** (desktop) + **hamburger slide-in drawer** (mobile);
   collapse control docked top-right.
-- **lucide-react** icon set throughout; new ClearLane product logo mark.
+- **lucide-react** icon set throughout; new TraFix product logo mark.
 - **Map UX**: full-bleed maps with floating glass panels; "Map layers & view" and
   "What to do now" are accordions on desktop and **Google-Maps-style bottom sheets**
   on mobile; legend & stats collapse to chips; default zoom buttons removed for a

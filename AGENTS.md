@@ -1,4 +1,4 @@
-# AGENTS.md — ClearLane AI (root)
+# AGENTS.md — TraFix (root)
 
 > Guidance for AI coding agents (and humans). Read this first, then the scoped
 > `AGENTS.md` for the layer you touch: `ml.v3/` (pipeline), `api/clearlane/` (API),
@@ -11,7 +11,7 @@
 
 ## What this project is
 
-**ClearLane AI** — bias-corrected, hour-aware parking-enforcement intelligence for
+**TraFix** — bias-corrected, hour-aware parking-enforcement intelligence for
 Bengaluru. Built for **Gridlock Hackathon 2.0, Theme 1 (PS1)**: "Poor visibility on
 parking-induced congestion." It turns five months of parking-violation tickets into
 a ranked, validated, hour-by-hour deployment plan for the Bengaluru Traffic Police —

@@ -1,4 +1,4 @@
-# ClearLane v3 — ML pipeline (Phase 0 + Phase 1)
+# TraFix v3 — ML pipeline (Phase 0 + Phase 1)
 
 The live-first rebuild from [`docs/ML_ARCHITECTURE.v3.md`](../docs/ML_ARCHITECTURE.v3.md).
 This commit ships **Phase 0 (scaffold)** + **Phase 1 (offline science core)**: clean

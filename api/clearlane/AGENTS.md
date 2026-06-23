@@ -1,6 +1,6 @@
 # AGENTS.md — API (`api/clearlane/`)
 
-> Scope: the FastAPI service for ClearLane (v3-only). Read the root `AGENTS.md`
+> Scope: the FastAPI service for TraFix (v3-only). Read the root `AGENTS.md`
 > first — the honesty contract and the three-number separation are enforced here.
 
 ## What this layer is (and is NOT)

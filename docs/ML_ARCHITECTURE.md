@@ -1,4 +1,4 @@
-# ClearLane AI — ML Architecture
+# TraFix AI — ML Architecture
 
 > **Problem statement (Gridlock Hackathon 2.0 · PS1):** *Poor visibility on
 > parking-induced congestion.* On-street illegal parking and spillover near
@@ -348,7 +348,7 @@ Every row below is a real endpoint from the docs you uploaded. "Used today" =
 already wired in Part I (`ml/pipeline/mappls.py`, `backend/app/mappls.py`,
 `frontend .../TestMap.jsx`). "New" = add for Part II.
 
-| Mappls capability | Endpoint (from the uploaded doc) | Doc | ClearLane use | Status |
+| Mappls capability | Endpoint (from the uploaded doc) | Doc | TraFix use | Status |
 |---|---|---|---|---|
 | **Web Maps JS SDK v3.0** | `https://sdk.mappls.com/map/sdk/web?v=3.0&access_token=<KEY>` → `new mappls.Map('map',{center:{lat,lng}})` | `Web_JS-0.md` | base map | used |
 | **Traffic Visualizer** | `mappls.trafficLayer({map,...})` / `traffic:true` | `Web_JS-0.md` | live congestion **visual** layer | used (`/test`) |

@@ -1,10 +1,12 @@
-# ClearLane
+# TraFix
 
-**Parking enforcement that clears the lane.** ClearLane turns Bengaluru's raw parking-violation tickets into a **bias-corrected, hour-aware, multi-model deployment plan** — for citizens, police stations, and government.
+**Parking enforcement that clears the lane.** TraFix (**Tra**ffic + **Fix**) turns Bengaluru's raw parking-violation tickets into a **bias-corrected, hour-aware, multi-model deployment plan** — for citizens, police stations, and government.
 
 > **Honesty contract:** we never claim to *measure* congestion from tickets (it's *modeled, not measured*), and we never rank individual officers. Everything is H3 cell- / station-level.
 
-The data is **5 months of parking-violation tickets** (298k rows, Nov 2023 → Apr 2024) — no flow/speed/delay signal. A naive hotspot map just reproduces where police already patrol, so ClearLane **proves that bias, corrects for it**, and extracts operational intelligence on **H3 res-10 cells (~65 m)**.
+> **Name note:** **TraFix** is the product. `clearlane` is only the internal **engine codename** — it lives on in code paths (`api/clearlane/`, `uvicorn clearlane.main:app`) and the Mongo DB name. Same project, different label; nothing to deploy or rename.
+
+The data is **5 months of parking-violation tickets** (298k rows, Nov 2023 → Apr 2024) — no flow/speed/delay signal. A naive hotspot map just reproduces where police already patrol, so TraFix **proves that bias, corrects for it**, and extracts operational intelligence on **H3 res-10 cells (~65 m)**.
 
 - **Citizen** — parking hotspots near you + one-tap report of a lane-blocking vehicle.
 - **Police** — **Force Dispatch**: where to deploy now, live patrol board, auto-allocation, ticket queue.
