@@ -1,16 +1,30 @@
 # Files Vercel should NOT upload with the deployment. Keeps the build fast and the
 # serverless function well under the size limit. Runtime data lives in MongoDB, so
 # none of this is needed in production.
+#
+# NOTE: because this .vercelignore exists, Vercel filters the upload with it (NOT
+# .gitignore) — so local .env files are listed explicitly below to keep secrets and
+# the local-only absolute VITE_API_BASE out of the build. Real env vars are injected
+# from the Vercel project dashboard; prod uses same-origin "/api".
 
 # Raw dataset (110 MB CSV) + heavy pipeline intermediates — never read at runtime
 data/raw/
 data/processed/*.parquet
 data/processed/*.csv
+data/processed/v3/*.parquet
+data/processed/v3/**/*.parquet
+data/processed/v3/models/
 
-# The whole ML pipeline + its heavy deps are build-time only (not used by the API)
+# The ML pipelines (v1 + v3) + their heavy deps are build-time only. The light API
+# serves precomputed artifacts out of MongoDB and never runs the pipeline.
 ml/
+ml.v3/
 requirements-ml.txt
 outputs/
+
+# ClearLane-ML — the v1 reference codebase snapshot (own git repo). Reference only,
+# never deployed. Keeps the upload small and the function bundle clean.
+ClearLane-ML/
 
 # Local virtualenvs / caches / build artifacts (Vercel rebuilds what it needs)
 .venv/
@@ -19,7 +33,16 @@ backend/.venv/
 **/*.pyc
 frontend/node_modules/
 frontend/dist/
+frontend.v3/node_modules/
+frontend.v3/dist/
 node_modules/
+
+# Local env files — secrets (Mongo URI, Mappls keys) + the local-only absolute
+# VITE_API_BASE. Never upload these; the dashboard injects the real values.
+# (.env.example is kept — it doesn't match these patterns.)
+**/.env
+**/.env.local
+**/.env.*.local
 
 # Docker / compose are not used on Vercel
 docker-compose.yml

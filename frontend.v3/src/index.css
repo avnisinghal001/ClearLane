@@ -15,7 +15,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 24 12% 14%;
 
-    --primary: 21 90% 48%;
+    --primary: 24 95% 53%;
     --primary-foreground: 40 100% 98%;
 
     --secondary: 28 30% 95%;
@@ -25,19 +25,20 @@
     --muted-foreground: 25 8% 45%;
 
     --accent: 27 95% 94%;
-    --accent-foreground: 21 80% 36%;
+    --accent-foreground: 24 86% 40%;
 
     --destructive: 0 75% 51%;
     --destructive-foreground: 0 0% 100%;
 
     --border: 28 18% 89%;
     --input: 28 18% 88%;
-    --ring: 21 90% 48%;
+    --ring: 24 95% 53%;
 
     /* honesty-aligned data palette */
     --live: 142 70% 40%;
     --typical: 38 92% 50%;
     --modeled: 222 60% 56%;
+    --simulated: 262 72% 58%;
     --success: 142 64% 38%;
     --warning: 33 95% 48%;
 
@@ -110,5 +111,80 @@
   }
   100% {
     box-shadow: 0 0 0 0 hsl(var(--primary) / 0);
+  }
+}
+
+/* --- Focus ripple ("waves out") for a clicked / deep-linked place --- */
+.cl-focus {
+  position: relative;
+  width: 0;
+  height: 0;
+}
+.cl-focus .cl-wave {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 18px;
+  height: 18px;
+  margin-left: -9px;
+  margin-top: -9px;
+  border-radius: 9999px;
+  border: 2px solid hsl(var(--primary));
+  opacity: 0;
+  animation: cl-wave 2.4s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+.cl-focus .cl-wave:nth-child(2) {
+  animation-delay: 0.8s;
+}
+.cl-focus .cl-wave:nth-child(3) {
+  animation-delay: 1.6s;
+}
+.cl-focus .cl-core {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 12px;
+  height: 12px;
+  margin-left: -6px;
+  margin-top: -6px;
+  border-radius: 9999px;
+  background: hsl(var(--primary));
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.45);
+}
+@keyframes cl-wave {
+  0% {
+    width: 14px;
+    height: 14px;
+    margin-left: -7px;
+    margin-top: -7px;
+    opacity: 0.7;
+  }
+  100% {
+    width: 90px;
+    height: 90px;
+    margin-left: -45px;
+    margin-top: -45px;
+    opacity: 0;
+  }
+}
+/* numbers peek card floating above the ripple */
+.cl-focus .cl-peek {
+  position: absolute;
+  left: 0;
+  bottom: 14px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  pointer-events: none;
+  animation: cl-peek-in 0.25s ease-out;
+}
+@keyframes cl-peek-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
   }
 }

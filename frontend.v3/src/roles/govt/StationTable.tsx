@@ -18,33 +18,33 @@ function PicCell({ v }: { v: number }) {
 export function StationTable({ stations, onFocus }: { stations: Station[]; onFocus: (s: Station) => void }) {
   const columns = useMemo<ColumnDef<Station>[]>(
     () => [
-      { accessorKey: "station", header: "Station", cell: ({ row }) => <span className="font-medium">{row.original.station}</span> },
-      { accessorKey: "n_tickets", header: "Tickets", cell: ({ row }) => <span className="num">{num(row.original.n_tickets)}</span> },
-      { accessorKey: "n_cells", header: "Cells", cell: ({ row }) => <span className="num">{num(row.original.n_cells)}</span> },
-      { accessorKey: "max_pic", header: "Max PIC", cell: ({ row }) => <PicCell v={row.original.max_pic} /> },
-      { accessorKey: "mean_pic", header: "Mean PIC", cell: ({ row }) => <span className="num">{row.original.mean_pic.toFixed(1)}</span> },
+      { accessorKey: "station", header: "Station", cell: ({ row }) => <span className="font-medium">{row.original.station ?? "—"}</span> },
+      { accessorKey: "n_tickets", header: "Tickets", cell: ({ row }) => <span className="num">{num(row.original.n_tickets ?? 0)}</span> },
+      { accessorKey: "n_cells", header: "Cells", cell: ({ row }) => <span className="num">{num(row.original.n_cells ?? 0)}</span> },
+      { accessorKey: "max_pic", header: "Max PIC", cell: ({ row }) => <PicCell v={row.original.max_pic ?? 0} /> },
+      { accessorKey: "mean_pic", header: "Mean PIC", cell: ({ row }) => <span className="num">{(row.original.mean_pic ?? 0).toFixed(1)}</span> },
       {
         accessorKey: "n_sig_hot",
         header: "Sig. hot",
-        cell: ({ row }) => <span className="num">{row.original.n_sig_hot}</span>,
+        cell: ({ row }) => <span className="num">{row.original.n_sig_hot ?? 0}</span>,
       },
       {
         accessorKey: "n_emerging",
         header: "Emerging",
-        cell: ({ row }) => (row.original.n_emerging > 0 ? <Badge variant="warning">{row.original.n_emerging}</Badge> : <span className="text-muted-foreground">0</span>),
+        cell: ({ row }) => ((row.original.n_emerging ?? 0) > 0 ? <Badge variant="warning">{row.original.n_emerging}</Badge> : <span className="text-muted-foreground">0</span>),
       },
       {
         accessorKey: "weekly_expected",
         header: "Expected/wk",
-        cell: ({ row }) => <span className="num">{num(row.original.weekly_expected)}</span>,
+        cell: ({ row }) => <span className="num">{num(row.original.weekly_expected ?? 0)}</span>,
       },
       {
         accessorKey: "dispatch_stops",
         header: "Route",
         cell: ({ row }) =>
-          row.original.dispatch_stops > 0 ? (
+          (row.original.dispatch_stops ?? 0) > 0 ? (
             <span className="num text-xs text-muted-foreground">
-              {row.original.dispatch_stops} stops · {row.original.route_km} km
+              {row.original.dispatch_stops} stops · {row.original.route_km ?? 0} km
             </span>
           ) : (
             <span className="text-muted-foreground">—</span>

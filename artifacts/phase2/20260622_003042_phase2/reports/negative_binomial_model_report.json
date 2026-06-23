@@ -1,0 +1,52 @@
+{
+  "aic": 24134.745154206932,
+  "alpha_estimation_method": "statsmodels.discrete.discrete_model.NegativeBinomial maximum likelihood with offset",
+  "alpha_is_finite": true,
+  "alpha_is_positive": true,
+  "bic_formula": "-2 * log_likelihood + k_params * log(nobs)",
+  "bic_llf": 24164.263135655005,
+  "converged": true,
+  "deviance": 86132.16941124506,
+  "deviance_formula": "2 * sum(y * log(y / predicted_count) - (y - predicted_count)); zero-count term uses predicted_count",
+  "estimated_alpha": 0.25985703733344223,
+  "iterations": 25,
+  "log_likelihood": -12062.372577103466,
+  "mae": 41.972859931765534,
+  "model": "negative_binomial",
+  "model_spec": {
+    "count_col": "citation_count_production",
+    "exposure_col": "device_days",
+    "exposure_used_as_normal_feature": false,
+    "feature_columns": [
+      "unique_devices",
+      "unique_officers",
+      "approval_rate"
+    ],
+    "log_exposure_used_as_normal_feature": false,
+    "offset_expression": "log(device_days)",
+    "uses_offset": true
+  },
+  "model_type": "negative_binomial_discrete_offset",
+  "nobs": 2707,
+  "offset_column": "device_days",
+  "offset_passed_separately": true,
+  "parameterization": "NB2 variance = mu + alpha * mu^2",
+  "params": {
+    "alpha": 0.25985703733344223,
+    "approval_rate": -0.20837412593853696,
+    "intercept": 0.9135891733682797,
+    "unique_devices": 0.02007541873012451,
+    "unique_officers": -0.002844357338772156
+  },
+  "pearson_dispersion": 46.16448985125722,
+  "predicted_count_min": 10.29732364577441,
+  "predicted_rate_min": 2.0594647291548815,
+  "prediction_finite": true,
+  "prediction_nonnegative": true,
+  "rmse": 139.4341130161761,
+  "spearman_observed_vs_predicted_rate": 0.29628060763475644,
+  "status": "PASS",
+  "warnings": [
+    "divide by zero encountered in log"
+  ]
+}

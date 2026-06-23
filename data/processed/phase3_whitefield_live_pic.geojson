@@ -1,0 +1,110 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.73570523171426,
+          12.987597932862966
+        ]
+      },
+      "properties": {
+        "h3_res10": "8a6189219cc7fff",
+        "pic_score": 0.10478931976918313,
+        "pic_rank": 2,
+        "congestion_severity": 0.36275862068965514,
+        "congestion_label": "HIGH",
+        "normalized_propensity": 0.2888678967021208,
+        "pic_status": "COMPUTED",
+        "localized_anomaly": null,
+        "overall_pic_confidence": 0.725
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.71758194081633,
+          12.95023012497599
+        ]
+      },
+      "properties": {
+        "h3_res10": "8a61892086a7fff",
+        "pic_score": 0.11174591397114234,
+        "pic_rank": 1,
+        "congestion_severity": 0.4650805832693784,
+        "congestion_label": "HIGH",
+        "normalized_propensity": 0.24027215495775323,
+        "pic_status": "COMPUTED",
+        "localized_anomaly": null,
+        "overall_pic_confidence": 0.7875
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.73508398326939,
+          12.98653062288719
+        ]
+      },
+      "properties": {
+        "h3_res10": "8a6189219ceffff",
+        "pic_score": 0.0,
+        "pic_rank": 5,
+        "congestion_severity": 0.0,
+        "congestion_label": "NORMAL",
+        "normalized_propensity": 0.21184759984696772,
+        "pic_status": "COMPUTED",
+        "localized_anomaly": null,
+        "overall_pic_confidence": 0.6875
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.73288751133244,
+          12.964075143821333
+        ]
+      },
+      "properties": {
+        "h3_res10": "8a618920ac1ffff",
+        "pic_score": 0.025414814209530855,
+        "pic_rank": 4,
+        "congestion_severity": 0.12801678908709346,
+        "congestion_label": "NORMAL",
+        "normalized_propensity": 0.1985271962433024,
+        "pic_status": "COMPUTED",
+        "localized_anomaly": null,
+        "overall_pic_confidence": 0.825
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.74651839120119,
+          12.98541645373974
+        ]
+      },
+      "properties": {
+        "h3_res10": "8a6189218a07fff",
+        "pic_score": 0.06092098058228419,
+        "pic_rank": 3,
+        "congestion_severity": 0.3085972850678732,
+        "congestion_label": "MODERATE",
+        "normalized_propensity": 0.19741256171092098,
+        "pic_status": "COMPUTED",
+        "localized_anomaly": null,
+        "overall_pic_confidence": 0.6875
+      }
+    }
+  ]
+}

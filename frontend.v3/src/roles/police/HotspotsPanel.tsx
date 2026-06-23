@@ -4,9 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BarSpark } from "@/components/Sparkline";
-import { SourceBadge } from "@/components/SourceBadge";
 import { DOW } from "@/lib/time";
-import { num } from "@/lib/format";
+import { cellLabel } from "@/lib/signals";
 import type { Cell, DispatchRoute } from "@/lib/types";
 
 export function HotspotsPanel({
@@ -50,13 +49,13 @@ export function HotspotsPanel({
                     <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
                       {i + 1}
                     </span>
-                    <span className="font-mono text-xs text-muted-foreground">{s.h3_r10.slice(0, 8)}…</span>
-                    <span className="ml-auto font-semibold">PIC {Math.round(s.pic_score)}</span>
+                    <span className="truncate text-xs font-medium">{cellLabel(s)}</span>
+                    <span className="ml-auto shrink-0 font-semibold">Pressure {Math.round(s.pic_score)}</span>
                   </li>
                 ))}
               </ol>
               <p className="mt-3 text-[11px] leading-tight text-muted-foreground">
-                Exact MCLP + VRP plan from the dispatch optimiser. Cell-level only — never per officer.
+                Optimised patrol route. Area-level only — never per officer.
               </p>
             </>
           ) : (
@@ -78,13 +77,12 @@ export function HotspotsPanel({
               <span className="num w-5 text-center text-sm font-bold text-muted-foreground">{i + 1}</span>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-xs text-muted-foreground">{c.h3_r10.slice(0, 9)}…</span>
+                  <span className="truncate text-sm font-medium">{cellLabel(c)}</span>
                   {stopSet.has(c.h3_r10) && <Badge variant="default">on route</Badge>}
-                  {c.emerging && <Badge variant="warning">emerging</Badge>}
-                  <SourceBadge source={c.congestion_source} />
+                  {c.emerging && <Badge variant="warning">rising</Badge>}
                 </div>
                 <div className="mt-0.5 text-xs text-muted-foreground">
-                  PIC {Math.round(c.pic_score)} · peak {c.peak_dow ?? "—"} · {num(c.weekly_expected, 0)}/wk expected
+                  Pressure {Math.round(c.pic_score)}
                 </div>
               </div>
               {c.dow_curve && <BarSpark values={c.dow_curve} labels={DOW} height={34} className="w-28" />}
@@ -94,7 +92,7 @@ export function HotspotsPanel({
             </div>
           ))}
           <p className="pt-1 text-[11px] leading-tight text-muted-foreground">
-            Ranked by modeled next-day obstruction pressure (recorded weekday pattern). Forecast — not measured congestion.
+            Ranked by expected next-day parking pressure (recorded weekday pattern). A forecast — not measured congestion.
           </p>
         </CardContent>
       </Card>

@@ -120,6 +120,42 @@ def run() -> dict:
     }
     U.write_json(C.DATA_PROC / "pic.json", summary)
 
+    # --- map_cells.json: the FULL occupied-cell set (thin record) so the map can
+    # render the WHOLE distribution (low→high), not just the all-high top-200. This
+    # is what makes the rendered map "alive" — pic_score is percentile-uniform
+    # (0..100), so colouring by tier/PIC spans green→yellow→red across ~6.5k cells.
+    full = cells.reset_index()
+    mc_keep = ["h3_r10", "lat", "lon", "police_station", "road_class",
+               "intensity", "congestion_severity", "congestion_source",
+               "count", "pic_score", "pic_rank"]
+    mc_keep = [k for k in mc_keep if k in full.columns]
+    mcells = []
+    for _, row in full.sort_values("pic_score", ascending=False)[mc_keep].iterrows():
+        ps = row.get("police_station")
+        mcells.append({
+            "h3_r10": row["h3_r10"],
+            "lat": round(float(row["lat"]), 6), "lon": round(float(row["lon"]), 6),
+            "police_station": (None if pd.isna(ps) else str(ps)),
+            "road_class": (None if pd.isna(row.get("road_class")) else str(row.get("road_class"))),
+            "intensity": round(float(row["intensity"]), 1),
+            "congestion_severity": round(float(row["congestion_severity"]), 3),
+            "congestion_source": row.get("congestion_source"),
+            "count": int(row["count"]) if "count" in full.columns and not pd.isna(row.get("count")) else None,
+            "pic_score": round(float(row["pic_score"]), 1),
+            "pic_rank": int(row["pic_rank"]) if "pic_rank" in full.columns else None,
+        })
+    U.write_json(C.DATA_PROC / "map_cells.json", {
+        "n_cells": len(mcells),
+        "congestion_mode": summary["congestion_mode"],
+        "note": ("FULL occupied-cell set (thin) for the map. pic_score is a 0..100 "
+                 "percentile of bias-corrected PIC; the backend composes a "
+                 "time-varying display_score = pic_score × MODELED hourly congestion "
+                 "× day-of-week factor per request. Modeled, never measured."),
+        "cells": mcells,
+    })
+    print(f"[05_pic] map_cells.json: {len(mcells):,} cells "
+          f"(pic_score {mcells[-1]['pic_score']:.0f}..{mcells[0]['pic_score']:.0f})")
+
     print(f"[05_pic] PIC built for {len(cells):,} cells · congestion="
           f"{summary['congestion_mode']} (mappls_typical={n_typical}, "
           f"modeled={summary['n_modeled']})")

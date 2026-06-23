@@ -63,8 +63,12 @@ ml.v3/  ──writes──>  data/processed/v3/*.json|*.parquet
 
 Deploy (vercel.json):  api/index.py  →  the FastAPI app (force + v3 routers)
                        frontend.v3/  →  static Vite build at the web root (SPA)
-                       cron hourly   →  GET /api/v3/cron/recompute
+                       cron daily    →  GET /api/v3/cron/recompute  (Hobby plan caps crons at 1/day)
 ```
+
+> **Live now:** https://clearlane-arisyn.vercel.app (Vercel project `clearlane-arisyn`).
+> Deploy with `vercel --prod` (direct CLI upload — there is no GitHub→Vercel
+> integration; pushing to GitHub does NOT deploy).
 
 - **ML is precomputed and deterministic.** The API serves artifacts (MongoDB on
   Vercel, filesystem in local dev). The only live compute is the labelled,

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#F97316" />
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+  <title>TraFix Phase 3 — Whitefield Live PIC</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="tf" x1="32" y1="0" x2="32" y2="64" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#FB923C"/>
+            <stop offset="1" stop-color="#F97316"/>
+          </linearGradient>
+        </defs>
+        <rect width="64" height="64" rx="16" fill="url(#tf)"/>
+        <path d="M19 34l9 9 17-20" stroke="#fff" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M16 51h32" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-dasharray="2 8" opacity="0.92"/>
+      </svg>
+      <div>
+        <h1>Tra<span class="fix">Fix</span> <span class="phase">Phase 3</span></h1>
+        <p class="tag">Whitefield live traffic · congestion severity · parking-induced-congestion ranking</p>
+      </div>
+    </div>
+    <div class="coverage">
+      <span class="pill pill-hist">CITYWIDE HISTORICAL: BENGALURU</span>
+      <span class="pill pill-live">LIVE TRAFFIC: WHITEFIELD DEMO</span>
+      <span id="dataMode" class="pill pill-mode">DATA MODE: …</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="map-wrap">
+      <div id="map"></div>
+      <div class="legend" id="legend"></div>
+    </section>
+
+    <aside class="panel">
+      <div id="runBanner" class="run-banner"></div>
+      <div class="kpis" id="kpis"></div>
+      <h2>Current PIC priority</h2>
+      <p class="muted" id="cycleInfo"></p>
+      <div class="table-wrap">
+        <table id="picTable">
+          <thead>
+            <tr><th>#</th><th>H3 cell</th><th>PIC</th><th>Severity</th><th>Propensity</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="honesty">
+        <h3>What this means (and does not)</h3>
+        <p>A high-ranked cell has <b>high historical illegal-parking propensity</b> and is
+        <b>experiencing elevated traffic delay right now</b>, so it receives high inspection priority.</p>
+        <ul>
+          <li>✓ Live congestion measurement · live PIC priority · localized slowdown signal</li>
+          <li>✗ Not a claim that an illegally parked vehicle was detected</li>
+          <li>✗ Not a claim that parking definitely caused this traffic</li>
+        </ul>
+      </div>
+    </aside>
+  </main>
+
+  <footer class="footer">
+    <span id="footerMeta">Loading Phase 3 outputs…</span>
+  </footer>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>

@@ -1,0 +1,45 @@
+{
+  "aic": 98628.52166669277,
+  "bic_formula": "-2 * log_likelihood + k_params * log(nobs)",
+  "bic_llf": 98652.13605185124,
+  "converged": true,
+  "deviance": 83876.93048456928,
+  "deviance_formula": "2 * sum(y * log(y / predicted_count) - (y - predicted_count)); zero-count term uses predicted_count",
+  "iterations": 5,
+  "log_likelihood": -49310.26083334639,
+  "mae": 42.968343117012594,
+  "model": "poisson",
+  "model_spec": {
+    "count_col": "citation_count_production",
+    "exposure_col": "device_days",
+    "exposure_used_as_normal_feature": false,
+    "feature_columns": [
+      "unique_devices",
+      "unique_officers",
+      "approval_rate"
+    ],
+    "log_exposure_used_as_normal_feature": false,
+    "offset_expression": "log(device_days)",
+    "uses_offset": true
+  },
+  "model_type": "poisson_glm_offset",
+  "nobs": 2707,
+  "offset_column": "device_days",
+  "offset_passed_separately": true,
+  "parameterization": "poisson_log_link",
+  "params": {
+    "approval_rate": -0.4349129400654896,
+    "intercept": 1.1504307064698016,
+    "unique_devices": 0.01577218641308101,
+    "unique_officers": -0.0021759956955143076
+  },
+  "pearson_dispersion": 42.18389024381901,
+  "predicted_count_min": 10.366214057917338,
+  "predicted_rate_min": 2.073242811583468,
+  "prediction_finite": true,
+  "prediction_nonnegative": true,
+  "rmse": 136.79316949273002,
+  "spearman_observed_vs_predicted_rate": 0.2716977095862228,
+  "status": "PASS",
+  "warnings": []
+}

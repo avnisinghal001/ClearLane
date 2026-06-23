@@ -1,0 +1,15 @@
+{
+  "credible_interval": 0.95,
+  "eligible_cell_count": 2707,
+  "failure_count": 0,
+  "failures": [],
+  "global_rate_per_device_day": 3.7298467775905646,
+  "interval_method": "scipy.stats.gamma.ppf",
+  "intervals_valid": true,
+  "normalized_propensity_max": 1.0,
+  "normalized_propensity_min": 0.06857049635848922,
+  "prior_rate": 10.0,
+  "prior_shape": 37.29846777590565,
+  "prior_strength": 10.0,
+  "status": "PASS"
+}

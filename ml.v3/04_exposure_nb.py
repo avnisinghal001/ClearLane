@@ -128,6 +128,12 @@ def _fit_nb(X, y, exposure, feat_names):
     irr = {n: round(float(np.exp(b)), 3) for n, b in zip(cols, model.params)}
     info = {"family": family, "dispersion": round(dispersion, 2),
             "alpha": round(alpha, 4), "n_features": int(X.shape[1]), "irr": irr}
+    # carry the fitted object + coefficient vector so run() can PERSIST the model
+    # (the offset is log(exposure); predict at offset 0 == bias-corrected rate).
+    info["_model"] = model
+    info["_coef"] = {"feature_names": cols,
+                     "params": [float(b) for b in model.params],
+                     "offset": "log(exposure)", "alpha": alpha, "family": family}
     return rate, fitted, info
 
 
@@ -248,6 +254,13 @@ def run() -> dict:
         info = {"family": "PoissonRegressor(sklearn fallback)",
                 "dispersion": None, "alpha": None, "n_features": int(X.shape[1]),
                 "irr": {}}
+        if _HAS_SK:                       # keep a persistable scaler+model pair
+            _sc = StandardScaler().fit(X)
+            _m = PoissonRegressor(alpha=1e-3, max_iter=500)
+            _m.fit(_sc.transform(X), y / np.clip(exposure, 1, None),
+                   sample_weight=np.clip(exposure, 1, None))
+            info["_model"] = {"kind": "sklearn_poisson", "scaler": _sc, "model": _m,
+                              "feature_names": list(feats)}
 
     cells["bias_rate"] = rate                                   # per unit exposure
     cells["intensity"] = U.percentile_norm(pd.Series(rate, index=cells.index))
@@ -281,11 +294,40 @@ def run() -> dict:
     # top IRRs for the report (most influential context drivers)
     irr_sorted = sorted(info.get("irr", {}).items(),
                         key=lambda kv: -abs(np.log(max(kv[1], 1e-6))))[:8]
-    metrics = {"model": info, "significance": sig, "spatial_cv": cv,
+    metrics = {"model": {k: v for k, v in info.items() if not k.startswith("_")},
+               "significance": sig, "spatial_cv": cv,
                "n_cells": int(len(cells)),
                "top_irr": dict(irr_sorted),
                "n_under_policed": int((cells["rank_divergence"] > 100).sum())}
     U.write_json(C.DATA_PROC / "nb_metrics.json", metrics)
+
+    # --- PERSIST the fitted hotspot model (real file + manifest entry) ------ #
+    try:
+        import models_io as MIO            # noqa: E402 (pipeline-local helper)
+        nb_obj = info.get("_model")
+        if nb_obj is not None:
+            try:                            # statsmodels GLMResults pickle (full model)
+                MIO.save_joblib(nb_obj, "nb_model.pkl")
+            except Exception as e:          # pragma: no cover - fall back to coefficients
+                print(f"[04_exposure_nb] full-model pickle failed ({type(e).__name__}); "
+                      "saving coefficient vector instead")
+                MIO.save_pickle(info.get("_coef", {}), "nb_model.pkl")
+            MIO.register(
+                "hotspot_nb", model_type=info["family"], file="nb_model.pkl",
+                features=feats,
+                metrics={"family": info["family"], "dispersion": info.get("dispersion"),
+                         "alpha": info.get("alpha"),
+                         "spatial_cv_spearman": cv.get("spearman_rate"),
+                         "moran_I_residuals": sig.get("moran_I_residuals"),
+                         "n_sig_hot": sig.get("n_sig_hot"),
+                         "n_under_policed": metrics["n_under_policed"]},
+                params={"offset": "log(exposure)", "n_features": info["n_features"]},
+                notes=("Exposure-corrected count GLM; predict at offset 0 (exposure=1) "
+                       "= bias-corrected violation RATE (the intensity we rank on). "
+                       "Predicts violation propensity, never congestion."))
+            print(f"[04_exposure_nb] persisted nb_model.pkl ({info['family']}) -> models/")
+    except Exception as e:                  # pragma: no cover - persistence is best-effort
+        print(f"[04_exposure_nb] model persistence skipped: {type(e).__name__}: {e}")
     (C.REPORTS / "nb_metrics.txt").write_text(
         json.dumps(U.json_safe(metrics), indent=2), encoding="utf-8")
 

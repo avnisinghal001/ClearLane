@@ -1,378 +1,125 @@
-# ClearLane AI — ML Architecture & Presentation Pack
+# TraFix — Pitch Deck
 
-**Bias-corrected parking-enforcement intelligence for Bengaluru.**
-Gridlock Hackathon 2.0 · Theme 1 (PS1) — *Poor visibility on parking-induced congestion.*
-
-> This document is the slide-ready story: the label design, the multi-model ML
-> architecture, the Mappls integration, the live cron-driven reranking, the real
-> metrics, and the honest "what broke on the first run → how we fixed it" section.
-> All diagrams are Mermaid (render on GitHub / VS Code / mermaid.live — screenshot
-> them straight into the deck).
+> **Traffic, Fixed.** Turning the data a city already has into the deployment plan it doesn't.
+> *(Engine codename: ClearLane.)*
 
 ---
 
-## 0. TL;DR (one slide)
+## 1 · The name & the product, born
 
-- **Problem:** the only data is **298,450 parking-violation tickets** (9 Nov 2023 → 8 Apr 2024). It has **zero traffic-flow / congestion signal** — every row is a ticket an officer wrote. A naive hotspot map just reproduces *where police already patrol*.
-- **Our move:** treat the data as **enforcement-shaped**, correct for that bias, and build a **multi-model stack** that forecasts future obstruction pressure, finds **blind spots**, and produces a **live, reranked dispatch queue**.
-- **5 models:** Poisson forecaster (M1) · PU blind-spot ranker (M2) · live Mappls delay proxy (M3) · transparent + LambdaMART reranker (M4) · contextual bandit (M5).
-- **Live:** a scheduled cron hits `/api/dispatch/recalc` → pulls **Mappls live ETA**, re-blends `dispatch_priority`, writes a snapshot to MongoDB → the dashboard reads it. Near-real-time without ever retraining online.
-- **Honesty contract:** we **never** claim to measure congestion; the "evening blind spot" is a *coverage* gap vs *assumed* peaks; we never rank individual officers.
+Bengaluru loses hours every day to congestion — and the cheapest, most fixable cause is **illegal parking that blocks a lane**. Yet the city had **no congestion sensors** for it. What it *did* have: **5 months of parking-violation tickets** (298k rows, Nov 2023 → Apr 2024).
 
----
+The catch — those tickets are **enforcement-shaped**: a naive hotspot map just shows *where police already patrol*, not where the problem actually is.
 
-## 1. The honest thesis
+> **The insight that became the product:** don't pretend the tickets are traffic. **Prove the bias, correct for it, and turn what's left into where to send a unit — honestly.**
 
-| Claim | Reality in the data |
-|---|---|
-| "Hotspot = congestion" | ❌ No flow/speed/delay column exists. Pressure is **modeled** from ticket severity × vehicle footprint × confidence. |
-| "Ticket times = traffic peaks" | ❌ Times track **officer shifts** — enforcement peaks ~10 AM; only **0.16%** of tickets fall in the 5–9 PM window. |
-| "More tickets = worse zone" | ❌ That's patrol bias. We correct with **exposure = distinct officers × active days**. |
-| "Evening blind spot = measured evening congestion" | ❌ It's an enforcement-**coverage** gap vs the city's *assumed* peaks (a stated assumption). |
+**TraFix = Traffic + Fix.** A small, honest fix to traffic, built only from data the city already owns. No new hardware. No surveillance. No officer scorecards.
 
----
+## 2 · A first step: Data Science, hand-in-hand with the Government of Bangalore
 
-## 2. Labels — primary, direct, indirect
+TraFix is intentionally a **small, trustworthy first brick** in a bigger partnership — a template for how the city and ML/Data-Science teams can work together:
 
-```mermaid
-flowchart TB
-  classDef raw fill:#0b1220,color:#e6edf6,stroke:#30363d,stroke-width:1px;
-  classDef direct fill:#1f6feb,color:#ffffff,stroke:#0b3d91,stroke-width:1px;
-  classDef indirect fill:#d29922,color:#1b1300,stroke:#9e6a00,stroke-width:1px;
-  classDef target fill:#2ea043,color:#ffffff,stroke:#176f2c,stroke-width:1px;
-  classDef weak fill:#8957e5,color:#ffffff,stroke:#5a32a3,stroke-width:1px;
+- **Use data the city already has.** Tickets, rosters, station boundaries — no new sensors, no procurement.
+- **Honesty contract, by design.** *Modeled, never measured. Cell-level, never per-officer.* Every screen labels its uncertainty — exactly the trust a government deployment needs.
+- **A closed loop the city owns.** Citizen reports + officer outcomes feed a transparent online model → better deployment → measured impact. The government sees the evidence scorecard, not a black box.
+- **A repeatable pattern.** The same bias-correction + multi-model + honest-UI recipe extends to garbage routing, streetlight faults, water complaints, road-cut permits — any enforcement- or complaint-shaped municipal dataset.
 
-  RAW["RAW EVENT<br/>1 parking-violation ticket<br/>(298,450 rows)"]:::raw
+> TraFix isn't "an app." It's the **first proof** that Bengaluru's own data, treated honestly, can become day-to-day operational intelligence — and the on-ramp to a standing data-science partnership with the city.
 
-  subgraph D["DIRECT labels — observed in the file"]
-    D1["violation_type / offence_code"]:::direct
-    D2["validation_status<br/>(rejected / duplicate / valid)"]:::direct
-    D3["timestamp (UTC→IST)"]:::direct
-    D4["lat / lon"]:::direct
-    D5["vehicle_number (anon)"]:::direct
-    D6["created_by_id (officer, anon)"]:::direct
-  end
+## 3 · Demo (90 seconds)
 
-  subgraph I["INDIRECT / DERIVED labels — engineered"]
-    I1["Obstruction Pressure<br/>Σ severity×footprint×confidence"]:::indirect
-    I2["Structural Recurrence<br/>active_days · months · regularity"]:::indirect
-    I3["Emergence<br/>recent vs baseline growth"]:::indirect
-    I4["Exposure = officers × active_days<br/>→ bias-corrected pressure"]:::indirect
-    I5["Repeat-vehicle share"]:::indirect
-    I6["Typology cluster (KMeans)"]:::indirect
-    I7["Carriageway Impact Index (CII)"]:::indirect
-  end
+1. **Map** — the whole city colours green→red by parking-induced congestion (PIC), hour-aware. Switch **Now / Tomorrow**.
+2. **Click a hotspot** → a ripple ("waves out") + a numbers peek (`place · priority · PIC`). The spot is now in the URL — shareable, deep-linkable.
+3. **Tap the ripple** → **place-analysis modal** in plain language: how often it repeats, busiest hours, top violations & vehicles, what to do. Same modal for all roles.
+4. **Force Dispatch** (police) — *Where to deploy* (AI next picks + reranked queue) + *Deploy your force* (live patrol board + auto-allocation) + roster, one screen.
+5. **Dispatch a unit** → live boost + "Team here now." The loop closes; tomorrow's plan learns from it.
 
-  subgraph T["PRIMARY TARGET — supervised"]
-    T1["Feb–Mar TICKET COUNT per zone<br/>a REAL observed future count<br/>(Poisson target, M1)"]:::target
-  end
+## 4 · System design (under the hood)
 
-  subgraph W["WEAK / SELF-SUPERVISED labels"]
-    W1["PU pseudo-label: high-pressure = positive,<br/>rest = unlabeled (M2)"]:::weak
-    W2["LambdaMART relevance = realized-pressure<br/>quantile bins (M4)"]:::weak
-    W3["Bandit reward = officer feedback<br/>action_taken=1 / false_alarm=0 (M5)"]:::weak
-  end
-
-  RAW --> D1 & D2 & D3 & D4 & D5 & D6
-  D1 & D3 & D4 --> I1
-  D3 --> I2 & I3
-  D5 --> I5
-  D6 --> I4
-  D3 --> I6
-  D4 --> I7
-  I1 --> T1
-  I1 --> W1
-  T1 --> W2
-  D6 --> W3
-```
-
-**Reading it:** *direct* labels are what the vendor gave us; *indirect* labels are the engineered intelligence; the **one true supervised target** is the **future ticket count** (a real, observed quantity on held-out months — never "congestion"). M2/M4/M5 use weak/self-supervised/online labels.
-
----
-
-## 3. The multi-model ML architecture
+Offline ML bakes artifacts → FastAPI serves them and merges **live** state → React renders. **Cron** keeps it fresh; **lazy caches** keep it cheap.
 
 ```mermaid
 flowchart LR
-  classDef etl fill:#30363d,color:#fff,stroke:#8b949e;
-  classDef model fill:#1f6feb,color:#fff,stroke:#0b3d91;
-  classDef serve fill:#2ea043,color:#fff,stroke:#176f2c;
-  classDef live fill:#8957e5,color:#fff,stroke:#5a32a3;
-  classDef store fill:#d29922,color:#1b1300,stroke:#9e6a00;
-
-  CSV["Raw CSV<br/>298k tickets"]:::etl
-  CLEAN["01 clean → IST, parse,<br/>filter, geo-bucket"]:::etl
-  SZ["02 superzones<br/>(~500m cells)"]:::etl
-  SCORE["03 scores<br/>A·Pressure B·Recurrence C·Emergence"]:::etl
-  ADV["04 advanced<br/>bias, offenders, typology, CII"]:::etl
-  FEAT["04b feature store<br/>+ Mappls POI / reachability"]:::etl
-
-  M1["M1 · Forecaster<br/>Poisson GLM → LightGBM(poisson)<br/>+ CatBoost challenger"]:::model
-  M2["M2 · Blind-spot<br/>Positive-Unlabeled residual"]:::model
-  M4o["M4 · Reranker (offline)<br/>transparent blend + LambdaMART"]:::model
-
-  ART["Artifacts<br/>map_payload / zones_detail / *_metrics"]:::store
-  MONGO[("MongoDB<br/>artifacts + live snapshot")]:::store
-
-  API["FastAPI serving<br/>/api/* (read-only over Mongo)"]:::serve
-  M3["M3 · Live association<br/>Mappls ETA-delta proxy"]:::live
-  M5["M5 · Contextual bandit<br/>LinUCB / Thompson (online)"]:::live
-  RECALC["/api/dispatch/recalc<br/>(cron + button)"]:::live
-  UI["React command center<br/>heatmap · dispatch queue · why?"]:::serve
-
-  CSV-->CLEAN-->SZ-->SCORE-->ADV-->FEAT
-  FEAT-->M1-->M2-->M4o-->ART-->MONGO-->API-->UI
-  API-->M3 & M5
-  RECALC-->M3-->MONGO
-  UI-->RECALC
+  RAW[("Parking tickets — 298k rows")] --> PIPE
+  subgraph PIPE["Offline ML — ml.v3 / run_all.py (stages 01–14)"]
+    direction TB
+    S1[01 clean → 02 H3 bin → 03 features]
+    S2[04 NB + Gi* → 05 PIC]
+    S3[06–07 forecaster → 08 dispatch]
+    S4[09 online → 10 causal → 11 eval → 12 sim → 13 hourly → 14 cell-detail]
+    S1 --> S2 --> S3 --> S4
+  end
+  PIPE -->|JSON artifacts| ART[("data/processed/v3/*.json  +  Mongo v3_artifacts")]
+  ART --> API
+  MONGO[("MongoDB — tickets · cell_state · roster · TTL caches")] <--> API
+  MAPPLS[["Mappls ETA / Route ADV"]] --> API
+  subgraph API["FastAPI — api/clearlane"]
+    direction TB
+    E1["/api/v3/map  (24h day×hour heatmap cache)"]
+    E2["/api/v3/cell/:h3  — historical + live merge"]
+    E3["/dispatch/queue · /force/* · /tickets"]
+    E4["/police/live-traffic  (15-min lazy TTL cache)"]
+  end
+  API --> FE["frontend.v3 — React + Vite (Citizen · Police · Govt)"]
+  subgraph CRON["Cron jobs"]
+    direction TB
+    C1["/cron/recompute — daily<br/>Gamma-Poisson fold → M4 rerank → rebake 24h heatmap"]
+    C2["/cron/plan-next-day"]
+  end
+  CRON --> API
 ```
 
-| # | Model | Learning type | Algorithm | Label / target | Headline metric |
-|---|---|---|---|---|---|
-| **M1** | Obstruction forecaster | **Supervised** (count regression) | Poisson GLM → **LightGBM `objective=poisson`** → CatBoost challenger | Feb–Mar **ticket count** | **CV R² 0.829 ± 0.063**, Spearman 0.80 |
-| **M2** | Blind-spot ranker | **Positive-Unlabeled** (semi-supervised) | Context-residual GBM | pseudo-label (high-pressure = pos) | 156 ML blind spots; 100% top-20 hidden in P3/P4 |
-| **M3** | Live association | **Heuristic / live signal** | Mappls Distance-Matrix ETA delta | live travel-time delay ratio | proxy ∈ [0,1+], cached 120 s |
-| **M4** | Dispatch reranker | **Transparent blend + Learning-to-Rank** | weighted blend → **LightGBM LambdaMART** | graded relevance = realized-pressure bins | **NDCG@10 0.982** |
-| **M5** | Dispatch explorer | **Online / contextual bandit (RL)** | LinUCB (Thompson fallback) | officer-feedback reward | explore/exploit, updates per outcome |
-| — | Typology | **Unsupervised** | KMeans (k=7) on temporal fingerprints | none (clusters) | silhouette ≈ 0.26 |
+- **Recompute cron (daily):** fold new verified outcomes into the Gamma-Poisson posterior → re-run the M4 reranker → re-bake the 24-hour heatmap.
+- **Live traffic — lazily cached 15 minutes** in Mongo (TTL): fetched only when an operator turns the layer on, never blindly polled.
+- **Offline-first:** every read falls back to a bundled demo bundle, so the app always renders (judging-safe).
 
-**Time-series treatment:** features come from **Nov–Jan**, the target from **Feb–Mar** — a strict **temporal holdout** (no future leakage into features) on top of a **spatial (zone) split** and **5-fold CV**. Monthly trend slope is an explicit feature (`feat_trend`).
+## 5 · ML architecture (multi-model, in the current checkpoint)
 
----
-
-## 4. Model-by-model detail
-
-### M1 — Next-month obstruction forecaster (the centerpiece)
-- **Why Poisson:** the target is a **count** (tickets next period); a Poisson objective is the statistically correct fit (vs. naive MSE).
-- **Stack:** `PoissonRegressor` GLM (interpretable baseline) → **LightGBM Poisson** (main) → **CatBoost Poisson** (challenger). The best model is selected and explained with **SHAP**.
-- **Honesty:** predicts **future obstruction pressure** (observed) — *never* congestion.
-- **Top SHAP drivers (real run):** `feat_tickets` (0.47), `feat_officers` (0.26), `feat_pressure` (0.22), `feat_cluster` (0.21), `feat_active_days` (0.20).
-
-### M2 — Positive-Unlabeled blind-spot ranker
-- Predicts pressure from **context-only** features (POIs, road class, reachability — *no* ticket history). Where context says "should be busy" but tickets are few → **`under_observed_score`** (a likely **blind spot**, i.e., under-enforced).
-- Counters the patrol-bias trap: surfaces zones the police *aren't* already writing tickets in.
-
-### M3 — Live association (Mappls)
-- For the top candidates, query **Mappls Distance Matrix (traffic vs non-traffic)** station→zone → `delay_ratio = (eta_traffic − eta_freeflow) / eta_freeflow`.
-- A **present-stress proxy**, explicitly **not** measured congestion. Cached 120 s; degrades to the precomputed score offline.
-
-### M4 — Dispatch reranker
-- **Transparent blend:** `0.30·forecast + 0.25·pressure + 0.15·under_observed + 0.20·live_delay + 0.10·reachability`, every weight auditable in `config.py`.
-- **LambdaMART challenger** (LightGBM `lambdarank`) trained on graded relevance (realized-pressure quantile bins) → **NDCG@10 = 0.982**.
-- Emits human **reason codes** per zone.
-
-### M5 — Contextual bandit (online dispatch)
-- **LinUCB** (numpy) / **Thompson-Beta** fallback (serverless). Balances **exploit** (known hotspots) vs **explore** (under-observed zones) so the loop *discovers* blind spots instead of re-confirming patrol bias.
-- **Online:** `POST /api/dispatch/reward` updates the bandit from officer outcomes (`action_taken=1`, `false_alarm=0`).
-
----
-
-## 5. Mappls API → feature / heatmap mapping
+Eight models → **one transparent number** with reason codes.
 
 ```mermaid
-flowchart LR
-  classDef api fill:#e3582a,color:#fff,stroke:#9e3412,stroke-width:1px;
-  classDef feat fill:#1f6feb,color:#fff,stroke:#0b3d91;
-  classDef out fill:#2ea043,color:#fff,stroke:#176f2c;
-
-  A1["Reverse Geocoding"]:::api
-  A2["Nearby API (POIs)"]:::api
-  A3["Distance Matrix — Non-Traffic"]:::api
-  A4["Distance Matrix ETA — Traffic"]:::api
-  A5["Route ETA / ADV"]:::api
-  A6["Snap-to-Road V2"]:::api
-  A7["Predictive Distance Matrix"]:::api
-  A8["Autosuggest / Text Search"]:::api
-  A9["Vector / Raster Tiles"]:::api
-
-  F1["locality / road-name context"]:::feat
-  F2["ctx_poi_*  (metro, bus, school,<br/>hospital, market, parking dist+count)"]:::feat
-  F3["reachability (free-flow ETA)"]:::feat
-  F4["live delay_ratio (M3)"]:::feat
-  F5["dispatch ETA (min) + eta_source"]:::feat
-  F6["road-class / corridor dedup"]:::feat
-  F7["evening-planning ETA (future)"]:::feat
-  F8["search box"]:::feat
-  F9["basemap under the heatmap"]:::feat
-
-  O1["M1 + M2 context features"]:::out
-  O2["Live dispatch queue + heatmap recalc"]:::out
-  O3["Map UI"]:::out
-
-  A1-->F1-->O3
-  A2-->F2-->O1
-  A3-->F3-->O1
-  A4-->F4-->O2
-  A5-->F5-->O2
-  A6-->F6-->O2
-  A7-->F7-->O2
-  A8-->F8-->O3
-  A9-->F9-->O3
+flowchart TD
+  T[("Parking tickets")] --> C[Clean + H3 res-10 bin]
+  C --> F["Features: road class · junction density · spatial lag · enforcement exposure"]
+  F --> H["Bias-corrected hotspots<br/>Negative-Binomial + Getis-Ord Gi* + Moran's I"]
+  H --> PIC["PIC score (0..100)<br/>violation intensity × congestion severity<br/>percentile-normalized → P1–P4 tiers"]
+  PIC --> FCAST["Forecaster<br/>LightGBM Poisson · held-out months"]
+  PIC --> ONLINE["Online learning<br/>Gamma-Poisson conjugate update (daily fold)"]
+  PIC --> CAUSAL["Quasi-causal panel<br/>enforcement → Δviolations + placebo test"]
+  PIC --> SIM["Sim dispatch policy<br/>LinUCB contextual bandit"]
+  FCAST --> RR
+  ONLINE --> RR
+  SIM --> RR
+  PIC --> RR
+  RR["M4 Reranker — transparent linear blend<br/>forecast · pressure · under-observed · live-delay · reachability"]
+  RR --> OUT["Dispatch queue · Force Dispatch · reason codes"]
+  PIC --> DETAIL["Place detail (stage 14)<br/>per-cell mix · hourly · weekday×hour · repeat-share"]
+  DETAIL --> MODAL["Place-analysis modal (all roles)"]
 ```
 
-| Mappls API | Used for | Where |
-|---|---|---|
-| **Reverse Geocoding** | human-readable locality / road names | readability, search |
-| **Nearby API** | POI distance + count (metro, bus, school, hospital, market, parking) | `ctx_poi_*` features → **M1 & M2** |
-| **Distance Matrix (Non-Traffic)** | free-flow ETA | reachability feature + delay baseline |
-| **Distance Matrix ETA (Traffic)** | live ETA | **M3 delay proxy** + dispatch ETA |
-| **Route ETA / ADV** | route timing | live dispatch ETA |
-| **Snap-to-Road V2** | road-segment assignment | road class + **corridor dedup** |
-| **Predictive Distance Matrix** | evening-window ETA | evening-planning queue (roadmap) |
-| **Autosuggest / Text Search** | place lookup | UI search |
-| **Vector / Raster Tiles** | basemap | heatmap canvas |
+| Technique | Why it matters |
+|-----------|----------------|
+| Negative-Binomial exposure model + Getis-Ord Gi* / Moran's I | corrects patrol bias → finds **under-watched** hotspots |
+| PIC = intensity × congestion severity (percentile-normalized) | one honest 0..100 pressure score + P1–P4 tiers |
+| LightGBM Poisson forecaster | next-month propensity, **beats baseline deviance** |
+| Gamma-Poisson conjugate online update | learns from citizen/officer feedback, daily, in closed form |
+| Quasi-causal panel + placebo | tests whether enforcement *actually* reduces violations |
+| LinUCB contextual bandit | dispatch-policy uplift vs greedy/random/oracle |
+| M4 linear reranker + reason codes | fuses it all into one auditable dispatch number |
 
-> Offline-first: the pipeline runs deterministically with **neutral defaults** when no Mappls key is present; live APIs are a **serving-side enhancement** with caching + graceful fallback. (In a fully offline build the `ctx_*` features carry ~0 SHAP because they have no variance — they light up only when enrichment runs.)
+Validated by an auditable scorecard (Spearman, Poisson deviance, placebo separation, bandit uplift) — not a single regression dressed up.
 
----
+## 6 · Future scope
 
-## 6. The live system — cron → reranking → dashboard
+- **Live traffic fusion** — Mappls predictive ETA already wired; promote it from a stress proxy to a measured layer where provisioned.
+- **Outcome measurement** — A/B the dispatch policy in the field; report cleared-lane minutes back to the city.
+- **More municipal datasets** — reuse the bias-correct → multi-model → honest-UI recipe for garbage, streetlights, water, road-cuts.
+- **Citizen trust loop** — status updates on reported spots; gamified, privacy-preserving.
+- **Edge cases** — towing/structural-fix workflows, multi-agency hand-off, vision-assisted verification.
+- **Governance** — model cards, audit logs, and a public evidence scorecard as a standing city dashboard.
 
-```mermaid
-sequenceDiagram
-  participant Cron as Scheduler (GitHub Action 5-min / Vercel Pro 1-min)
-  participant API as FastAPI /api/dispatch/recalc
-  participant MP as Mappls Distance-Matrix
-  participant DB as MongoDB (snapshot)
-  participant UI as Command Center UI
+## 7 · Thank you
 
-  Cron->>API: GET /api/dispatch/recalc  (every N min)
-  API->>API: rank candidates by base M4 score
-  API->>MP: ETA (traffic vs free-flow) for top-40, UNIFORM
-  MP-->>API: delay_ratio + live ETA
-  API->>API: score = base·0.7 + live_stress·0.3 → re-rank → dedup → tiers
-  API->>DB: save_artifact("dispatch_rerank.json", snapshot + generated_at)
-  UI->>API: GET /api/dispatch/queue
-  API->>DB: read latest snapshot
-  API-->>UI: ranked queue + reason codes + "calculated at / last cron"
-  Note over UI: "Force recalculate" button hits the same endpoint on demand
-```
+**TraFix — Traffic, Fixed.** Built for Bengaluru, from Bengaluru's own data. Honest by design: *modeled, never measured; cell-level, never per-officer.*
 
-**How the cron actually runs:**
-- The recalc logic lives behind one endpoint (`/api/dispatch/recalc`, GET+POST) so the **same path** serves the cron *and* the dashboard's **Force recalculate** button.
-- **Schedule:** Vercel **Hobby** caps crons at *once/day*, so the repeatable trigger is a free **GitHub Action** at `*/5 * * * *` (5 min); on **Vercel Pro** the native cron supports **1-minute** (`* * * * *`). Either way it just curls the URL.
-- Each run pulls live Mappls ETAs for the **top-40 uniformly**, re-blends, **dedups same-station corridors**, assigns **sequential ranks**, and stores the snapshot in Mongo with a `generated_at` stamp. The UI shows *"Calculated 02:44 · auto-reranks every 5 min · last cron 02:40."*
-- It is **recompute-only**: it reads precomputed artifacts + live traffic and writes a **derived** snapshot — it **never** edits the historical ML scores.
-
----
-
-## 7. Heatmaps
-
-```mermaid
-flowchart LR
-  classDef a fill:#1f6feb,color:#fff,stroke:#0b3d91;
-  classDef b fill:#2ea043,color:#fff,stroke:#176f2c;
-  Z["per-zone dispatch_priority<br/>(0–100, de-saturated)"]:::a
-  H["heat colour = HSL(120·(1−p)…0)<br/>green → amber → red"]:::a
-  M["Leaflet circle markers<br/>radius ∝ priority"]:::b
-  P["click → reason-code popup<br/>+ live ETA / delay"]:::b
-  Z-->H-->M-->P
-```
-
-- The map encodes **modeled obstruction priority** (not measured congestion) as a green→red heat scale; marker size ∝ priority.
-- Clicking a marker shows **instance-level reason codes** (e.g., *"high modeled obstruction pressure · forecast rising · evening coverage gap · +28% live delay now · ~3 min from station"*) and the live ETA + delay proxy.
-
----
-
-## 8. Metrics & validation (real run, 248,374 rows, 1,555 zones)
-
-**M1 forecaster**
-
-| Metric | Value |
-|---|---|
-| Test R² | **0.80** |
-| **5-fold CV R²** | **0.829 ± 0.063** |
-| Train R² | 0.93 |
-| **Overfit gap (train − CV)** | **0.101** ✓ (threshold 0.12) |
-| Spearman (test / CV) | 0.792 / 0.798 |
-| Poisson deviance (model / GLM) | **22.4 / 29.5** |
-| Top-K precision | top10 0.70 · top20 0.70 · top50 0.70 |
-| Best iteration (early-stopped) | 429 / 2000 cap |
-| CatBoost challenger deviance | 31.3 (LightGBM wins) |
-
-**Other models / validation**
-
-| Check | Value |
-|---|---|
-| M4 reranker NDCG@10 | **0.982** |
-| M2 PU context R² · ML blind spots | 0.204 · **156** zones |
-| Persistence backtest Spearman | **0.804** (target 0.79) |
-| Sensitivity top-20 overlap (±20% weights) | 80–100% |
-| Self-check headline metrics within ±15% | **13 / 13 ✓** |
-| Pipeline runtime (full) | ~33 s |
-
----
-
-## 9. Supervision & time-series at a glance
-
-```mermaid
-flowchart TB
-  classDef s fill:#2ea043,color:#fff,stroke:#176f2c;
-  classDef u fill:#d29922,color:#1b1300,stroke:#9e6a00;
-  classDef p fill:#8957e5,color:#fff,stroke:#5a32a3;
-  classDef o fill:#1f6feb,color:#fff,stroke:#0b3d91;
-
-  S["SUPERVISED<br/>M1 Poisson count forecaster"]:::s
-  U["UNSUPERVISED<br/>typology KMeans · superzone clustering"]:::u
-  P["SEMI-SUPERVISED (PU)<br/>M2 blind-spot ranker"]:::p
-  L["LEARNING-TO-RANK<br/>M4 LambdaMART"]:::s
-  O["ONLINE / RL<br/>M5 contextual bandit"]:::o
-  TS["TIME-SERIES holdout<br/>Nov–Jan ➜ Feb–Mar + trend feature"]:::s
-```
-
----
-
-## 10. What broke on the first run → how we fixed it
-
-> The interesting engineering story for the deck: the first end-to-end run *looked* great (R² 0.82) but careful auditing exposed leakage, an over-confident fit, and a buggy live queue. Here's the gap → fix log.
-
-| # | First-run gap (found) | Root cause | Fix → result |
-|---|---|---|---|
-| 1 | **Target leakage** inflating R² to 0.822 | `repeat_share` (the #1 SHAP driver) was computed over **all months incl. Feb–Mar target** | Recompute it **in-window (Nov–Jan only)** → honest **R² 0.80**, driver importance 0.47→**0.067** |
-| 2 | **No overfit visibility** | only a single test split was reported | Added **5-fold CV** + **train-vs-test gap** → CV **0.829 ± 0.063**, gap **0.101** |
-| 3 | **Over-confident fit** (train 0.93 vs test) | 500 fixed trees, no regularization | **Early stopping** (429 trees) + L1/L2 (`reg_lambda 3.0`) + bagging + `num_leaves 24` → gap shrunk 0.114→**0.101**, top-10 0.7→**0.8** |
-| 4 | LightGBM/CatBoost silently **fell back** to GradientBoosting | libs missing in venv | Installed + pinned in `requirements-ml.txt`; CatBoost as a real challenger |
-| 5 | `catboost_info/` **polluting the repo** | CatBoost default file logging | `allow_writing_files=False` |
-| 6 | **`UnicodeEncodeError`** (`≥`) on Windows | cp1252 console | force **UTF-8 stdout** in `run_all.py` |
-| 7 | **`FileNotFoundError`** on the raw CSV | vendor filename drift | robust **auto-detect** of the largest non-sample CSV in `config.py` |
-| 8 | Dispatch queue **rank 1–81 with a gap** | pipeline ranks passed through after truncation | **re-sequence `1..N`** after final sort |
-| 9 | **`live:true` but only 25/80 enriched** | live applied to top-25 only | **uniform enrichment** of the candidate set + `live_coverage_pct` metadata |
-| 10 | **Selection bias** (live rows pinned to ranks 1–25) | multiplicative "bonus" for being live | symmetric blend `base·0.7 + live_stress·0.3` (no bonus) + a separate **planned** queue |
-| 11 | **Score saturation** (everything 95–100) | top-80 slice of a percentile score | de-saturated served score + `dispatch_priority_raw`; **rank** is the operational signal |
-| 12 | **Stale P1/P2 tier** vs live priority | `tier` was historical only | split **`base_tier`** vs recomputed **`dispatch_tier`** |
-| 13 | **Blind-spot fields contradicted** | one boolean overloaded | `under_observed_score` / `under_observed_candidate` / `blind_spot_ml` separated |
-| 14 | **"Fast to reach"** with no ETA shown | ETA only when Mappls live | added **`eta_source`** (`mappls_live` / `haversine_estimate`) so every claim is backed |
-| 15 | **Temporal mixing** (2:44 AM traffic + evening gap + next-month forecast) | three horizons unlabeled | explicit `traffic_mode`, `horizon: deploy_now`, `evening_target_at` |
-| 16 | **Duplicate dispatches** (same corridor twice) | no spatial dedup | same-station **~300 m corridor clustering** (representative + supporting) |
-
-**Net effect:** the model went from an *impressive-but-leaky* 0.82 to an **honest, regularized, cross-validated 0.80 (CV 0.829 ± 0.063)** with a clean **0.101** train–CV gap — *neither overfitting nor underfitting* — and the live queue went from a buggy high-score list to a **deduped, fairly-ranked, time-stamped, explainable** dispatch board.
-
----
-
-## 11. Suggested PPT slide order
-
-1. **Title** — ClearLane AI, PS1, the one-line thesis.
-2. **The data trap** — enforcement-shaped, 0.16% evening tickets, patrol-bias map. *(§1)*
-3. **Label design** — primary / direct / indirect diagram. *(§2)*
-4. **ML architecture** — the 5-model flow diagram. *(§3)*
-5. **The forecaster** — Poisson, temporal holdout, SHAP drivers, metrics. *(§4, §8)*
-6. **Blind spots** — PU model, "find where police *aren't* looking." *(§4)*
-7. **Mappls integration** — API→feature/heatmap colored diagram. *(§5)*
-8. **Live system** — cron → recalc → Mongo → UI sequence. *(§6)*
-9. **The product** — heatmap + reranked dispatch queue + reason codes screenshots. *(§7)*
-10. **Validation** — metrics table + self-check 13/13. *(§8)*
-11. **Engineering rigor** — the "first run → fixes" leakage/overfit story. *(§10)*  ← *judges love this*
-12. **Roadmap** — predictive evening queue, VRP routing, online refit.
-
----
-
-## 12. Reproduce / finalize
-
-```powershell
-# from (.venv) PS C:\ClearLane>
-pip install -r requirements-ml.txt
-python ml\pipeline\run_all.py            # full run on real CSV → artifacts + demo bundle
-python scripts\migrate_to_mongo.py       # push the hardened model to the live API's Mongo
-```
-
-Full model card + run commands: **[`ml/README.md`](ml/README.md)**. Honesty rules & dataset ground truth: **[`AGENTS.md`](AGENTS.md)**, **[`docs/METHODOLOGY.md`](docs/METHODOLOGY.md)**.
+*The first brick in a data-science partnership with the city.*

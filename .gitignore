@@ -32,3 +32,15 @@ backend/data/*.db
 .DS_Store
 .cursor/
 .vercel
+
+ClearLane-ML/
+ClearLane-ML/*
+
+# Phase 3 — live traffic state & generated dashboard data (regenerable).
+# Live observations carry timestamps/run state; never commit them.
+data/live/
+frontend.phase3/data/
+artifacts/phase3/
+
+# Large generated Phase 1/2 intermediate. Keep local, but do not commit.
+data/interim/violations_cleaned.csv

@@ -32,10 +32,50 @@ export interface PolylineSpec {
   color: string;
 }
 
+// A live-traffic road segment: a SOLID, themed line following the real street
+// (Mappls Route ADV geometry), coloured by congestion severity in our P1–P4 ramp.
+export interface TrafficLineSpec {
+  id: string;
+  points: [number, number][];
+  color: string;
+  tooltip?: string;
+}
+
+// Dashed, unfilled overlay ring (e.g. an evening blind-spot marker).
+export interface RingSpec {
+  id: string;
+  lat: number;
+  lon: number;
+  radius: number;
+  color: string;
+  weight?: number;
+  dashArray?: string;
+  tooltip?: string;
+}
+
+// A tiny, non-interactive evidence point (a recorded ticket / report location).
+export interface DotSpec {
+  id: string;
+  lat: number;
+  lon: number;
+  color?: string;
+  radius?: number;
+}
+
 export interface HeatPoint {
   lat: number;
   lon: number;
   intensity: number;
+}
+
+// A single animated "focus" marker (ripple/waves-out) at a clicked / deep-linked
+// place. `html` is the full marker markup (ripple + optional numbers peek), built
+// by ClearLaneMap; clicking it opens the detail modal.
+export interface FocusSpec {
+  lat: number;
+  lon: number;
+  html: string;
+  onClick?: () => void;
 }
 
 export interface MapEngine {
@@ -46,10 +86,16 @@ export interface MapEngine {
   setView(center: [number, number], zoom: number, animate?: boolean): void;
   getZoom(): number;
   onMapClick(cb: (lat: number, lon: number) => void): void;
+  // long-press (mobile) / right-click (desktop) — used to drop a report pin.
+  onLongPress?(cb: (lat: number, lon: number) => void): void;
   setCircles(circles: CircleSpec[]): void;
   setHeat(points: HeatPoint[], on: boolean): void;
   setPins(pins: PinSpec[]): void;
   setPolylines(lines: PolylineSpec[]): void;
+  setTrafficLines?(lines: TrafficLineSpec[]): void; // live-traffic road segments (optional)
+  setRings(rings: RingSpec[]): void;
+  setDots(dots: DotSpec[]): void;
+  setFocus(focus: FocusSpec | null): void; // animated ripple at a clicked/deep-linked place
   setTraffic(on: boolean): void;
   invalidate(): void;
   destroy(): void;
@@ -61,6 +107,7 @@ export interface InitOptions {
   zoom: number;
   restKey: string | null;
   staticKey: string | null;
+  disableMappls?: boolean; // USE_MAPPLE=false => skip MapMyIndia/Mappls, CARTO basemap only
 }
 
 export interface Attempt {

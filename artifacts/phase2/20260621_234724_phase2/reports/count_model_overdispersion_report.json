@@ -1,0 +1,8 @@
+{
+  "count_col": "citation_count_production",
+  "mean": 104.6727004063539,
+  "overdispersed_relative_to_poisson": true,
+  "status": "PASS",
+  "variance": 75807.37990116779,
+  "variance_to_mean_ratio": 724.2325802895413
+}

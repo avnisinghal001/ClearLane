@@ -1,0 +1,9 @@
+{
+  "maximum_records_for_one_vehicle": 55,
+  "median_records_per_repeat_vehicle": 2.0,
+  "p95_records_per_vehicle": 3.0,
+  "percentage_of_records_from_repeat_vehicles": 34.2241,
+  "records_belonging_to_repeat_vehicles": 102140,
+  "repeat_vehicles": 35585,
+  "unique_vehicles": 231890
+}

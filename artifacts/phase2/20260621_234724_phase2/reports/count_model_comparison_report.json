@@ -1,0 +1,8 @@
+{
+  "conclusion": "NEGATIVE_BINOMIAL_PREFERRED_BY_AIC",
+  "negative_binomial_aic": 25824.46814326075,
+  "offset_policy": "device_days used only through log(device_days) offset",
+  "poisson_aic": 98628.52166669277,
+  "status": "PASS",
+  "variance_to_mean_ratio": 724.2325802895413
+}

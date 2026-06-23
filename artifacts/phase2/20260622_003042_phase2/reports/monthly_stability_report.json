@@ -1,0 +1,80 @@
+{
+  "method": "recompute_counts_exposure_prior_and_posterior_per_month_from_ticket_mapping",
+  "month_count": 6,
+  "months": [
+    {
+      "eligible_cells": 681,
+      "global_rate_per_device_day": 4.015495747407666,
+      "h3_cells": 2930,
+      "month": "2023-11",
+      "ticket_rows": 43504
+    },
+    {
+      "eligible_cells": 948,
+      "global_rate_per_device_day": 3.961367906801954,
+      "h3_cells": 3662,
+      "month": "2023-12",
+      "ticket_rows": 63917
+    },
+    {
+      "eligible_cells": 950,
+      "global_rate_per_device_day": 4.157604591451443,
+      "h3_cells": 3656,
+      "month": "2024-01",
+      "ticket_rows": 65479
+    },
+    {
+      "eligible_cells": 831,
+      "global_rate_per_device_day": 4.281291674604686,
+      "h3_cells": 3310,
+      "month": "2024-02",
+      "ticket_rows": 54660
+    },
+    {
+      "eligible_cells": 838,
+      "global_rate_per_device_day": 4.068897283684116,
+      "h3_cells": 3453,
+      "month": "2024-03",
+      "ticket_rows": 55453
+    },
+    {
+      "eligible_cells": 215,
+      "global_rate_per_device_day": 4.3276781386330585,
+      "h3_cells": 1785,
+      "month": "2024-04",
+      "ticket_rows": 15432
+    }
+  ],
+  "status": "PASS",
+  "temporal_leakage_prevention": "Each month computes its own exposure and empirical prior from that month's ticket-level records only.",
+  "top_k_stability": [
+    {
+      "intersection_count": 1,
+      "jaccard_all_months": 0.03333333333333333,
+      "month_count": 6,
+      "top_k": 10,
+      "union_count": 30
+    },
+    {
+      "intersection_count": 1,
+      "jaccard_all_months": 0.012987012987012988,
+      "month_count": 6,
+      "top_k": 25,
+      "union_count": 77
+    },
+    {
+      "intersection_count": 5,
+      "jaccard_all_months": 0.03225806451612903,
+      "month_count": 6,
+      "top_k": 50,
+      "union_count": 155
+    },
+    {
+      "intersection_count": 13,
+      "jaccard_all_months": 0.04452054794520548,
+      "month_count": 6,
+      "top_k": 100,
+      "union_count": 292
+    }
+  ]
+}

@@ -10,7 +10,7 @@ export const compact = (x: number | null | undefined): string =>
   x == null || Number.isNaN(x) ? "—" : Intl.NumberFormat("en-IN", { notation: "compact", maximumFractionDigits: 1 }).format(x);
 
 // Honesty: badge the provenance of the congestion-severity number.
-export const SOURCE_META: Record<CongestionSource, { label: string; variant: "live" | "typical" | "modeled"; help: string }> = {
+export const SOURCE_META: Record<CongestionSource, { label: string; variant: "live" | "typical" | "modeled" | "simulated"; help: string }> = {
   live: {
     label: "Live",
     variant: "live",
@@ -25,6 +25,11 @@ export const SOURCE_META: Record<CongestionSource, { label: string; variant: "li
     label: "Modeled",
     variant: "modeled",
     help: "Modeled severity proxy (live Mappls ETA upgrades it in place when enabled). Not measured congestion.",
+  },
+  simulated: {
+    label: "Simulated · time/day model",
+    variant: "simulated",
+    help: "Transparent time-of-day × day-of-week model over the modeled base severity (live Mappls ETA not provisioned). NOT measured congestion and NOT from ticket counts.",
   },
 };
 

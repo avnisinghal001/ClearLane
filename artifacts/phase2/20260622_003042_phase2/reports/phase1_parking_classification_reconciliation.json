@@ -1,0 +1,32 @@
+{
+  "classification_mapping_version": "phase1.violation_labels.parking_related from configs/phase1.yaml",
+  "denominator_definition": "Phase 1 accepted rows",
+  "difference_explanation": "Phase 2 trusts the Phase 1 recomputation from normalized violation labels. The older 97.3% document value is retained as a reference discrepancy, not as a filtering rule.",
+  "document_discrepancy_policy": "Do not filter records to reproduce the document claim. Keep both populations and use configs/phase2.yaml to choose production scope.",
+  "parking_related_percentage_document_reference": "97.3",
+  "parking_related_percentage_phase1_reported": 100.0,
+  "parking_related_percentage_recomputed": 100.0,
+  "populations": {
+    "population_all_accepted": {
+      "description": "All Phase 1 accepted rows.",
+      "rows": 298445
+    },
+    "population_non_parking": {
+      "description": "Rows with contains_parking_related_label == false.",
+      "rows": 0
+    },
+    "population_parking_classified": {
+      "description": "Rows with contains_parking_related_label == true.",
+      "rows": 298445
+    },
+    "population_unknown_parking_classification": {
+      "description": "Rows with missing parking classification.",
+      "rows": 0
+    }
+  },
+  "production_population": "population_all_accepted",
+  "status": "WARN",
+  "warnings": [
+    "PARKING_CLASSIFICATION_DISCREPANCY"
+  ]
+}

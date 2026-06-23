@@ -194,6 +194,35 @@ def run() -> dict:
     (C.REPORTS / "online_metrics.txt").write_text(
         "\n".join(f"{k}: {v}" for k, v in metrics.items()) + "\n", encoding="utf-8")
 
+    # --- REGISTER the online model (online_state.json IS the closed-form model) - #
+    # Copy it under models/ too so every persisted model lives in one place + the
+    # manifest. The live serverless cron folds new verified outcomes into THIS
+    # posterior (Gamma(shape+Σy, rate+n)) — the genuine online learner.
+    try:
+        import models_io as MIO            # noqa: E402 (pipeline-local helper)
+        MIO.copy_into(C.DATA_PROC / "online_state.json", "online_state.json")
+        MIO.register(
+            "online_gamma_poisson", model_type="GammaPoisson(conjugate, closed-form)",
+            file="online_state.json",
+            features=["daily violation counts per cell (Σy)", "elapsed days (n)"],
+            metrics={"n_cells": metrics["n_cells"],
+                     "n_eligible_cells": metrics["n_eligible_cells"],
+                     "n_emerging": metrics["n_emerging"],
+                     "overdispersion_phi": metrics["drift"]["overdispersion_phi"],
+                     "closed_form_selftest_match": st["match"]},
+            params={"prior_shape_s0": C.ONLINE_PRIOR_SHAPE,
+                    "prior_rate_r0": C.ONLINE_PRIOR_RATE,
+                    "recent_days": int(C.ONLINE_RECENT_DAYS),
+                    "drift_k_sigma": C.ONLINE_DRIFT_K},
+            notes=("Per-cell Gamma-Poisson posterior λ ~ Gamma(s0+Σy, r0+n); a new "
+                   "verified day updates E[λ] by ADDING TWO NUMBERS — no refit. This "
+                   "is the model the live serverless cron updates each run "
+                   "(see api/clearlane/V3_SELF_LEARNING.md). λ is expected "
+                   "violations/day, never congestion; cell-level only."))
+        print("[09_online] registered online_gamma_poisson -> models/ (+ manifest)")
+    except Exception as e:                  # pragma: no cover - best-effort
+        print(f"[09_online] model registration skipped: {type(e).__name__}: {e}")
+
     print(f"[09_online] Gamma-Poisson on {len(state):,} cells | prior Gamma"
           f"({C.ONLINE_PRIOR_SHAPE},{C.ONLINE_PRIOR_RATE}) | {n_days}-day record")
     print(f"[09_online] emerging hotspots (last {recent_days}d): {n_emerging} "

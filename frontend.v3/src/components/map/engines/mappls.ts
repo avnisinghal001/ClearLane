@@ -2,16 +2,27 @@
 // Leaflet, so this implements the adapter directly. Defensive throughout: if the
 // SDK or a required class is missing the init throws and the chain falls through
 // to engine 3.
-import { loadScriptOnce, type CircleSpec, type HeatPoint, type InitOptions, type MapEngine, type PinSpec, type PolylineSpec } from "./types";
+import { loadScriptOnce, type CircleSpec, type DotSpec, type FocusSpec, type HeatPoint, type InitOptions, type MapEngine, type PinSpec, type PolylineSpec, type RingSpec } from "./types";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 const w = () => window as any;
-const MAX_CIRCLES = 300; // DOM markers are heavy; cap on this fallback engine
+const MAX_CIRCLES = 600; // DOM markers are heavy; cap on this fallback engine
+
+// Even-stride sample so a capped set still SPANS the distribution (specs arrive in
+// pic_score-desc order, so striding keeps high+mid+low → green/yellow/red all show,
+// not an all-high top-N slice). The primary Leaflet engine renders every cell.
+function sampleSpread<T>(specs: T[], max: number): T[] {
+  if (specs.length <= max) return specs;
+  const step = specs.length / max;
+  const out: T[] = [];
+  for (let i = 0; i < max; i++) out.push(specs[Math.floor(i * step)]);
+  return out;
+}
 
 function circleHtml(c: CircleSpec) {
   const d = Math.round(c.radius * 2);
-  return `<div style="width:${d}px;height:${d}px;border-radius:50%;background:${c.fillColor};opacity:.62;border:${c.weight}px solid ${c.color}"></div>`;
+  return `<div style="width:${d}px;height:${d}px;border-radius:50%;background:${c.fillColor};opacity:.68;border:${c.weight}px solid ${c.color};transition:width .22s ease,height .22s ease,background .22s ease,opacity .18s ease"></div>`;
 }
 function pinHtml(p: PinSpec) {
   if (p.kind === "user")
@@ -59,7 +70,11 @@ export async function initMappls(o: InitOptions): Promise<MapEngine> {
   let circles: any[] = [];
   let pins: any[] = [];
   let lines: any[] = [];
+  let rings: any[] = [];
+  let dots: any[] = [];
+  let focusMarker: any = null;
   let heat: any = null;
+  const MAX_DOTS = 600; // DOM markers are heavy on this fallback engine
 
   const removeAll = (arr: any[]) => {
     for (const obj of arr) {
@@ -105,10 +120,25 @@ export async function initMappls(o: InitOptions): Promise<MapEngine> {
         /* noop */
       }
     },
+    onLongPress(cb) {
+      // long-press / right-click on the Mappls GL map -> drop a report pin.
+      const handler = (e: any) => {
+        const ll = e?.lngLat ?? e?.latLng ?? e?.latlng;
+        const lat = ll?.lat ?? (Array.isArray(ll) ? ll[1] : undefined);
+        const lng = ll?.lng ?? (Array.isArray(ll) ? ll[0] : undefined);
+        if (lat != null && lng != null) cb(lat, lng);
+      };
+      try {
+        if (typeof map.addListener === "function") map.addListener("contextmenu", handler);
+        else map.on?.("contextmenu", handler);
+      } catch {
+        /* noop */
+      }
+    },
     setCircles(specs: CircleSpec[]) {
       removeAll(circles);
       circles = [];
-      for (const c of specs.slice(0, MAX_CIRCLES)) {
+      for (const c of sampleSpread(specs, MAX_CIRCLES)) {
         try {
           const m = new mappls.Marker({
             map,
@@ -181,6 +211,52 @@ export async function initMappls(o: InitOptions): Promise<MapEngine> {
         }
       }
     },
+    setRings(specs: RingSpec[]) {
+      removeAll(rings);
+      rings = [];
+      for (const r of specs) {
+        try {
+          const d = Math.round(r.radius * 2);
+          const html = `<div style="width:${d}px;height:${d}px;border-radius:50%;border:${r.weight ?? 1.4}px dashed ${r.color};box-sizing:border-box"></div>`;
+          const m = new mappls.Marker({ map, position: { lat: r.lat, lng: r.lon }, html, width: d, height: d, popupHtml: r.tooltip, fitbounds: false });
+          rings.push(m);
+        } catch {
+          /* skip */
+        }
+      }
+    },
+    setDots(specs: DotSpec[]) {
+      removeAll(dots);
+      dots = [];
+      for (const dot of specs.slice(0, MAX_DOTS)) {
+        try {
+          const sz = Math.max(3, Math.round((dot.radius ?? 1.7) * 2));
+          const html = `<div style="width:${sz}px;height:${sz}px;border-radius:50%;background:${dot.color ?? "#64748b"};opacity:.55"></div>`;
+          const m = new mappls.Marker({ map, position: { lat: dot.lat, lng: dot.lon }, html, width: sz, height: sz, fitbounds: false });
+          dots.push(m);
+        } catch {
+          /* skip */
+        }
+      }
+    },
+    setFocus(focus: FocusSpec | null) {
+      if (focusMarker) {
+        try {
+          focusMarker.remove?.();
+        } catch {
+          /* noop */
+        }
+        focusMarker = null;
+      }
+      if (!focus) return;
+      try {
+        const m = new mappls.Marker({ map, position: { lat: focus.lat, lng: focus.lon }, html: focus.html, fitbounds: false });
+        if (focus.onClick && typeof m.addListener === "function") m.addListener("click", focus.onClick);
+        focusMarker = m;
+      } catch {
+        /* skip a bad focus marker */
+      }
+    },
     setTraffic(on: boolean) {
       try {
         if (typeof map.setTraffic === "function") map.setTraffic(on);
@@ -201,6 +277,8 @@ export async function initMappls(o: InitOptions): Promise<MapEngine> {
         removeAll(circles);
         removeAll(pins);
         removeAll(lines);
+        removeAll(rings);
+        removeAll(dots);
         map.remove?.();
       } catch {
         /* noop */

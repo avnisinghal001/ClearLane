@@ -38,6 +38,23 @@ try:
 except Exception:                       # pragma: no cover
     _HAS_PULP = False
 
+try:
+    import lightgbm as lgb
+    _HAS_LGB = True
+except Exception:                       # pragma: no cover
+    _HAS_LGB = False
+
+# LambdaMART challenger features (interpretable, all already in pic.parquet +
+# a reachability term). Mirrors the M4 blend's signals: pressure, congestion,
+# road context, blind-spot divergence, reachability.
+LTR_FEATURES = ["intensity", "congestion_severity", "road_class_wt",
+                "junction_share", "neighbor_pressure", "rank_divergence",
+                "gistar_z", "reach_km"]
+LTR_GRADES = 5                          # relevance grades 0..4 (qcut of pic_score)
+LTR_LGBM = {"objective": "lambdarank", "n_estimators": 300, "learning_rate": 0.05,
+            "num_leaves": 31, "min_child_samples": 20, "subsample": 0.9,
+            "colsample_bytree": 0.9}
+
 
 def _haversine_matrix(a_lat, a_lon, b_lat, b_lon):
     """Pairwise haversine (km) between point sets A (rows) and B (cols)."""
@@ -114,6 +131,79 @@ def _route(station_ll, stops_df):
     return [ids[i] for i in order], round(total, 2)
 
 
+def _train_lambdamart(pic: pd.DataFrame, stations: pd.DataFrame) -> dict | None:
+    """Train + PERSIST a LightGBM LambdaMART dispatch-reranker CHALLENGER (mirrors
+    the v1 ml/pipeline/07b_reranker.py learning-to-rank model). Query groups =
+    police stations; relevance grade = pic_score quantile (0..4). The SHIPPED
+    dispatch score stays the transparent M4 config-weight blend — this model is a
+    trained challenger kept for VISIBILITY/comparison, not used for dispatch.
+
+    HONEST: ranks cells by modeled obstruction priority (never measured congestion);
+    grouping is station-level, never per officer. Returns a manifest-metrics dict."""
+    if not _HAS_LGB:
+        print("[08_dispatch] lightgbm unavailable -> LambdaMART challenger skipped")
+        return None
+    df = pic[pic["police_station"].notna() &
+             (pic["police_station"] != "No Police Station")].copy()
+    if len(df) < 50 or df["police_station"].nunique() < 2:
+        print("[08_dispatch] too few labelled cells -> LambdaMART skipped")
+        return None
+
+    # reachability: km to the NEAREST station centroid (0 when no stations resolved)
+    if len(stations):
+        SD = _haversine_matrix(df["lat"].to_numpy(float), df["lon"].to_numpy(float),
+                               stations["lat"].to_numpy(float),
+                               stations["lon"].to_numpy(float))
+        df["reach_km"] = SD.min(axis=1)
+    else:                                   # pragma: no cover
+        df["reach_km"] = 0.0
+
+    for col in LTR_FEATURES:                 # some context cols may be absent -> 0
+        if col not in df.columns:
+            df[col] = 0.0
+    df = df.sort_values("police_station", kind="stable")
+    # LightGBM rejects pandas-3.0 pyarrow-backed dtypes -> hand it clean numpy.
+    Xdf = df[LTR_FEATURES].apply(pd.to_numeric, errors="coerce").fillna(0.0)
+    X = np.ascontiguousarray(Xdf.to_numpy(dtype="float64"))
+    # relevance grade 0..4 from the pic_score percentile (the rank target)
+    y = np.asarray(pd.qcut(df["pic_score"].rank(method="first"), LTR_GRADES,
+                           labels=False, duplicates="drop"), dtype=int)
+    groups = df.groupby("police_station", sort=True, observed=True).size().tolist()
+
+    ranker = lgb.LGBMRanker(random_state=42, verbose=-1, **LTR_LGBM)
+    ranker.fit(X, y, group=groups, eval_set=[(X, y)], eval_group=[groups],
+               eval_at=[5, 10], eval_metric="ndcg")
+    # in-fit NDCG (a CHALLENGER skill readout; shipped score is still the blend)
+    ndcg = {}
+    try:
+        bs = ranker.best_score_ or {}
+        vd = next(iter(bs.values()), {}) if bs else {}
+        ndcg = {k: round(float(v), 4) for k, v in vd.items()}
+    except Exception:                       # pragma: no cover
+        ndcg = {}
+    imp = dict(sorted(zip(LTR_FEATURES, ranker.feature_importances_.tolist()),
+                      key=lambda kv: -kv[1]))
+
+    import models_io as MIO                  # noqa: E402 (pipeline-local helper)
+    MIO.save_lgb(ranker, "reranker_lambdamart.lgb")
+    metrics = {"n_cells": int(len(df)), "n_groups": int(len(groups)),
+               "grades": LTR_GRADES, **{f"fit_{k}": v for k, v in ndcg.items()}}
+    MIO.register(
+        "dispatch_reranker_lambdamart", model_type="LightGBM(LambdaMART)",
+        file="reranker_lambdamart.lgb", features=LTR_FEATURES, metrics=metrics,
+        params=LTR_LGBM, trained_at=None,
+        notes=("CHALLENGER learning-to-rank model (query groups = police stations, "
+               "relevance = pic_score quantile). The SHIPPED dispatch score remains "
+               "the transparent M4 config-weight blend in api/clearlane/v3.py + "
+               "ml.v3/config.RERANK_WEIGHTS; this model is kept for visibility only. "
+               "Ranks modeled obstruction priority, never measured congestion; "
+               "station-level, never per officer."))
+    print(f"[08_dispatch] LambdaMART challenger: {len(df):,} cells / {len(groups)} "
+          f"stations · fit ndcg={ndcg or 'n/a'} -> models/reranker_lambdamart.lgb")
+    return {"file": "reranker_lambdamart.lgb", "n_cells": int(len(df)),
+            "n_groups": int(len(groups)), "ndcg": ndcg, "top_importance": imp}
+
+
 def run() -> dict:
     pic = pd.read_parquet(C.DATA_PROC / "pic.parquet")
     ev = pd.read_parquet(C.DATA_PROC / "events_h3.parquet")
@@ -166,13 +256,24 @@ def run() -> dict:
                                    "route_km": km, "stops": order})
         plan["routes"].sort(key=lambda r: -r["n_stops"])
 
+    # M4 reranker stays the SHIPPED transparent blend; additionally train + save a
+    # LightGBM LambdaMART challenger (for visibility — never used for the shipped score).
+    try:
+        ltr = _train_lambdamart(pic, stations)
+    except Exception as e:                   # pragma: no cover - best-effort
+        print(f"[08_dispatch] LambdaMART challenger skipped: {type(e).__name__}: {e}")
+        ltr = None
+
     metrics = {"solver": solver, "officers": C.DISPATCH_OFFICERS,
                "candidates": int(len(cand)), "demand_cells": int(len(demand)),
                "coverage_radius_km": C.DISPATCH_COVER_RADIUS_KM,
                "covered_pic": round(covered, 2), "covered_pct": plan["covered_pct"],
                "random_baseline_pic": round(rand_mean, 2),
                "uplift_vs_random": round(covered / rand_mean, 2) if rand_mean else None,
-               "coverage_source": "haversine-proxy (isochrone when API live)"}
+               "coverage_source": "haversine-proxy (isochrone when API live)",
+               "reranker": {"shipped": "M4 transparent config-weight blend "
+                            "(RERANK_WEIGHTS, served by api/clearlane/v3.py)",
+                            "challenger": ltr}}
     U.write_json(C.DATA_PROC / "dispatch_plan.json", plan)
     U.write_json(C.DATA_PROC / "dispatch_metrics.json", metrics)
 

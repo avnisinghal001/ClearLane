@@ -19,6 +19,43 @@ Every cell carries three **separate** numbers, exactly like the v1 zone loop:
 `live_adjustment` lives in the Mongo collection **`v3_cell_state`**. The historical
 score is read-only and is never written by this layer.
 
+## Persisted models + the manifest (what you can "see")
+
+The heavy models are trained by the **offline** `ml.v3/run_all.py` and written as real
+files under **`data/processed/v3/models/`** (NOT trained in the serverless function):
+
+| file | model | trained by | predicts |
+|---|---|---|---|
+| `nb_model.pkl` | exposure-corrected Negative-Binomial GLM | stage 04 | bias-corrected hotspot **rate** |
+| `forecast_daily.lgb` | LightGBM Poisson day-of-week forecaster | stage 06 | future violation **propensity** |
+| `reranker_lambdamart.lgb` | LightGBM **LambdaMART challenger** (visibility only) | stage 08 | dispatch ranking |
+| `online_state.json` | closed-form **Gamma-Poisson** online model | stage 09 | expected violations/day (λ) |
+
+`models/model_manifest.json` (also copied to `data/processed/v3/model_manifest.json`
+so it's served + migrated) lists, per model: **name, type, file, train timestamp,
+feature list, headline metrics**. It is exposed at **`GET /api/v3/models`** and
+included in `/api/health`.
+
+> The **shipped** dispatch score stays the **transparent M4 config-weight blend**
+> (`RERANK_WEIGHTS`, served by `v3.py`). The LambdaMART is a trained *challenger*
+> kept for comparison/visibility — it does **not** drive dispatch unless promoted.
+
+### Retrain vs. online update (the split)
+
+- **Heavy retrain** (NB GLM + LightGBM forecaster + LambdaMART) = the **offline
+  `run_all.py`** on a workstation/CI. It is NOT run in the serverless function.
+- **Online update** = the **closed-form Gamma-Poisson** posterior, folded **every
+  cron** (below). This is the genuine live learner — no model is refit, ever.
+
+The crons **load** the persisted `online_state.json` base posterior (`_online_base`)
+and the manifest for provenance, then log the version used:
+
+```
+[v3.cron] models=manifest@<train-timestamp> online_updated=<N cells>
+```
+
+`v3_meta.state.models_version` records the same stamp on each recompute.
+
 ## What "online learning" means here
 
 Each cell keeps a **Gamma-Poisson** betting line on its daily violation rate λ — the
@@ -48,12 +85,18 @@ no model is refit, ever. `Σy` = count of officer-**verified** ticket resolution
 `POST /api/v3/cron/recompute?token=<CLEARLANE_CRON_SECRET>` (also accepts `GET`)
 runs a **lightweight** online refresh — **NOT** the full `ml.v3` pipeline:
 
-1. Pull new complaints + newly-closed tickets since `v3_meta.last_calc`.
-2. Fold each cell's verified outcomes into its Gamma-Poisson posterior (above).
-3. Recompute `operational_priority` for every live cell and a **dispatch rerank**
+1. **Load** the persisted online model (`online_state.json` base posterior via
+   `_online_base`) + the `model_manifest.json` version stamp.
+2. Pull new complaints + newly-closed tickets since `v3_meta.last_calc`.
+3. Fold each cell's verified outcomes into its Gamma-Poisson posterior (above).
+4. Recompute `operational_priority` for every live cell and a **dispatch rerank**
    (candidates = `dispatch_plan` stops ∪ cells with live state, scored by
    `operational_priority + 0.2 × online-lift%`).
-4. Write `last_calc` + a summary to the Mongo collection **`v3_meta`** (`_id:"state"`).
+5. Write `last_calc` + a summary (incl. `models_version`) to **`v3_meta`**
+   (`_id:"state"`), and log `[v3.cron] models=manifest@<ts> online_updated=N`.
+
+The hourly `/api/v3/rerank` and daily `/api/v3/cron/plan-next-day` log the same
+`[v3.cron] models=manifest@<ts> …` provenance line.
 
 Response: `{ "updated": <n_cells>, "last_calc": <epoch>, "summary": {...} }`.
 

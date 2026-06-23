@@ -1,0 +1,8 @@
+{
+  "accepted_rows": 298445,
+  "equation": "raw rows = clean accepted rows + quarantined rows + exact duplicate copies removed",
+  "exact_duplicate_rows_removed": 0,
+  "passed": true,
+  "quarantined_rows": 5,
+  "raw_rows": 298450
+}

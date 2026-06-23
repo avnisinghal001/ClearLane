@@ -39,7 +39,8 @@ STAGES = ["01_clean", "02_h3_bin", "03_features", "04_exposure_nb",   # Phase 1
           "10_causal",                                                # Phase 6 (quasi-causal panel)
           "11_evaluate",                                              # Phase 7 (scorecard)
           "12_sim_rl",                                                # Phase 8 (sim dispatch policy)
-          "13_hourly_congestion"]                                     # Phase 9 (hourly congestion overlay)
+          "13_hourly_congestion",                                     # Phase 9 (hourly congestion overlay)
+          "14_cell_detail"]                                           # Phase 10 (per-cell detail for the modal)
 
 
 def _load(stage):
@@ -132,6 +133,14 @@ def _self_check() -> int:
         print(" INFO (Phase 7 — evaluation scorecard):")
         print(f"   capabilities PASS            : {evl.get('n_pass')}/"
               f"{evl.get('n_capabilities')}  → outputs/reports/v3/EVALUATION.md")
+    man = _load("model_manifest.json")
+    if man:
+        print(" INFO (persisted models — data/processed/v3/models/):")
+        print(f"   manifest@{man.get('generated_at')}  ({man.get('n_models')} models)")
+        for m in man.get("models", []):
+            kb = (m.get("file_bytes") or 0) / 1024.0
+            print(f"     - {m.get('name'):<28} {m.get('type'):<28} "
+                  f"{m.get('file'):<26} {kb:7.1f} KB")
     print("=" * 66 + "\n")
     return int(flag)
 

@@ -1,0 +1,19 @@
+{
+  "cell_count": 6805,
+  "maximum_count": 4125.0,
+  "mean_count": 43.856722997795735,
+  "median_count": 5.0,
+  "percentiles": {
+    "0.5": 5.0,
+    "0.75": 21.0,
+    "0.9": 78.0,
+    "0.95": 174.0,
+    "0.99": 695.9200000000001
+  },
+  "population": "production_observed_h3_cells",
+  "positive_observation_limitation": "Input contains observed citation locations only; zero-citation H3 cells outside the observed support are not inferred.",
+  "status": "PASS",
+  "stddev_count": 180.5715578195384,
+  "variance_count": 32606.087493374904,
+  "variance_to_mean_ratio": 743.4683958264211
+}
