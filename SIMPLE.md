@@ -1,7 +1,7 @@
 # TraFix, explained simply
 
 No jargon. The whole thing in plain English — what it does, what the screens mean,
-and how it answers the problem. *(TraFix is the product; **ClearLane** is the engine
+and how it answers the problem. *(TraFix is the product; `clearlane` is the engine
 codename in the code.)*
 
 ---

@@ -1,4 +1,4 @@
-# ClearLane — Product Scope (PS1 mapping)
+# TraFix — Product Scope (PS1 mapping)
 
 **Gridlock Hackathon 2.0 · Theme 1 — Poor visibility on parking-induced congestion.**
 
@@ -6,13 +6,13 @@
 Bengaluru parking enforcement is patrol-based and reactive, and the only available
 data is **5 months of parking-violation tickets** (Nov 2023 – Apr 2024). That data
 has **no traffic-flow, speed, delay, or congestion signal**, and ticket *times*
-reflect officer shifts, not traffic. ClearLane therefore never claims to measure
+reflect officer shifts, not traffic. TraFix therefore never claims to measure
 congestion. It corrects for the enforcement bias baked into the data and turns it
 into prioritized, explainable, deployable operational intelligence.
 
 ## Challenge → response mapping
 
-| Theme challenge | ClearLane response | Where in the app |
+| Theme challenge | TraFix response | Where in the app |
 |---|---|---|
 | Enforcement is patrol-based & reactive | Proactive ranked enforcement queue + exposure **bias correction** (raw rank → bias-adjusted rank) | Priority Queue, Zone drawer |
 | No heatmap of violations vs. likely impact | Bias-corrected **obstruction-pressure** map (severity × vehicle footprint × confidence) **+ Carriageway Impact Index** — a modeled flow-impact proxy (pressure × junction/road-class/metro-proximity context), labelled *not measured congestion* | Command Map, Flow Impact |

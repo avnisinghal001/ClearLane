@@ -1,4 +1,4 @@
-# ClearLane v3 — self-learning (online recompute) & the H3 closed loop
+# TraFix v3 — self-learning (online recompute) & the H3 closed loop
 
 This documents the **self-learning** half of the v3 backend (`api/clearlane/v3.py`):
 the hourly weight-adjustment cron, the 24-hour lazy fallback, and the per-cell

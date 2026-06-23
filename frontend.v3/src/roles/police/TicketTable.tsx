@@ -48,7 +48,7 @@ export function TicketTable({
         accessorKey: "kind",
         header: "Source",
         cell: ({ row }) => {
-          const m = KIND_META[row.original.kind];
+          const m = KIND_META[row.original.kind] ?? { label: "Ticket", icon: FileText };
           const Icon = m.icon;
           return (
             <Badge variant={row.original.kind === "citizen_complaint" ? "modeled" : "secondary"} className="gap-1">

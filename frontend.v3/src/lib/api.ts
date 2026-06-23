@@ -27,6 +27,7 @@ import type {
   Station,
   Ticket,
   TicketInput,
+  TicketKind,
   When,
 } from "./types";
 
@@ -498,6 +499,31 @@ interface TicketFilter {
   limit?: number;
 }
 
+// The live backend ticket shape (created_ts, numeric id, kind complaint|chalan|action)
+// differs from the frontend Ticket contract (created_at, string id, kind
+// citizen_complaint|police_ticket|chalan). Normalize here so EVERY consumer (ticket
+// table, my-reports, force command) gets one shape — and the kind badge/icon lookups
+// never hit an unknown key (which was crashing the police Tickets view).
+const KIND_FROM_BACKEND: Record<string, TicketKind> = {
+  complaint: "citizen_complaint",
+  citizen_complaint: "citizen_complaint",
+  action: "police_ticket",
+  police_ticket: "police_ticket",
+  chalan: "chalan",
+};
+
+function normalizeTicket(t: Ticket & { created_ts?: number; kind?: string }): Ticket {
+  const createdAt =
+    t.created_at ?? (t.created_ts != null ? new Date(t.created_ts * 1000).toISOString() : new Date().toISOString());
+  return {
+    ...t,
+    id: String(t.id),
+    kind: KIND_FROM_BACKEND[String(t.kind)] ?? "police_ticket",
+    labels: Array.isArray(t.labels) ? t.labels : [],
+    created_at: createdAt,
+  };
+}
+
 export async function getTickets(filter: TicketFilter = {}): Promise<Ticket[]> {
   const qs = new URLSearchParams();
   Object.entries(filter).forEach(([k, v]) => v != null && qs.set(k, String(v)));
@@ -514,7 +540,7 @@ export async function getTickets(filter: TicketFilter = {}): Promise<Ticket[]> {
     local.seed((await demo<DemoCells>("cells.json")).cells, await demo<Ticket[]>("tickets.json"));
     rows = local.listTickets();
   }
-  let out = rows;
+  let out = rows.map(normalizeTicket);
   if (filter.station) {
     const want = stationSlug(filter.station);
     out = out.filter((t) => stationSlug(t.station) === want);
@@ -708,7 +734,7 @@ export async function postComplaint(input: ComplaintInput): Promise<Ticket> {
   // Attach the stable citizen id so the complaint is owned in MongoDB (created_by)
   // and routed to its station for police/govt — not stored as "anon".
   const live = await postLive<Ticket>("/api/v3/complaints", { ...input, citizen_id: citizenId() }, { "X-Citizen-Id": citizenId() });
-  if (live) return live;
+  if (live) return normalizeTicket(live);
   local.seed((await demo<DemoCells>("cells.json")).cells, await demo<Ticket[]>("tickets.json"));
   return local.postComplaint(input);
 }
@@ -716,7 +742,7 @@ export async function postComplaint(input: ComplaintInput): Promise<Ticket> {
 export async function postTicket(input: TicketInput): Promise<Ticket> {
   // Police/government chalans require the bearer session (station scope enforced server-side).
   const live = await postLive<Ticket>("/api/v3/tickets", input, authHeader());
-  if (live) return live;
+  if (live) return normalizeTicket(live);
   local.seed((await demo<DemoCells>("cells.json")).cells, await demo<Ticket[]>("tickets.json"));
   return local.postTicket(input);
 }
@@ -729,7 +755,7 @@ export async function patchTicket(id: string, body: ResolveInput): Promise<Ticke
       headers: { "Content-Type": "application/json", ...authHeader() },
       body: JSON.stringify(body),
     });
-    if (r.ok) return (await r.json()) as Ticket;
+    if (r.ok) return normalizeTicket(await r.json());
     throw new Error(String(r.status));
   } catch {
     setLive(false);

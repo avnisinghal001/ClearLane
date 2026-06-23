@@ -1,9 +1,9 @@
-# ClearLane AI — ML Architecture v3 (the live-first master spec)
+# TraFix AI — ML Architecture v3 (the live-first master spec)
 
 ### Live illegal-parking hotspot intelligence + congestion impact + targeted enforcement, built on Mappls only
 
 *Theory-backed, dataset-grounded, hackathon-buildable. Every method is tied to (a)
-a real signal in the ClearLane dataset, (b) a real Mappls API/SDK you already have
+a real signal in the TraFix dataset, (b) a real Mappls API/SDK you already have
 docs for in `uploads/`, and (c) a real published paper. This v3 supersedes the
 "Master Plan" by verifying which goals it actually meets and adding the missing,
 **live** pieces — without ever claiming the ticket data measures congestion.*
@@ -44,7 +44,7 @@ docs for in `uploads/`, and (c) a real published paper. This v3 supersedes the
 ## 1. Abstract
 
 **In one breath:** Bengaluru's 298k parking tickets only tell you *where police
-already stand*, not *where illegal parking actually chokes traffic*. ClearLane (1)
+already stand*, not *where illegal parking actually chokes traffic*. TraFix (1)
 statistically removes that enforcement bias to find the **true** hotspots, (2)
 multiplies them by **live Mappls congestion** to rank the spots costing the city
 the most road capacity **right now**, (3) forecasts **tomorrow's** pressure and
@@ -505,7 +505,7 @@ the new stages ([§18](#18-complete-ml-specification-what-to-build)) write them 
 **Verdict ✅ — every row is a real endpoint from the docs in `uploads/`.**
 
 
-| Capability                              | Endpoint (from your uploaded doc)                                                                                                                                             | Doc                            | ClearLane use                             |
+| Capability                              | Endpoint (from your uploaded doc)                                                                                                                                             | Doc                            | TraFix use                             |
 | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ | ----------------------------------------- |
 | **Web Maps JS SDK v3.0**                | `https://sdk.mappls.com/map/sdk/web?v=3.0&access_token=<KEY>` → `new mappls.Map('map',{center:{lat,lng}})`                                                                    | `Web_JS-0.md`                  | base map                                  |
 | **Traffic Visualizer**                  | `mappls.trafficLayer({map,...})` / `traffic:true`                                                                                                                             | `Web_JS-0.md`                  | live congestion **visual** layer          |
