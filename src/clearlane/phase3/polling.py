@@ -89,6 +89,18 @@ def _matrix_pair(
     return extract_pair(matrix, source_index, dest_index)
 
 
+def _previous_metrics(
+    previous: dict[str, Any] | None,
+) -> tuple[Optional[float], Optional[float]]:
+    if not previous:
+        return None, None
+    prev_eta = previous.get("live_eta_duration_s")
+    prev_speed = previous.get("current_speed_kmh")
+    if prev_speed is None:
+        prev_speed = cong.speed_kmh(previous.get("eta_distance_m"), prev_eta)
+    return prev_eta, prev_speed
+
+
 def run_poll_cycle(
     *,
     directed_segments: pd.DataFrame,
@@ -98,6 +110,7 @@ def run_poll_cycle(
     config: dict[str, Any],
     poll_cycle_id: str,
     data_mode: str = "LIVE",
+    previous_observations_by_directed: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Returns a dict with observations, per-segment + per-H3 congestion, PIC, and counters."""
     quality = config["quality"]
@@ -224,6 +237,20 @@ def run_poll_cycle(
                         quality=quality,
                     )
 
+                ref_duration = float(seg["route_duration_reference_s"])
+                prev_eta, prev_speed = _previous_metrics(
+                    (previous_observations_by_directed or {}).get(str(seg["directed_segment_id"]))
+                )
+                metrics = cong.compute(
+                    eta_dur,
+                    ref_duration,
+                    current_distance_m=eta_dist,
+                    reference_distance_m=ref_dist,
+                    previous_live_eta_s=prev_eta,
+                    previous_current_speed_kmh=prev_speed,
+                    config=config,
+                )
+
                 obs = {
                     "phase3_run_id": config.get("_run_id", ""),
                     "poll_cycle_id": poll_cycle_id,
@@ -246,7 +273,7 @@ def run_poll_cycle(
                     "reference_distance_m": ref_dist,
                     "eta_distance_m": eta_dist,
                     "distance_difference_ratio": diff_ratio,
-                    "reference_duration_s": float(seg["route_duration_reference_s"]),
+                    "reference_duration_s": ref_duration,
                     "live_eta_duration_s": eta_dur,
                     "http_status": getattr(raw, "http_status", None) if matrix is not None else None,
                     "provider_status": qstatus if not is_valid else "OK",
@@ -256,6 +283,7 @@ def run_poll_cycle(
                     "quality_status": qstatus,
                     "quality_flags": ",".join(qflags),
                     "created_at": now_ist().isoformat(),
+                    **metrics,
                 }
                 obs["observation_id"] = observation_id(obs)
                 observations.append(obs)
@@ -301,19 +329,35 @@ def _compute_congestion(observations, phys_groups, candidate_meta, baseline_map,
     for pid, grp in phys_groups.items():
         dir_sev: dict[str, Optional[float]] = {"A_TO_B": None, "B_TO_A": None}
         dir_eta: dict[str, Optional[float]] = {"A_TO_B": None, "B_TO_A": None}
-        ref_used = None
+        dir_ref: dict[str, Optional[float]] = {"A_TO_B": None, "B_TO_A": None}
+        dir_metric: dict[str, dict[str, Any] | None] = {"A_TO_B": None, "B_TO_A": None}
         baseline_status = bl.UNAVAILABLE
         h3 = None
         for direction, seg in grp.items():
             h3 = seg["h3_res10"]
             ref_s, baseline_status = _baseline_reference(seg, baseline_map)
-            ref_used = ref_s
+            dir_ref[direction] = ref_s
             o = obs_by_directed.get(seg["directed_segment_id"])
             if o and o["is_valid_observation"]:
-                sev = cong.congestion_severity(o["live_eta_duration_s"], ref_s)
+                metrics = cong.compute(
+                    o["live_eta_duration_s"],
+                    ref_s,
+                    current_distance_m=o.get("eta_distance_m"),
+                    reference_distance_m=o.get("reference_distance_m"),
+                    previous_live_eta_s=None,
+                    previous_current_speed_kmh=None,
+                    config=config,
+                )
+                # Preserve poll-to-poll deltas computed on the observation row.
+                metrics["eta_change_percentage"] = o.get("eta_change_percentage")
+                metrics["speed_change_percentage"] = o.get("speed_change_percentage")
+                sev = metrics["congestion_severity"]
                 dir_sev[direction] = sev
                 dir_eta[direction] = o["live_eta_duration_s"]
+                dir_metric[direction] = metrics
         agg = cong.aggregate_directions(dir_sev["A_TO_B"], dir_sev["B_TO_A"])
+        max_dir = agg["maximum_severity_direction"]
+        max_metrics = dir_metric.get(max_dir) if max_dir else None
         row = {
             "physical_segment_id": pid,
             "h3_res10": h3,
@@ -321,7 +365,24 @@ def _compute_congestion(observations, phys_groups, candidate_meta, baseline_map,
             "b_to_a_eta_s": dir_eta["B_TO_A"],
             "a_to_b_severity": dir_sev["A_TO_B"],
             "b_to_a_severity": dir_sev["B_TO_A"],
-            "reference_duration_s": ref_used,
+            "a_to_b_current_speed_kmh": (dir_metric["A_TO_B"] or {}).get("current_speed_kmh"),
+            "b_to_a_current_speed_kmh": (dir_metric["B_TO_A"] or {}).get("current_speed_kmh"),
+            "a_to_b_speed_reduction_percentage": (dir_metric["A_TO_B"] or {}).get("speed_reduction_percentage"),
+            "b_to_a_speed_reduction_percentage": (dir_metric["B_TO_A"] or {}).get("speed_reduction_percentage"),
+            "a_to_b_traffic_label": (dir_metric["A_TO_B"] or {}).get("traffic_label"),
+            "b_to_a_traffic_label": (dir_metric["B_TO_A"] or {}).get("traffic_label"),
+            "reference_duration_s": dir_ref.get(max_dir) if max_dir else next((v for v in dir_ref.values() if v is not None), None),
+            "current_speed_kmh": (max_metrics or {}).get("current_speed_kmh"),
+            "reference_speed_kmh": (max_metrics or {}).get("reference_speed_kmh"),
+            "speed_reduction_percentage": (max_metrics or {}).get("speed_reduction_percentage"),
+            "delay_seconds": (max_metrics or {}).get("delay_seconds"),
+            "delay_percentage": (max_metrics or {}).get("delay_percentage"),
+            "travel_time_index": (max_metrics or {}).get("travel_time_index"),
+            "congestion_severity_percentage": (max_metrics or {}).get("congestion_severity_percentage"),
+            "traffic_label": (max_metrics or {}).get("traffic_label"),
+            "congestion_label": (max_metrics or {}).get("congestion_label"),
+            "eta_change_percentage": (max_metrics or {}).get("eta_change_percentage"),
+            "speed_change_percentage": (max_metrics or {}).get("speed_change_percentage"),
             "baseline_status": baseline_status,
             **agg,
         }
@@ -336,10 +397,7 @@ def _compute_congestion(observations, phys_groups, candidate_meta, baseline_map,
         prop = float(m["normalized_propensity"]) if m is not None else None
         live_valid = sev is not None
         baseline_usable = bl.is_usable(row["baseline_status"])
-        c = cong.compute(
-            row["a_to_b_eta_s"] if row["a_to_b_severity"] == sev else row["b_to_a_eta_s"],
-            row["reference_duration_s"],
-        ) if sev is not None else cong.compute(None, None)
+        c = row if sev is not None else cong.compute(None, None, config=config)
         pic_input.append(
             {
                 "h3_res10": h3,
@@ -348,10 +406,20 @@ def _compute_congestion(observations, phys_groups, candidate_meta, baseline_map,
                 "normalized_propensity": prop,
                 "reference_duration_s": row["reference_duration_s"],
                 "live_eta_duration_s": dir_eta_for_max(row),
+                "current_eta_seconds": dir_eta_for_max(row),
+                "reference_duration_seconds": row["reference_duration_s"],
+                "current_speed_kmh": c.get("current_speed_kmh"),
+                "reference_speed_kmh": c.get("reference_speed_kmh"),
+                "speed_reduction_percentage": c.get("speed_reduction_percentage"),
                 "travel_time_index": c["travel_time_index"],
                 "delay_seconds": c["delay_seconds"],
+                "delay_percentage": c.get("delay_percentage"),
                 "congestion_severity": sev,
-                "congestion_label": cong.severity_label(sev),
+                "congestion_severity_percentage": c.get("congestion_severity_percentage"),
+                "traffic_label": c.get("traffic_label"),
+                "congestion_label": c.get("congestion_label"),
+                "eta_change_percentage": c.get("eta_change_percentage"),
+                "speed_change_percentage": c.get("speed_change_percentage"),
                 "baseline_status": row["baseline_status"],
                 "live_observation_valid": live_valid,
                 "baseline_usable": baseline_usable,

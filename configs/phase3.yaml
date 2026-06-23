@@ -161,6 +161,30 @@ baseline:
 congestion:
   formula: one_minus_inverse_tti
 
+  traffic_label_basis: speed_reduction_percentage
+  traffic_label_bands:
+    normal:
+      label: NORMAL
+      minimum: 0.0
+      maximum: 10.0
+    light_congestion:
+      label: LIGHT_CONGESTION
+      minimum: 10.0
+      maximum: 25.0
+    moderate_congestion:
+      label: MODERATE_CONGESTION
+      minimum: 25.0
+      maximum: 45.0
+    high_congestion:
+      label: HIGH_CONGESTION
+      minimum: 45.0
+      maximum: 65.0
+    severe_congestion:
+      label: SEVERE_CONGESTION
+      minimum: 65.0
+      maximum: 100.0
+
+  # Legacy 0..1 severity bands are retained for compatibility with older reports.
   severity_labels:
     normal:
       minimum: 0.00

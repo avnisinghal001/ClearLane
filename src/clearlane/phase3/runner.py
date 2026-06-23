@@ -402,6 +402,8 @@ def _run_poll(
 
     baseline_map = _load_baselines(ctx)
     poll_cycle_id = f"{ctx.run_id}_cycle_{now_ist().strftime('%H%M%S')}"
+    store = ObservationStore(_abs(ctx.root, ctx.config["storage"]["observations_root"]))
+    previous_by_directed = store.latest_valid_by_directed(data_mode=ctx.data_mode)
 
     result = polling.run_poll_cycle(
         directed_segments=directed,
@@ -411,10 +413,10 @@ def _run_poll(
         config=ctx.config,
         poll_cycle_id=poll_cycle_id,
         data_mode=ctx.data_mode,
+        previous_observations_by_directed=previous_by_directed,
     )
 
     # store observations (live only updates production baselines later)
-    store = ObservationStore(_abs(ctx.root, ctx.config["storage"]["observations_root"]))
     store_result = store.write(result["observations"])
     ctx.outputs["observations_root"] = str(store.root)
 
@@ -492,6 +494,10 @@ def _write_congestion_pic_outputs(ctx: RunContext, result: dict[str, Any], pic_d
         exports.points_to_geojson(
             geo_df, "centroid_latitude", "centroid_longitude",
             ["h3_res10", "pic_score", "pic_rank", "congestion_severity", "congestion_label",
+             "traffic_label", "current_speed_kmh", "reference_speed_kmh",
+             "speed_reduction_percentage", "delay_seconds", "delay_percentage",
+             "travel_time_index", "congestion_severity_percentage",
+             "eta_change_percentage", "speed_change_percentage",
              "normalized_propensity", "pic_status", "localized_anomaly", "overall_pic_confidence"],
             proc / "phase3_whitefield_live_pic.geojson",
         )

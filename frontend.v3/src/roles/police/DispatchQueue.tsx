@@ -5,11 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/DataTable";
-import { SourceBadge } from "@/components/SourceBadge";
 import { getDispatchQueue } from "@/lib/api";
 import { picColor } from "@/lib/format";
 import { relativeTime } from "@/lib/time";
-import type { DispatchQueue as DispatchQueueT, RerankComponent, RerankRow } from "@/lib/types";
+import type { DispatchQueue as DispatchQueueT, RerankComponent, RerankRow, When } from "@/lib/types";
 
 const TIER_VARIANT: Record<string, "destructive" | "warning" | "secondary"> = {
   P1: "destructive",
@@ -48,18 +47,28 @@ function ComponentBar({ comp }: { comp: Record<RerankComponent, number> }) {
   );
 }
 
-export function DispatchQueue({ stationName, onFocus }: { stationName: string; onFocus: (lat: number, lon: number) => void }) {
+export function DispatchQueue({
+  stationName,
+  when = "now",
+  hour,
+  onFocus,
+}: {
+  stationName: string;
+  when?: When;
+  hour?: number;
+  onFocus: (lat: number, lon: number, h3?: string) => void;
+}) {
   const [q, setQ] = useState<DispatchQueueT | null>(null);
   const [loading, setLoading] = useState(false);
 
   const load = useMemo(
     () => () => {
       setLoading(true);
-      getDispatchQueue(stationName, "now")
+      getDispatchQueue(stationName || null, when, hour)
         .then(setQ)
         .finally(() => setLoading(false));
     },
-    [stationName],
+    [stationName, when, hour],
   );
   useEffect(() => load(), [load]);
 
@@ -90,12 +99,12 @@ export function DispatchQueue({ stationName, onFocus }: { stationName: string; o
       },
       {
         id: "cell",
-        header: "Cell",
+        header: "Area",
         cell: ({ row }) => (
           <div className="min-w-0">
-            <div className="font-mono text-xs text-muted-foreground">{row.original.h3_r10.slice(0, 10)}…</div>
+            <div className="truncate text-xs font-medium">{row.original.road_class?.replace(/_/g, " ") ?? row.original.station ?? "Priority area"}</div>
             <div className="text-[11px] text-muted-foreground">
-              Pressure {Math.round(row.original.pressure)} · {row.original.road_class ?? "—"}
+              {row.original.station ?? "City-wide"} · Pressure {Math.round(row.original.pressure)}
             </div>
           </div>
         ),
@@ -133,7 +142,7 @@ export function DispatchQueue({ stationName, onFocus }: { stationName: string; o
             title="Show on map"
             onClick={(e) => {
               e.stopPropagation();
-              onFocus(row.original.lat, row.original.lon);
+              onFocus(row.original.lat, row.original.lon, row.original.h3_r10);
             }}
           >
             <MapPin className="h-4 w-4" />
@@ -144,8 +153,6 @@ export function DispatchQueue({ stationName, onFocus }: { stationName: string; o
     [onFocus],
   );
 
-  const liveEta = q?.live_eta ?? false;
-
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -153,18 +160,9 @@ export function DispatchQueue({ stationName, onFocus }: { stationName: string; o
           <CardTitle className="flex items-center gap-2 text-base">
             <Radio className="h-4 w-4 text-primary" /> Where to deploy now
           </CardTitle>
-          <div className="flex items-center gap-2">
-            {/* live-vs-simulated indicator on the congestion/traffic signal */}
-            <span className="text-[11px] text-muted-foreground">Congestion:</span>
-            <SourceBadge source={q?.congestion_source ?? "simulated"} />
-            <Badge variant={liveEta ? "live" : "secondary"} className="gap-1">
-              <span className={`h-1.5 w-1.5 rounded-full ${liveEta ? "bg-[hsl(var(--live))]" : "bg-muted-foreground"}`} />
-              {liveEta ? "Live ETA" : "Live ETA off"}
-            </Badge>
-            <Button size="sm" variant="outline" onClick={load} disabled={loading}>
-              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-            </Button>
-          </div>
+          <Button size="sm" variant="outline" onClick={load} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          </Button>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -177,16 +175,12 @@ export function DispatchQueue({ stationName, onFocus }: { stationName: string; o
           empty={loading ? "Loading reranked queue…" : "No reranked cells for this station."}
         />
         <p className="text-[11px] leading-tight text-muted-foreground">
+          Lens: {q?.when ?? when} · {q?.dow ?? "—"} · {String(q?.hour ?? hour ?? "—").padStart(2, "0")}:00.{" "}
           Ranked by what needs attention now — recent trend, how chronic the spot is, evening blind-spots, congestion, and how fast a patrol can reach it.
-          <span className="font-medium"> Pressure is estimated from tickets — not a live congestion measurement.</span>{" "}
-          {q?.fallback === "simulated"
-            ? "Congestion is a simulated time/day estimate (live Mappls ETA not provisioned)."
-            : "Congestion from live Mappls ETA."}{" "}
+          <span className="font-medium"> Pressure is estimated from tickets — not a direct congestion measurement.</span>{" "}
           {q?.source === "rerank-cache"
             ? `Updated from the hourly cache${q?.last_rerank ? ` · ${relativeTime(new Date(q.last_rerank * 1000).toISOString())}` : ""}.`
-            : q?.source === "offline-compose"
-              ? "Composed offline from the demo bundle."
-              : "Computed live."}{" "}
+            : "Updated just now."}{" "}
           Area-level only — never per officer.
         </p>
       </CardContent>

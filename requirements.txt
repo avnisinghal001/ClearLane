@@ -1,8 +1,0 @@
-# Vercel serverless API dependencies (api/index.py, @vercel/python runtime).
-# Deliberately LIGHT: the API only serves precomputed artifacts and the live
-# operational/force state out of MongoDB — it never runs the ML pipeline. The
-# heavy pipeline stack lives in requirements-ml.txt (not installed on Vercel).
-fastapi==0.137.1
-pydantic>=2.0
-pymongo==4.10.1
-dnspython==2.7.0

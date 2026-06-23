@@ -12,6 +12,7 @@ import { ReportSheet } from "./ReportSheet";
 import { MyReports } from "./MyReports";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { useMapData } from "@/hooks/useMapData";
+import { useMapFocus } from "@/hooks/useMapFocus";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 import { getTickets, postComplaint } from "@/lib/api";
 import { logout } from "@/lib/auth";
@@ -36,6 +37,7 @@ export function CitizenApp() {
   const { data, loading } = useMapData(time.when, time.hour, time.date);
 
   const [selected, setSelected] = useState<Cell | null>(null);
+  const { focus, setFocus } = useMapFocus();
   const [reportOpen, setReportOpen] = useState(false);
   const [pickMode, setPickMode] = useState(false);
   const [reportLoc, setReportLoc] = useState<[number, number] | null>(null);
@@ -128,7 +130,10 @@ export function CitizenApp() {
             audience="citizen"
             userLocation={cityCoords}
             flyTo={flyTo}
-            onCellClick={setSelected}
+            focus={focus}
+            modalOpen={Boolean(selected)}
+            onCellClick={(c) => setFocus({ lat: c.lat, lon: c.lon, h3: c.h3_r10 })}
+            onFocusOpen={(c) => setSelected((data?.cells ?? []).find((x) => x.h3_r10 === c.h3_r10) ?? c)}
             pickMode={pickMode}
             onPick={(ll) => {
               setReportLoc(ll);
@@ -150,7 +155,7 @@ export function CitizenApp() {
             <TimeControl value={time} onChange={setTime} plain />
             <div className="mt-2 flex items-center gap-2">
               <Badge variant={data?.source === "forecast" ? "modeled" : "live"}>
-                {data?.source === "forecast" ? "Forecast" : "Live"}
+                {data?.source === "forecast" ? "Forecast" : "Now"}
               </Badge>
               {loading && <span className="text-[11px] text-muted-foreground">updating…</span>}
             </div>

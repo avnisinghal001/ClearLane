@@ -1,7 +1,7 @@
 // Shared Leaflet adapter — powers BOTH engine 1 (MapMyIndia map_load, using the
 // global `L` the script exposes) and engine 3 (bundled Leaflet + OSM/Carto). The
 // only difference is which `L` instance and map are passed in.
-import { HEAT_GRADIENT, type CircleSpec, type DotSpec, type EngineId, type HeatPoint, type MapEngine, type PinSpec, type PolylineSpec, type RingSpec, type TrafficLineSpec } from "./types";
+import { HEAT_GRADIENT, type CircleSpec, type DotSpec, type EngineId, type FocusSpec, type HeatPoint, type MapEngine, type PinSpec, type PolylineSpec, type RingSpec, type TrafficLineSpec } from "./types";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -54,6 +54,7 @@ export function createLeafletEngine(cfg: LeafletEngineConfig): MapEngine {
   const pinLayer = L.layerGroup().addTo(map);
   const lineLayer = L.layerGroup().addTo(map);
   const trafficLayer = L.layerGroup().addTo(map); // live-traffic road segments (top overlay)
+  const focusLayer = L.layerGroup().addTo(map); // single ripple "focus" marker (topmost)
   let heat: any = null;
   let traffic: any = null;
 
@@ -91,7 +92,7 @@ export function createLeafletEngine(cfg: LeafletEngineConfig): MapEngine {
             color: c.color,
             weight: c.weight,
             fillColor: c.fillColor,
-            fillOpacity: 0.62,
+            fillOpacity: 0.68,
           }));
           // bindTooltip only exists in Leaflet >= 1.0; guard so an old build can't
           // throw mid-loop and abort the whole layer (leaving the map blank).
@@ -186,6 +187,22 @@ export function createLeafletEngine(cfg: LeafletEngineConfig): MapEngine {
         } catch {
           /* skip a single bad dot */
         }
+      }
+    },
+    setFocus(focus: FocusSpec | null) {
+      focusLayer.clearLayers();
+      if (!focus) return;
+      try {
+        const m = L.marker([focus.lat, focus.lon], {
+          icon: L.divIcon({ className: "", html: focus.html, iconSize: [0, 0], iconAnchor: [0, 0] }),
+          interactive: true,
+          keyboard: false,
+          zIndexOffset: 1200,
+        });
+        if (focus.onClick) m.on("click", focus.onClick);
+        m.addTo(focusLayer);
+      } catch {
+        /* skip a bad focus marker rather than throwing */
       }
     },
     setTraffic(on: boolean) {

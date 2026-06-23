@@ -1,8 +1,0 @@
-# ClearLane Phase 3 — live traffic intelligence dependencies.
-# Builds on Phase 1/2 deps (pandas, pyarrow, h3, shapely, pyyaml, numpy).
--r requirements-phase2.txt
-
-httpx>=0.27
-python-dotenv>=1.0
-tenacity>=8.2
-polyline>=2.0

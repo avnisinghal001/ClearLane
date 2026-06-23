@@ -97,6 +97,31 @@ export const ROAD_CLASS_LABEL: Record<string, string> = {
   unknown: "Unclassified",
 };
 
+// Stable, human-readable zone label — NEVER the raw H3 hex. The same cell resolves
+// to the same name on every screen (route, hotspots, road impact, dispatch). Shape:
+//   "<station> · <road type> <code>"  (code is a short block-style number for
+// uniqueness within a station, so it reads like a place, not an id).
+export function cellCode(h3: string): string {
+  let h = 2166136261;
+  for (let i = 0; i < (h3 || "").length; i++) {
+    h ^= h3.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return String(((h >>> 0) % 90) + 10); // 10..99
+}
+
+export function cellLabel(c: { h3_r10: string; name?: string | null; police_station?: string | null; station?: string | null; road_class?: string | null }): string {
+  // Prefer the readable place name (junction / street) baked into the cell.
+  if (c.name && c.name.trim() && c.name.toLowerCase() !== "nan") return c.name;
+  const station = c.police_station ?? c.station ?? null;
+  const road = c.road_class ? c.road_class.replace(/_/g, " ").replace(/^\w/, (m) => m.toUpperCase()) : null;
+  const code = cellCode(c.h3_r10);
+  if (station && road) return `${station} · ${road} ${code}`;
+  if (station) return `${station} · Zone ${code}`;
+  if (road) return `${road} · Zone ${code}`;
+  return `Zone ${code}`;
+}
+
 // Public landmark coordinates (Namma Metro stations + commercial hubs). Audited
 // static reference, mirroring v1 ml/pipeline/anchors.py — used only for proximity.
 export const METRO: [number, number][] = [

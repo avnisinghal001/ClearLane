@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { getDispatchQueue } from "@/lib/api";
 import { picColor } from "@/lib/format";
 import { relativeTime } from "@/lib/time";
-import type { DispatchQueue, RerankRow } from "@/lib/types";
+import { cellLabel } from "@/lib/signals";
+import type { DispatchQueue, RerankRow, When } from "@/lib/types";
 
 const TIER_VARIANT: Record<string, "destructive" | "warning" | "secondary"> = {
   P1: "destructive",
@@ -15,7 +16,7 @@ const TIER_VARIANT: Record<string, "destructive" | "warning" | "secondary"> = {
   P4: "secondary",
 };
 
-function PickRow({ r, onFocus }: { r: RerankRow; onFocus: (lat: number, lon: number) => void }) {
+function PickRow({ r, onFocus }: { r: RerankRow; onFocus: (lat: number, lon: number, h3?: string) => void }) {
   return (
     <div className="flex items-center gap-2 rounded-lg border bg-card p-2">
       <span
@@ -29,11 +30,11 @@ function PickRow({ r, onFocus }: { r: RerankRow; onFocus: (lat: number, lon: num
           <Badge variant={TIER_VARIANT[r.dispatch_tier]} className="px-1.5 py-0">
             {r.dispatch_tier}
           </Badge>
-          <span className="truncate text-[11px] text-muted-foreground">{r.station ?? r.h3_r10.slice(0, 8)}</span>
+          <span className="truncate text-[11px] text-muted-foreground">{cellLabel(r)}</span>
         </div>
         <div className="truncate text-[11px] text-muted-foreground">{r.reason_codes[0] ?? "top modeled priority"}</div>
       </div>
-      <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" title="Show on map" onClick={() => onFocus(r.lat, r.lon)}>
+      <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" title="Open details" onClick={() => onFocus(r.lat, r.lon, r.h3_r10)}>
         <MapPin className="h-3.5 w-3.5" />
       </Button>
     </div>
@@ -45,11 +46,15 @@ function PickRow({ r, onFocus }: { r: RerankRow; onFocus: (lat: number, lon: num
 //  · EXPLORE = under-observed / emerging blind-spot candidates (discovery value)
 export function AiNextPicks({
   station,
+  when = "now",
+  hour,
   onFocus,
   title = "AI next picks",
 }: {
   station?: string | null;
-  onFocus: (lat: number, lon: number) => void;
+  when?: When;
+  hour?: number;
+  onFocus: (lat: number, lon: number, h3?: string) => void;
   title?: string;
 }) {
   const [q, setQ] = useState<DispatchQueue | null>(null);
@@ -57,14 +62,14 @@ export function AiNextPicks({
 
   function load() {
     setLoading(true);
-    getDispatchQueue(station ?? undefined, "now")
+    getDispatchQueue(station ?? undefined, when, hour)
       .then(setQ)
       .finally(() => setLoading(false));
   }
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [station]);
+  }, [station, when, hour]);
 
   const { exploit, explore } = useMemo(() => {
     const rows = q?.queue ?? [];
@@ -109,7 +114,7 @@ export function AiNextPicks({
           </div>
         </div>
         <p className="text-[11px] leading-tight text-muted-foreground">
-          Picks come from the M4 dispatch reranker (forecast · pressure · under-observed · congestion · reachability). Pressure is
+          Lens: {q?.when ?? when} · {q?.dow ?? "—"} · {String(q?.hour ?? hour ?? "—").padStart(2, "0")}:00. Picks come from the M4 dispatch reranker (forecast · pressure · under-observed · congestion · reachability). Pressure is
           MODELED from tickets — never measured congestion. Cell/station-level only; never per officer.
         </p>
       </CardContent>

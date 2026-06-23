@@ -39,7 +39,8 @@ STAGES = ["01_clean", "02_h3_bin", "03_features", "04_exposure_nb",   # Phase 1
           "10_causal",                                                # Phase 6 (quasi-causal panel)
           "11_evaluate",                                              # Phase 7 (scorecard)
           "12_sim_rl",                                                # Phase 8 (sim dispatch policy)
-          "13_hourly_congestion"]                                     # Phase 9 (hourly congestion overlay)
+          "13_hourly_congestion",                                     # Phase 9 (hourly congestion overlay)
+          "14_cell_detail"]                                           # Phase 10 (per-cell detail for the modal)
 
 
 def _load(stage):

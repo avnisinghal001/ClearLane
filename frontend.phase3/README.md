@@ -1,4 +1,4 @@
-# ClearLane Phase 3 — Standalone Live Dashboard
+# TraFix Phase 3 — Standalone Live Dashboard
 
 A **new, self-contained** frontend for Phase 3. It does **not** touch the existing
 `frontend.v3/` app or any backend. No build step, no npm — just static files

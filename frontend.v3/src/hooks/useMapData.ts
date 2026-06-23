@@ -1,17 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getMap } from "@/lib/api";
-import { useDebounce } from "./useDebounce";
 import type { MapPayload, When } from "@/lib/types";
 
 // Fetches the composed /api/v3/map payload for the active time lens. The hour is
-// DEBOUNCED (~300ms) so scrubbing the slider doesn't fire a request per tick; the
-// settled value triggers the fetch. `when`/`date` changes fetch immediately. The
-// "Now" lens (and refetch()) FORCE-hits the API for fresh live state, bypassing the
-// client cache — the Google-style "give me the current moment" action.
+// intentionally not debounced while the dispatch model is being judged: every
+// clock/day change should hit the backend and produce a logged lens-specific map.
 export function useMapData(when: When, hour: number, date?: string) {
   const [data, setData] = useState<MapPayload | null>(null);
   const [loading, setLoading] = useState(true);
-  const debouncedHour = useDebounce(hour, 300);
   const prevWhen = useRef<When | null>(null);
 
   const fetchMap = useCallback(
@@ -36,8 +32,8 @@ export function useMapData(when: When, hour: number, date?: string) {
     // moment, not a cached snapshot. Other lenses use the cache for instant scrubs.
     const force = when === "now" && prevWhen.current !== "now";
     prevWhen.current = when;
-    return fetchMap(debouncedHour, force);
-  }, [when, debouncedHour, date, fetchMap]);
+    return fetchMap(hour, force);
+  }, [when, hour, date, fetchMap]);
 
   return { data, loading, refetch };
 }

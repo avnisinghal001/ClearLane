@@ -4,8 +4,8 @@ import {
 } from "lucide-react";
 import type { Cell, DispatchRoute } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { sourceMeta } from "@/lib/format";
-import { cellTier, flowImpactTable, isBlindSpot, tierColor, flowColor } from "@/lib/signals";
+import { picColor } from "@/lib/format";
+import { cellLabel, cellTier, flowImpactTable, isBlindSpot, priorityLabel, priorityScore, tierColor, flowColor } from "@/lib/signals";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 import { Switch } from "@/components/ui/switch";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -17,6 +17,9 @@ import { circleColor, heatPoints, type ColorMode } from "./layers";
 const BLR: [number, number] = [12.9716, 77.5946];
 const ROUTE_COLORS = ["#ea580c", "#2563eb", "#16a34a", "#9333ea", "#dc2626", "#0891b2"];
 const DOW_LONG = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+const V1_CIRCLE_VISIBLE_FLOOR = 18; // below this active score, the zone disappears
+const V1_RADIUS_MIN = 4;
+const V1_RADIUS_MAX = 23;
 
 export interface MapPin {
   key: string;
@@ -33,7 +36,12 @@ interface Props {
   source: "live" | "forecast";
   userLocation?: [number, number] | null;
   flyTo?: [number, number] | null;
-  onCellClick?: (c: Cell) => void;
+  // Focus a single place: zoom in + show the animated ripple ("waves out") + a
+  // numbers peek. Clicking the ripple opens the detail modal (via onCellClick).
+  focus?: { lat: number; lon: number; h3?: string } | null;
+  modalOpen?: boolean; // when the detail modal is open, suppress the numbers peek
+  onCellClick?: (c: Cell) => void; // a map dot was clicked -> set the focus ripple (a "peek")
+  onFocusOpen?: (c: Cell) => void; // the focus ripple was clicked -> open the detail modal
   pickMode?: boolean;
   onPick?: (latlon: [number, number]) => void;
   onLongPress?: (latlon: [number, number]) => void; // long-press / right-click -> report here
@@ -56,6 +64,7 @@ interface Props {
   liveTrafficEnabled?: boolean;
   liveTrafficDefaultOn?: boolean; // start with the live layer ON (police default)
   liveTraffic?: { segments: TrafficLineSpec[]; loading?: boolean; live?: boolean; coveragePct?: number };
+  liveTrafficActive?: boolean;
   // h3 -> severity colour: when the live layer is on, recolour these hotspot dots by
   // live congestion severity (Avni's dot technique) instead of their tier colour.
   liveSeverityByCell?: Record<string, string>;
@@ -75,7 +84,10 @@ export function ClearLaneMap({
   source,
   userLocation,
   flyTo,
+  focus,
+  modalOpen = false,
   onCellClick,
+  onFocusOpen,
   pickMode = false,
   onPick,
   onLongPress,
@@ -85,7 +97,7 @@ export function ClearLaneMap({
   routes,
   pins,
   defaultHeat = false,
-  defaultColorMode = "tier",
+  defaultColorMode = "pic",
   defaultZoom = 12,
   sizeMode = "intensity",
   bottomSafe = false,
@@ -95,6 +107,7 @@ export function ClearLaneMap({
   liveTrafficEnabled = false,
   liveTrafficDefaultOn = false,
   liveTraffic,
+  liveTrafficActive,
   liveSeverityByCell,
   onLiveTraffic,
 }: Props) {
@@ -143,6 +156,8 @@ export function ClearLaneMap({
   onLongPressRef.current = onLongPress;
   const onCellRef = useRef(onCellClick);
   onCellRef.current = onCellClick;
+  const onFocusOpenRef = useRef(onFocusOpen);
+  onFocusOpenRef.current = onFocusOpen;
   const centeredRef = useRef(false);
 
   // flow-impact proxy table (for the "flow" color mode + ring tooltip), memoized
@@ -188,25 +203,32 @@ export function ClearLaneMap({
   const display = useMemo(() => (simple ? cells.filter((c) => { const t = cellTier(c); return t === "P1" || t === "P2"; }) : cells), [cells, simple]);
 
   const replayMax = useMemo(() => (replayOn ? Math.max(1, ...cells.map((c) => c.dow_curve?.[replayIdx] ?? 0)) : 1), [cells, replayOn, replayIdx]);
-  // expected-activity ceiling for the date-lens (today/tomorrow) circle sizing.
-  const activityMax = useMemo(() => Math.max(1, ...cells.map((c) => c.forecast_intensity ?? c.display_score ?? 0)), [cells]);
+  const showLiveTrafficForLens = liveTrafficActive ?? source === "live";
 
-  // ---- circle radius (v1-style) — variable, NOT uniform -------------------
-  // replay -> day's expected activity · hour-activity -> modeled congestion @ hour ·
-  // date-lens (forecast) -> EXPECTED ACTIVITY · default/now -> obstruction PRESSURE
-  // (pic_score), linear like v1 (`4 + pressure/100*11`). So sizes visibly vary.
+  // ---- v1-style active visual score ---------------------------------------
+  // One score drives BOTH visibility and colour/radius. Below the floor, a zone
+  // disappears; above it, green→yellow→red and small→large are tied together.
+  const activeVisualScore = useCallback(
+    (c: Cell): number => {
+      if (replayOn) return Math.max(0, Math.min(100, ((c.dow_curve?.[replayIdx] ?? 0) / replayMax) * 100));
+      if (hourActivity) return Math.max(0, Math.min(100, (c.congestion_hour ?? 0) * 100));
+      if (sizeMode === "pressure") return Math.max(0, Math.min(100, c.pressure ?? c.pic_score ?? 0));
+      return Math.max(0, Math.min(100, c.activity_score ?? c.forecast_intensity ?? c.display_score ?? c.intensity ?? c.pic_score ?? 0));
+    },
+    [replayOn, replayIdx, replayMax, hourActivity, sizeMode],
+  );
+
+  const visibleDisplay = useMemo(
+    () => display.filter((c) => activeVisualScore(c) >= V1_CIRCLE_VISIBLE_FLOOR || c.emerging || isBlindSpot(c)),
+    [display, activeVisualScore],
+  );
+
   const radiusOf = useCallback(
     (c: Cell): number => {
-      if (replayOn) return 3 + Math.sqrt(Math.max(0, (c.dow_curve?.[replayIdx] ?? 0) / replayMax)) * 16;
-      if (hourActivity) return 4 + Math.max(0, Math.min(1, c.congestion_hour ?? 0.4)) * 16;
-      if (sizeMode !== "pressure" && source === "forecast") {
-        const a = c.forecast_intensity ?? c.display_score ?? 0;
-        return 4 + Math.sqrt(Math.max(0, a / activityMax)) * 15;
-      }
-      const pressure = c.pressure ?? c.pic_score ?? 0;
-      return 4 + (Math.max(0, Math.min(100, pressure)) / 100) * 12;
+      const t = activeVisualScore(c) / 100;
+      return V1_RADIUS_MIN + Math.sqrt(t) * (V1_RADIUS_MAX - V1_RADIUS_MIN);
     },
-    [replayOn, replayIdx, replayMax, hourActivity, sizeMode, source, activityMax],
+    [activeVisualScore],
   );
 
   // ---- circles + heat -----------------------------------------------------
@@ -214,15 +236,14 @@ export function ClearLaneMap({
     const engine = engineRef.current;
     if (!engine || status !== "ready") return;
 
-    // When the live layer is on AND we're on the live "now" lens, monitored cells are
-    // coloured by LIVE severity (Avni's dot technique). Scrub to another day/time and
-    // the live override lifts so the dots follow the time-modeled colour instead —
-    // live traffic only exists for "now" (and is never re-fetched on a time change).
+    // When the live layer is on AND the owner says this lens is the real current
+    // moment, monitored cells are coloured by LIVE severity. Scrubbing to another
+    // hour/day lifts the override so dots follow the modeled time colour instead.
     const liveSev = (c: Cell): string | undefined =>
-      liveOn && source === "live" ? liveSeverityByCell?.[c.h3_r10] : undefined;
-    const fillOf = (c: Cell): string => liveSev(c) ?? (replayOn ? tierColor(cellTier(c)) : circleColor(c, colorMode, flowMap));
+      liveOn && showLiveTrafficForLens ? liveSeverityByCell?.[c.h3_r10] : undefined;
+    const fillOf = (c: Cell): string => liveSev(c) ?? (colorMode === "pic" ? picColor(activeVisualScore(c)) : replayOn ? picColor(activeVisualScore(c)) : circleColor(c, colorMode, flowMap));
 
-    const circleSpecs: CircleSpec[] = display.map((c) => {
+    const circleSpecs: CircleSpec[] = visibleDisplay.map((c) => {
       const lift = c.learn_lift ?? 0;
       const expanding = lift >= 0.15;
       const blind = isBlindSpot(c);
@@ -240,7 +261,7 @@ export function ClearLaneMap({
         color: ring,
         fillColor: fill,
         weight: onLive ? 2 : c.emerging ? 2.5 : expanding ? 1.6 : blind ? 1.4 : 0.6,
-        tooltip: `${c.police_station || "—"} · ${cellTier(c)} · PIC ${Math.round(c.pic_score)}${onLive ? " · ● live congestion" : ""}${blind ? " · ◎ blind spot" : ""}${c.emerging ? " · ◆ emerging" : ""}${liftTip}`,
+        tooltip: `${c.police_station || "—"} · ${cellTier(c)} · active ${Math.round(activeVisualScore(c))} · PIC ${Math.round(c.pic_score)}${onLive ? " · ● live congestion" : ""}${blind ? " · ◎ blind spot" : ""}${c.emerging ? " · ◆ emerging" : ""}${liftTip}`,
         onClick: () => onCellRef.current?.(c),
       };
     });
@@ -251,8 +272,8 @@ export function ClearLaneMap({
     // engine won. Remove once the render path is verified in the field.
     if (import.meta.env.DEV)
       // eslint-disable-next-line no-console
-      console.log(`[ClearLaneMap] engine=${engine.label} cells_in=${cells.length} display=${display.length} circles_drawn=${showHeat ? 0 : circleSpecs.length} heat_pts=${showHeat ? heatSpecs.length : 0} mode=${colorMode}`);
-  }, [display, cells, source, colorMode, showHeat, status, replayOn, radiusOf, flowMap, liveOn, liveSeverityByCell]);
+      console.log(`[ClearLaneMap] engine=${engine.label} cells_in=${cells.length} display=${display.length} visible=${visibleDisplay.length} circles_drawn=${showHeat ? 0 : circleSpecs.length} heat_pts=${showHeat ? heatSpecs.length : 0} mode=${colorMode}`);
+  }, [visibleDisplay, display.length, cells, colorMode, showHeat, status, replayOn, radiusOf, flowMap, liveOn, liveSeverityByCell, showLiveTrafficForLens, activeVisualScore]);
 
   // ---- evening blind-spot rings (dashed) ----------------------------------
   useEffect(() => {
@@ -262,7 +283,7 @@ export function ClearLaneMap({
       engine.setRings([]);
       return;
     }
-    const rings: RingSpec[] = display
+    const rings: RingSpec[] = visibleDisplay
       .filter(isBlindSpot)
       .map((c) => ({
         id: `ring-${c.h3_r10}`,
@@ -275,7 +296,7 @@ export function ClearLaneMap({
         tooltip: `${c.police_station || "—"} · evening blind spot (high-priority · under-observed)`,
       }));
     engine.setRings(rings);
-  }, [display, showRings, status, radiusOf]);
+  }, [visibleDisplay, showRings, status, radiusOf]);
 
   // ---- evidence points (recorded tickets/reports) -------------------------
   useEffect(() => {
@@ -329,6 +350,43 @@ export function ClearLaneMap({
     const engine = engineRef.current;
     if (engine && status === "ready" && flyTo) engine.setView(flyTo, Math.max(engine.getZoom(), 16));
   }, [flyTo, status]);
+
+  // ---- focus ripple: zoom into ONE place, animate "waves out", show a small
+  // numbers peek; clicking the ripple opens the detail modal. Driven by the URL
+  // (?lat/lon/h3) so a single place is deep-linkable and shareable.
+  const focusCell = useMemo<Cell | null>(() => {
+    if (!focus) return null;
+    const byId = focus.h3 ? cells.find((c) => c.h3_r10 === focus.h3) : null;
+    if (byId) return byId;
+    return cells.find((c) => Math.abs(c.lat - focus.lat) < 1e-5 && Math.abs(c.lon - focus.lon) < 1e-5) ?? null;
+  }, [focus, cells]);
+  const onFocusClickRef = useRef<(() => void) | null>(null);
+  onFocusClickRef.current = focusCell ? () => onFocusOpenRef.current?.(focusCell) : null;
+  useEffect(() => {
+    const engine = engineRef.current;
+    if (!engine || status !== "ready") return;
+    if (!focus) {
+      engine.setFocus(null);
+      return;
+    }
+    engine.setView([focus.lat, focus.lon], Math.max(engine.getZoom(), 17));
+    const esc = (s: string) => s.replace(/[&<>"]/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[m] as string));
+    let peek = "";
+    if (!modalOpen && focusCell) {
+      const name = esc(cellLabel(focusCell));
+      const word = esc(priorityLabel(focusCell).word);
+      peek =
+        `<div class="cl-peek"><div class="rounded-lg border bg-background/95 px-2.5 py-1.5 text-center shadow-lg backdrop-blur">` +
+        `<div class="text-[11px] font-bold leading-tight">${name}</div>` +
+        `<div class="text-[10px] text-muted-foreground">${word} · priority ${Math.round(priorityScore(focusCell))} · PIC ${Math.round(focusCell.pic_score)}</div>` +
+        `<div class="text-[9px] font-medium text-primary">tap for details</div>` +
+        `</div></div>`;
+    } else if (!modalOpen) {
+      peek = `<div class="cl-peek"><div class="rounded-lg border bg-background/95 px-2.5 py-1 text-[10px] font-medium text-primary shadow-lg backdrop-blur">tap for details</div></div>`;
+    }
+    const html = `<div class="cl-focus"><span class="cl-wave"></span><span class="cl-wave"></span><span class="cl-wave"></span><span class="cl-core"></span>${peek}</div>`;
+    engine.setFocus({ lat: focus.lat, lon: focus.lon, html, onClick: () => onFocusClickRef.current?.() });
+  }, [focus, focusCell, modalOpen, status]);
   useEffect(() => {
     const engine = engineRef.current;
     if (engine && status === "ready" && userLocation && !centeredRef.current) {
@@ -351,13 +409,15 @@ export function ClearLaneMap({
   }, [liveOn, liveZones, liveTrafficEnabled]);
 
   // ---- live-traffic layer: draw the severity-coloured road segments -------
-  // Only on the live "now" lens — scrubbing to a forecast day hides the live streets
-  // (no re-fetch; the billed API is only hit via the toggle / zone slider).
+  // Keep cached road geometry visible whenever the operator turns the layer on.
+  // Only hotspot DOT colour overrides are limited to the exact current lens; the
+  // road layer itself is a cached context overlay and should not vanish while the
+  // shift clock is being scrubbed.
   useEffect(() => {
     const engine = engineRef.current;
     if (!engine || status !== "ready") return;
-    engine.setTrafficLines?.(liveOn && source === "live" ? liveTraffic?.segments ?? [] : []);
-  }, [liveOn, liveTraffic, status, source]);
+    engine.setTrafficLines?.(liveOn ? liveTraffic?.segments ?? [] : []);
+  }, [liveOn, liveTraffic, status]);
 
   // ---- keep sized on layout/viewport changes ------------------------------
   useEffect(() => {
@@ -602,7 +662,7 @@ function MapPanel({
     <div className="pointer-events-auto flex min-h-0 flex-col overflow-hidden rounded-lg border bg-background/95 text-[11px] shadow-md backdrop-blur">
       <button
         onClick={onToggle}
-        aria-expanded={open}
+        aria-expanded={open ? "true" : "false"}
         className="flex w-full shrink-0 items-center justify-between gap-2 px-3 py-1.5 text-left font-semibold"
       >
         <span className="flex items-center gap-1.5">{title}</span>
@@ -706,10 +766,10 @@ function LayersPanel(p: PanelProps) {
                 </div>
                 <p className="text-[10px] leading-tight text-muted-foreground">
                   {p.liveLoading
-                    ? "Polling live traffic…"
+                    ? "Updating traffic…"
                     : p.liveIsLive
-                      ? `Live · ${p.liveCoverage}% of zones (Mappls Route ADV/ETA). Severity = 1 − free-flow / live ETA.`
-                      : "Simulated fallback (Mappls quota/off). Severity = modeled day×hour."}
+                      ? `${p.liveCoverage}% of zones covered. Severity = 1 − free-flow / travel-time.`
+                      : "Severity = modeled day×hour congestion."}
                 </p>
                 <div className="mt-1 flex items-center gap-2 text-[10px] text-muted-foreground">
                   <span>busy</span>
@@ -810,7 +870,7 @@ function Legend({
         (["live", "mappls_typical", "modeled"] as const).map((s) => (
           <span key={s} className="flex items-center gap-1.5">
             <i className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: { live: "#16a34a", mappls_typical: "#f59e0b", modeled: "#4f7fd6" }[s] }} />
-            {sourceMeta(s).label}
+            {({ live: "Current", mappls_typical: "Typical", modeled: "Modeled" } as const)[s]}
           </span>
         ))
       ) : colorMode === "tier" ? (
@@ -833,6 +893,9 @@ function Legend({
           <div className="flex justify-between text-muted-foreground">
             <span>low</span>
             <span>high</span>
+          </div>
+          <div className="text-[10px] text-muted-foreground">
+            Zones below {V1_CIRCLE_VISIBLE_FLOOR}% active score are hidden for this time lens.
           </div>
         </>
       )}

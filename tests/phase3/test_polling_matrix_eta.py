@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pandas as pd
+import pytest
 
 from clearlane.phase3 import polling
 from clearlane.phase3.mappls_client import RawResponse
@@ -68,6 +69,13 @@ def _config() -> dict:
         },
         "congestion": {
             "formula": "one_minus_inverse_tti",
+            "traffic_label_bands": {
+                "normal": {"label": "NORMAL", "minimum": 0.0, "maximum": 10.0},
+                "light": {"label": "LIGHT_CONGESTION", "minimum": 10.0, "maximum": 25.0},
+                "moderate": {"label": "MODERATE_CONGESTION", "minimum": 25.0, "maximum": 45.0},
+                "high": {"label": "HIGH_CONGESTION", "minimum": 45.0, "maximum": 65.0},
+                "severe": {"label": "SEVERE_CONGESTION", "minimum": 65.0, "maximum": 100.0},
+            },
             "severity_labels": {
                 "normal": {"minimum": 0.00, "maximum": 0.15},
                 "moderate": {"minimum": 0.15, "maximum": 0.35},
@@ -154,3 +162,56 @@ def test_polling_uses_explicit_directional_matrix_diagonals(monkeypatch):
         ("phys_1", "A_TO_B"): 33.0,
         ("phys_1", "B_TO_A"): 34.0,
     }
+
+
+def test_polling_adds_speed_labels_and_previous_deltas(monkeypatch):
+    def fake_call_matrix_eta(client, points, *, sources=None, destinations=None, budget_scope="poll"):
+        if sources == [0, 2] and destinations == [1, 3]:
+            matrix = MatrixResult(
+                distances=[[100.0, 999.0], [999.0, 110.0]],
+                durations=[[30.0, 999.0], [999.0, 33.0]],
+                rows=2,
+                cols=2,
+            )
+        else:
+            matrix = MatrixResult(
+                distances=[[100.0, 999.0], [999.0, 110.0]],
+                durations=[[31.0, 999.0], [999.0, 34.0]],
+                rows=2,
+                cols=2,
+            )
+        return matrix, _raw("distance_matrix_eta")
+
+    monkeypatch.setattr(polling, "call_matrix_eta", fake_call_matrix_eta)
+
+    result = polling.run_poll_cycle(
+        directed_segments=_directed_segments(),
+        candidate_meta=_candidate_meta(),
+        baseline_map={},
+        client=object(),
+        config=_config(),
+        poll_cycle_id="cycle",
+        data_mode="LIVE",
+        previous_observations_by_directed={
+            "phys_0_A_TO_B": {
+                "live_eta_duration_s": 24.0,
+                "eta_distance_m": 100.0,
+            }
+        },
+    )
+
+    obs = {
+        (o["physical_segment_id"], o["direction"]): o
+        for o in result["observations"]
+    }
+    current = obs[("phys_0", "A_TO_B")]
+    assert current["current_speed_kmh"] == pytest.approx(12.0)
+    assert current["reference_speed_kmh"] == pytest.approx(18.0)
+    assert current["speed_reduction_percentage"] == pytest.approx(33.333333)
+    assert current["traffic_label"] == "MODERATE_CONGESTION"
+    assert current["eta_change_percentage"] == pytest.approx(25.0)
+    assert current["speed_change_percentage"] == pytest.approx(-20.0)
+
+    pic = result["pic"].set_index("h3_res10")
+    assert pic.loc["h3_a", "current_speed_kmh"] == pytest.approx(100.0 / 31.0 * 3.6)
+    assert pic.loc["h3_a", "congestion_label"] == "MODERATE_CONGESTION"

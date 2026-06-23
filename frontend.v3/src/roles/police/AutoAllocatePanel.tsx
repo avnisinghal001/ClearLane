@@ -3,7 +3,8 @@ import { Layers, RefreshCw, Minus, Plus, AlertTriangle, RotateCcw } from "lucide
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { autoAllocate } from "@/lib/api";
-import { cellTier, tierColor } from "@/lib/signals";
+import { ROAD_CLASS_LABEL, cellTier, isBlindSpot, tierColor } from "@/lib/signals";
+import type { Problem } from "@/lib/force";
 import type { AllocZone, AutoAllocation, Cell, Officer } from "@/lib/types";
 
 const TIER_WEIGHT: Record<string, number> = { P1: 1.0, P2: 0.66, P3: 0.4, P4: 0.2 };
@@ -23,21 +24,57 @@ function largestRemainder(weights: number[], total: number): number[] {
   return base;
 }
 
-// Offline compose (when the live force endpoint is unreachable): zones = the station's
-// top priority cells, weighted by tier × pressure; officers = on-shift roster count.
-function composeOffline(cells: Cell[], officers: Officer[], shift: string | null, stationName: string, slug: string): AutoAllocation {
-  const onShift = officers.filter((o) => o.status !== "off" && (!shift || o.shift === shift)).length;
-  const zonesRaw = cells
+function scoreOf(c: Cell, shift: string | null = null): number {
+  const base = c.activity_score ?? c.forecast_intensity ?? c.display_score ?? c.operational_priority ?? c.pic_score ?? 0;
+  if (shift === "C") return base * (1 + (isBlindSpot(c) ? 0.28 : 0) + (c.congestion_hour ?? 0) * 0.18);
+  if (shift === "D") return base * (0.72 + (c.emerging ? 0.22 : 0));
+  if (shift === "A") return base * (1 + (c.emerging ? 0.15 : 0));
+  if (shift === "B") return base * (0.95 + (c.congestion_hour ?? 0) * 0.08);
+  return base;
+}
+
+function zoneName(c: Cell, stationName: string): string {
+  const road = c.road_class ? ROAD_CLASS_LABEL[c.road_class] ?? c.road_class.replace(/_/g, " ") : null;
+  if (road && road !== "Unclassified") return `${road} priority area`;
+  return `${stationName} priority area`;
+}
+
+function buildAllocations(cells: Cell[], onShift: number, stationName: string, problems: Problem[] = [], shift: string | null = null): AllocZone[] {
+  const order = new Map(problems.map((p, i) => [p.id, i]));
+  const zonesRaw = [...cells]
     .filter((c) => (c.pic_score ?? 0) > 0)
-    .sort((a, b) => (b.pic_score ?? 0) - (a.pic_score ?? 0))
-    .slice(0, 14)
+    .sort((a, b) => {
+      const ai = order.get(a.h3_r10);
+      const bi = order.get(b.h3_r10);
+      if (!shift && (ai != null || bi != null)) return (ai ?? 9999) - (bi ?? 9999);
+      return scoreOf(b, shift) - scoreOf(a, shift);
+    })
     .map((c) => {
       const tier = cellTier(c);
-      return { cell: c.h3_r10, lat: c.lat, lon: c.lon, tier, rerank_score: Math.round(c.pic_score ?? 0), pressure: Math.round(c.pic_score ?? 0), road_class: c.road_class, reason_codes: [] as string[], weight: TIER_WEIGHT[tier] * Math.max((c.pic_score ?? 0) / 100, 0.01) };
+      const pressure = Math.round(scoreOf(c, shift));
+      return {
+        cell: c.h3_r10,
+        name: zoneName(c, stationName),
+        lat: c.lat,
+        lon: c.lon,
+        tier,
+        rerank_score: pressure,
+        pressure,
+        road_class: c.road_class,
+        reason_codes: [] as string[],
+        weight: TIER_WEIGHT[tier] * Math.max(scoreOf(c, shift) / 100, 0.01),
+      };
     });
   const counts = largestRemainder(zonesRaw.map((z) => z.weight), onShift);
   const totalW = zonesRaw.reduce((a, z) => a + z.weight, 0) || 1;
-  const allocations: AllocZone[] = zonesRaw.map((z, i) => ({ ...z, officers: counts[i], share_pct: Math.round((1000 * z.weight) / totalW) / 10 }));
+  return zonesRaw.map((z, i) => ({ ...z, officers: counts[i] ?? 0, share_pct: Math.round((1000 * z.weight) / totalW) / 10 }));
+}
+
+// Offline compose (when the live force endpoint is unreachable): zones = the current
+// lens's station cells, weighted by active priority; officers = on-shift roster count.
+function composeOffline(cells: Cell[], officers: Officer[], shift: string | null, stationName: string, slug: string, problems: Problem[]): AutoAllocation {
+  const onShift = officers.filter((o) => o.status !== "off" && (!shift || o.shift === shift)).length;
+  const allocations = buildAllocations(cells, onShift, stationName, problems, shift);
   const expected = cells.reduce((a, c) => a + (c.weekly_expected ?? 0), 0) / 7 * (SHIFT_HOURS / 24);
   const recommended = Math.max(1, Math.ceil(expected / (TPOH * SHIFT_HOURS)));
   return {
@@ -59,15 +96,19 @@ export function AutoAllocatePanel({
   stationName,
   cells,
   officers,
+  problems = [],
   shiftOrder,
   shiftLabels,
+  onZoneFocus,
 }: {
   slug: string;
   stationName: string;
   cells: Cell[];
   officers: Officer[];
+  problems?: Problem[];
   shiftOrder: string[];
   shiftLabels: Record<string, string>;
+  onZoneFocus?: (cell: Cell) => void;
 }) {
   const [shift, setShift] = useState<string | "all">("all");
   const [alloc, setAlloc] = useState<AutoAllocation | null>(null);
@@ -78,10 +119,22 @@ export function AutoAllocatePanel({
     setLoading(true);
     setOverride({});
     const sh = shift === "all" ? null : shift;
+    const local = composeOffline(cells, officers, sh, stationName, slug, problems);
     autoAllocate(slug, sh)
-      .then((live) => setAlloc(live ?? composeOffline(cells, officers, sh, stationName, slug)))
+      .then((live) =>
+        setAlloc(
+          live
+            ? {
+                ...live,
+                allocations: buildAllocations(cells, live.on_shift_officers, stationName, problems, sh),
+                n_zones: cells.filter((c) => (c.pic_score ?? 0) > 0).length,
+                method: `${live.method} Visible rows use the current map/dispatch lens.`,
+              }
+            : local,
+        ),
+      )
       .finally(() => setLoading(false));
-  }, [slug, shift, cells, officers, stationName]);
+  }, [slug, shift, cells, officers, stationName, problems]);
 
   useEffect(() => load(), [load]);
 
@@ -151,17 +204,25 @@ export function AutoAllocatePanel({
         <div className="space-y-1.5">
           {(alloc?.allocations ?? []).map((z) => {
             const n = override[z.cell] ?? z.officers;
+            const cell = cells.find((c) => c.h3_r10 === z.cell);
+            const name = cell ? zoneName(cell, stationName) : z.name ?? `${stationName} priority area`;
+            const road = cell?.road_class ? ROAD_CLASS_LABEL[cell.road_class] ?? cell.road_class.replace(/_/g, " ") : z.road_class ?? "—";
             return (
               <div key={z.cell} className="flex items-center gap-2 rounded-lg border bg-card px-2.5 py-1.5">
                 <span className="inline-flex h-6 w-7 items-center justify-center rounded text-[11px] font-bold text-white" style={{ background: tierColor(z.tier) }}>
                   {z.tier}
                 </span>
-                <div className="min-w-0 flex-1">
-                  <div className="num truncate text-xs text-muted-foreground">{z.cell.slice(0, 10)}…</div>
+                <button
+                  type="button"
+                  className="min-w-0 flex-1 text-left"
+                  onClick={() => cell && onZoneFocus?.(cell)}
+                  title={cell ? "Pulse on map and open zone details" : z.cell}
+                >
+                  <div className="truncate text-xs font-semibold">{name}</div>
                   <div className="text-[11px] text-muted-foreground">
-                    PIC {Math.round(z.pressure)} · {z.road_class ?? "—"} · {z.share_pct}% share
+                    Priority {Math.round(z.pressure)} · {road} · {z.share_pct}% share
                   </div>
-                </div>
+                </button>
                 <div className="flex items-center gap-1">
                   <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => nudge(z.cell, z.officers, -1)} disabled={n <= 0} title="Fewer officers">
                     <Minus className="h-3.5 w-3.5" />

@@ -68,6 +68,16 @@ export interface HeatPoint {
   intensity: number;
 }
 
+// A single animated "focus" marker (ripple/waves-out) at a clicked / deep-linked
+// place. `html` is the full marker markup (ripple + optional numbers peek), built
+// by ClearLaneMap; clicking it opens the detail modal.
+export interface FocusSpec {
+  lat: number;
+  lon: number;
+  html: string;
+  onClick?: () => void;
+}
+
 export interface MapEngine {
   id: EngineId;
   label: string;
@@ -85,6 +95,7 @@ export interface MapEngine {
   setTrafficLines?(lines: TrafficLineSpec[]): void; // live-traffic road segments (optional)
   setRings(rings: RingSpec[]): void;
   setDots(dots: DotSpec[]): void;
+  setFocus(focus: FocusSpec | null): void; // animated ripple at a clicked/deep-linked place
   setTraffic(on: boolean): void;
   invalidate(): void;
   destroy(): void;

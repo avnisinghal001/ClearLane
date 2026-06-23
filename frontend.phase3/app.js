@@ -1,4 +1,4 @@
-/* ClearLane Phase 3 dashboard — reads generated Phase 3 outputs (no build step).
+/* TraFix Phase 3 dashboard — reads generated Phase 3 outputs (no build step).
    Place the latest outputs in ./data via scripts/build_phase3_dashboard.py, then
    serve this folder (python -m http.server) and open it. Falls back gracefully. */
 
@@ -124,7 +124,7 @@ async function main() {
   });
 
   document.getElementById("footerMeta").textContent =
-    `ClearLane Phase 3 · ${feats.length} monitored Whitefield cells · ${meta.coverage || "LIVE TRAFFIC COVERAGE: WHITEFIELD DEMO REGION"} · PIC = historical propensity × live congestion severity`;
+    `TraFix Phase 3 · ${feats.length} monitored Whitefield cells · ${meta.coverage || "LIVE TRAFFIC COVERAGE: WHITEFIELD DEMO REGION"} · PIC = historical propensity × live congestion severity`;
 }
 
 main();

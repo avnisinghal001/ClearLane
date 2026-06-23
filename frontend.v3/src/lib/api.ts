@@ -10,6 +10,9 @@ import { genRoster, RANK_ABBR, RANKS, SHIFT_ORDER, SHIFTS } from "./force";
 import type {
   AutoAllocation,
   Cell,
+  CellDetail,
+  CellHistorical,
+  CellLive,
   ComplaintInput,
   DispatchPlan,
   DispatchQueue,
@@ -240,22 +243,19 @@ function composeMap(when: When, hour: number | null, date: string | undefined, b
 // instant (no network). `now` is short-lived (live data); other lenses are stable
 // until the page reloads or forceRecompute() clears the cache.
 const _mapCache = new Map<string, { ts: number; payload: MapPayload }>();
-const MAP_TTL_NOW_MS = 20_000;
 export function clearMapCache() {
   _mapCache.clear();
 }
 
 export async function getMap(when: When, hour: number | null, date?: string, force = false): Promise<MapPayload> {
   const lens = `${when}:${hour ?? "_"}:${when === "custom" ? date ?? "" : ""}`;
-  const hit = _mapCache.get(lens);
-  // `force` (e.g. the "Now" button) always hits the API for fresh live state.
-  if (!force && hit && (when !== "now" || Date.now() - hit.ts < MAP_TTL_NOW_MS)) {
-    return { ...hit.payload, served_from_client_cache: true } as MapPayload;
-  }
 
   const qs = new URLSearchParams({ when });
   if (hour != null) qs.set("hour", String(hour)); // hour drives the heatmap in every mode
   if (when === "custom" && date) qs.set("date", date);
+  if (force) qs.set("force", "1");
+  qs.set("nocache", "1");
+  qs.set("debug", "1");
   // Dense map like v1 (~1.5k zones): ask for the full representative spread (head +
   // stride across all 6.5k occupied cells) instead of the thin 250-cell default.
   qs.set("limit", "2000");
@@ -348,6 +348,29 @@ function authHeader(): Record<string, string> {
   }
 }
 
+// Stable per-browser citizen identity so a citizen's reports are attributed to a
+// real `created_by` in MongoDB (not "anon") and the same person can be recognised
+// across sessions. Persisted in localStorage.
+function citizenId(): string {
+  try {
+    let id = localStorage.getItem("cl_citizen_id");
+    if (!id) {
+      id = "cz-" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+      localStorage.setItem("cl_citizen_id", id);
+    }
+    return id;
+  } catch {
+    return "anon";
+  }
+}
+
+// Lowercase slug used to reconcile station display names across roles (citizen
+// complaint station vs the police session station) so the UI filter never drops a
+// matching ticket on a case/spacing difference.
+function stationSlug(name: string | null | undefined): string {
+  return (name || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
 export async function getGovtStations(): Promise<{ stations: GovtStation[]; totals: { stations: number; officers: number } } | null> {
   try {
     const r = await fetch(BASE + "/api/govt/stations", { headers: authHeader() });
@@ -428,14 +451,17 @@ export async function getDispatchQueue(
   when: When = "now",
   hour?: number | null,
 ): Promise<DispatchQueue> {
+  const queueWhen: Exclude<When, "custom"> = when === "custom" ? "today" : when;
   const qs = new URLSearchParams();
   if (station) qs.set("station", station);
-  if (when) qs.set("when", when);
+  if (queueWhen) qs.set("when", queueWhen);
   if (hour != null) qs.set("hour", String(hour));
+  qs.set("debug", "1");
+  qs.set("live", "1");
   const live = await tryLive<DispatchQueue>(`/api/v3/dispatch/queue?${qs}`);
   if (live && live.queue) return live;
   const [base, stations] = await Promise.all([demo<DemoCells>("cells.json"), getStations()]);
-  return composeQueue(base.cells, stations, { station, when, hour: hour ?? undefined });
+  return composeQueue(base.cells, stations, { station, when: queueWhen, hour: hour ?? undefined });
 }
 
 export async function getForecastDaily<T = unknown>(): Promise<T> {
@@ -475,14 +501,24 @@ interface TicketFilter {
 export async function getTickets(filter: TicketFilter = {}): Promise<Ticket[]> {
   const qs = new URLSearchParams();
   Object.entries(filter).forEach(([k, v]) => v != null && qs.set(k, String(v)));
-  const live = await tryLive<Ticket[]>(`/api/v3/tickets?${qs}`);
+  // Send the police/government bearer so a station session gets ITS scoped tickets
+  // (complaints + chalans) and govt gets all — instead of the unauthenticated public
+  // feed. Citizen/offline tokens send no bearer, so they keep the public community feed.
+  const live = await tryLive<Ticket[]>(`/api/v3/tickets?${qs}`, { headers: authHeader() });
+  // Fall back to the bundled demo tickets when the backend is unreachable (null) OR
+  // returns nothing (e.g. live API up but MongoDB not configured -> ok([])). Without
+  // this the Tickets screen renders blank in local/dev. Mirrors the offline-first
+  // contract used by every other reader here.
   let rows = live;
-  if (!rows) {
+  if (!rows || rows.length === 0) {
     local.seed((await demo<DemoCells>("cells.json")).cells, await demo<Ticket[]>("tickets.json"));
     rows = local.listTickets();
   }
   let out = rows;
-  if (filter.station) out = out.filter((t) => (t.station || "").toLowerCase() === filter.station!.toLowerCase());
+  if (filter.station) {
+    const want = stationSlug(filter.station);
+    out = out.filter((t) => stationSlug(t.station) === want);
+  }
   if (filter.status) out = out.filter((t) => t.status === filter.status);
   if (filter.cell) out = out.filter((t) => t.cell === filter.cell);
   if (filter.officer != null) {
@@ -491,6 +527,70 @@ export async function getTickets(filter: TicketFilter = {}): Promise<Ticket[]> {
   }
   if (filter.limit) out = out.slice(0, filter.limit);
   return out;
+}
+
+// Full PLACE-ANALYSIS for one cell (trained historical layer + live ticket overlay).
+// Live first; offline falls back to the bundled trimmed cell_detail.json for the
+// historical breakdown and computes the live recurrence from the demo tickets so
+// the modal always renders.
+interface DemoCellDetail {
+  month_order: string[];
+  data_window?: string;
+  cells: Record<string, CellHistorical>;
+}
+export async function getCellDetail(h3: string): Promise<CellDetail> {
+  const live = await tryLive<CellDetail>(`/api/v3/cell/${encodeURIComponent(h3)}`);
+  if (live && live.live) return live;
+  const detail = await demo<DemoCellDetail>("cell_detail.json").catch(() => null);
+  const hist = detail?.cells?.[h3] ?? null;
+  const tickets = await getTickets({ cell: h3 });
+  const now = Date.now() / 1000;
+  const cutoff = now - 30 * 86400;
+  const vehicles = tickets.map((t) => t.vehicle_number).filter(Boolean) as string[];
+  const seen: Record<string, number> = {};
+  vehicles.forEach((v) => (seen[v] = (seen[v] || 0) + 1));
+  const repeat = Object.values(seen).reduce((a, c) => a + (c > 1 ? c : 0), 0);
+  const liveBlock: CellLive = {
+    total: tickets.length,
+    open: tickets.filter((t) => t.status === "open").length,
+    closed: tickets.filter((t) => t.status === "closed").length,
+    recent_30d: tickets.filter((t) => new Date(t.created_at).getTime() / 1000 >= cutoff).length,
+    repeat_share: vehicles.length ? round(repeat / vehicles.length, 3) : null,
+    last_at: null,
+    historical_priority: 0,
+    live_adjustment: local.liveAdjustment(h3),
+    operational_priority: 0,
+    dispatch_state: null,
+    deployed: false,
+    escalated: false,
+  };
+  return {
+    h3_r10: h3,
+    police_station: null,
+    month_order: detail?.month_order ?? [],
+    data_window: detail?.data_window ?? null,
+    historical: hist,
+    live: liveBlock,
+    note: "Offline demo: historical from bundle, live from demo tickets.",
+  };
+}
+
+// Send a unit to a cell NOW (police/govt). Real assignment — marks the cell
+// 'assigned' server-side ('deployed now'). Needs a live backend + auth.
+export async function assignDispatch(cell: string, officer?: number | null): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const r = await fetch(`${BASE}/api/v3/operational/dispatch`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeader() },
+      body: JSON.stringify({ cell, officer: officer ?? null }),
+    });
+    if (r.ok) return { ok: true };
+    if (r.status === 401 || r.status === 403) return { ok: false, error: "Police/government login required to dispatch." };
+    if (r.status === 503) return { ok: false, error: "Dispatch needs the live backend + MongoDB." };
+    return { ok: false, error: `Dispatch failed (${r.status}).` };
+  } catch {
+    return { ok: false, error: "Backend unavailable — dispatch needs the live API + MongoDB." };
+  }
 }
 
 // --------------------------------------------------------------------------- //
@@ -589,11 +689,11 @@ export async function autoAllocate(slug: string, shift?: string | null): Promise
   return null;
 }
 
-async function postLive<T>(path: string, body: unknown): Promise<T | null> {
+async function postLive<T>(path: string, body: unknown, extraHeaders: Record<string, string> = {}): Promise<T | null> {
   try {
     const r = await fetch(BASE + path, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...extraHeaders },
       body: JSON.stringify(body),
     });
     if (!r.ok) throw new Error(String(r.status));
@@ -605,14 +705,17 @@ async function postLive<T>(path: string, body: unknown): Promise<T | null> {
 }
 
 export async function postComplaint(input: ComplaintInput): Promise<Ticket> {
-  const live = await postLive<Ticket>("/api/v3/complaints", input);
+  // Attach the stable citizen id so the complaint is owned in MongoDB (created_by)
+  // and routed to its station for police/govt — not stored as "anon".
+  const live = await postLive<Ticket>("/api/v3/complaints", { ...input, citizen_id: citizenId() }, { "X-Citizen-Id": citizenId() });
   if (live) return live;
   local.seed((await demo<DemoCells>("cells.json")).cells, await demo<Ticket[]>("tickets.json"));
   return local.postComplaint(input);
 }
 
 export async function postTicket(input: TicketInput): Promise<Ticket> {
-  const live = await postLive<Ticket>("/api/v3/tickets", input);
+  // Police/government chalans require the bearer session (station scope enforced server-side).
+  const live = await postLive<Ticket>("/api/v3/tickets", input, authHeader());
   if (live) return live;
   local.seed((await demo<DemoCells>("cells.json")).cells, await demo<Ticket[]>("tickets.json"));
   return local.postTicket(input);
@@ -622,7 +725,8 @@ export async function patchTicket(id: string, body: ResolveInput): Promise<Ticke
   try {
     const r = await fetch(`${BASE}/api/v3/tickets/${encodeURIComponent(id)}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      // Resolving a ticket needs the police/government bearer (scope enforced server-side).
+      headers: { "Content-Type": "application/json", ...authHeader() },
       body: JSON.stringify(body),
     });
     if (r.ok) return (await r.json()) as Ticket;

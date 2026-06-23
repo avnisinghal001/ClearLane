@@ -96,3 +96,20 @@ class ObservationStore:
             if pd.notna(dur) and pd.notna(ts):
                 out.append((ts.to_pydatetime(), float(dur)))
         return out
+
+    def latest_valid_by_directed(self, data_mode: str | None = None) -> dict[str, dict[str, Any]]:
+        """Latest valid observation per directed segment, used for poll-to-poll deltas."""
+        df = self.read_all()
+        if df.empty:
+            return {}
+        mask = df.get("is_valid_observation") == True  # noqa: E712
+        if data_mode is not None and "data_mode" in df.columns:
+            mask = mask & (df["data_mode"] == data_mode)
+        sub = df[mask].copy()
+        if sub.empty:
+            return {}
+        sub["_observed_sort"] = pd.to_datetime(sub.get("observed_at_ist"), errors="coerce")
+        sub = sub.sort_values("_observed_sort")
+        latest = sub.groupby("directed_segment_id", as_index=False).tail(1)
+        latest = latest.drop(columns=["_observed_sort"], errors="ignore")
+        return {str(r["directed_segment_id"]): dict(r) for _, r in latest.iterrows()}

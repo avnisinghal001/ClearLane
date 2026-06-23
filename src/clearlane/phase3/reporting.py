@@ -47,14 +47,27 @@ def coverage_block(citywide_h3: int) -> dict[str, Any]:
 def congestion_summary(pic_df: pd.DataFrame) -> dict[str, Any]:
     sev = pd.to_numeric(pic_df.get("congestion_severity"), errors="coerce").dropna()
     labels = pic_df.get("congestion_label")
-    counts = {"normal_count": 0, "moderate_count": 0, "high_count": 0, "severe_count": 0}
+    counts = {
+        "normal_count": 0,
+        "light_congestion_count": 0,
+        "moderate_count": 0,
+        "moderate_congestion_count": 0,
+        "high_count": 0,
+        "high_congestion_count": 0,
+        "severe_count": 0,
+        "severe_congestion_count": 0,
+    }
     if labels is not None:
         vc = labels.value_counts()
         counts = {
             "normal_count": int(vc.get("NORMAL", 0)),
-            "moderate_count": int(vc.get("MODERATE", 0)),
-            "high_count": int(vc.get("HIGH", 0)),
-            "severe_count": int(vc.get("SEVERE", 0)),
+            "light_congestion_count": int(vc.get("LIGHT_CONGESTION", 0)),
+            "moderate_count": int(vc.get("MODERATE", 0) + vc.get("MODERATE_CONGESTION", 0)),
+            "moderate_congestion_count": int(vc.get("MODERATE_CONGESTION", 0)),
+            "high_count": int(vc.get("HIGH", 0) + vc.get("HIGH_CONGESTION", 0)),
+            "high_congestion_count": int(vc.get("HIGH_CONGESTION", 0)),
+            "severe_count": int(vc.get("SEVERE", 0) + vc.get("SEVERE_CONGESTION", 0)),
+            "severe_congestion_count": int(vc.get("SEVERE_CONGESTION", 0)),
         }
     return {
         "cells_with_valid_severity": int(len(sev)),

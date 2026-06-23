@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/DataTable";
 import { picColor, num } from "@/lib/format";
 import {
-  cellTier, isBlindSpot, underObserved, flowImpactTable, priorityScore, type FlowImpactRanked,
+  cellLabel, cellTier, isBlindSpot, underObserved, flowImpactTable, priorityScore, ROAD_CLASS_LABEL, type FlowImpactRanked,
 } from "@/lib/signals";
 import type { Cell } from "@/lib/types";
 
@@ -74,15 +74,15 @@ export function CellTable({
   const columns = useMemo<ColumnDef<Cell>[]>(() => {
     const idCol: ColumnDef<Cell> = {
       id: "cell",
-      header: "Cell",
+      header: "Place",
       cell: ({ row }) => {
         const c = row.original;
+        const road = c.road_class ? ROAD_CLASS_LABEL[c.road_class] ?? c.road_class.replace(/_/g, " ") : "Unclassified";
+        const sub = [c.police_station, road].filter(Boolean).join(" · ");
         return (
           <div className="min-w-0">
-            <div className="truncate text-[13px] font-medium">{c.police_station ?? "Unassigned"}</div>
-            <div className="font-mono text-[11px] text-muted-foreground">
-              {c.h3_r10.slice(0, 9)}… · {c.road_class ?? "—"}
-            </div>
+            <div className="truncate text-[13px] font-medium">{cellLabel(c)}</div>
+            {sub && <div className="truncate text-[11px] text-muted-foreground">{sub}</div>}
           </div>
         );
       },
@@ -191,7 +191,7 @@ export function CellTable({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        <DataTable columns={columns} data={rows} pageSize={10} dense empty="No cells in scope." />
+        <DataTable columns={columns} data={rows} pageSize={10} dense onRowClick={onFocus} empty="No cells in scope." />
         <p className="text-[11px] leading-tight text-muted-foreground">{meta.caption} Area-level only — never per officer.</p>
       </CardContent>
     </Card>

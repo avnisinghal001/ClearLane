@@ -22,7 +22,7 @@ export function Analytics({ kpis, sim, causal }: { kpis: Kpis; sim: any; causal:
 
   const forecastBars = [
     { name: "Baseline", dev: kpis.forecaster.baseline_poisson_deviance, fill: "#d6d3d1" },
-    { name: "ClearLane", dev: kpis.forecaster.poisson_deviance, fill: "#ea580c" },
+    { name: "TraFix", dev: kpis.forecaster.poisson_deviance, fill: "#ea580c" },
   ];
 
   const concBars = [

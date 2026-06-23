@@ -81,7 +81,7 @@ export function RosterPanel({
             <Users className="h-4 w-4 text-primary" /> Members &amp; hierarchy
             <Badge variant="secondary">{summary?.total ?? officers.length}</Badge>
           </CardTitle>
-          <Badge variant={roster?.live ? "live" : "modeled"}>{roster?.live ? "Live roster" : "Offline seed"}</Badge>
+          <Badge variant={roster?.live ? "live" : "modeled"}>{roster?.live ? "Synced" : "Local"}</Badge>
         </div>
         {/* per-shift roster summary */}
         <div className="mt-1 flex flex-wrap items-center gap-1.5">
@@ -202,7 +202,7 @@ export function RosterPanel({
         </div>
 
         <p className="text-[11px] leading-tight text-muted-foreground">
-          Roster is an operational record (rank · shift · badge). ClearLane never scores, ranks or profiles an individual officer —
+          Roster is an operational record (rank · shift · badge). TraFix never scores, ranks or profiles an individual officer —
           all hotspot/priority signals stay zone/cell-level.
         </p>
       </CardContent>

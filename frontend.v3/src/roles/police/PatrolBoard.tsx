@@ -44,11 +44,13 @@ export function PatrolBoard({
   officers,
   cells,
   problems,
+  focusCell,
 }: {
   station: StationLite;
   officers: Officer[];
   cells: Cell[];
   problems: Problem[];
+  focusCell?: Cell | null;
 }) {
   const slug = station.slug;
   const [units, setUnits] = useState<UnitSnapshot[]>([]);
@@ -64,6 +66,10 @@ export function PatrolBoard({
   officersRef.current = officers;
 
   useEffect(() => setAutoAlloc(slug, auto), [slug, auto]);
+
+  useEffect(() => {
+    if (focusCell) setFlyTo([focusCell.lat, focusCell.lon]);
+  }, [focusCell]);
 
   // run the sim loop (deterministic, 500ms cadence) — re-armed when the station changes
   useEffect(() => {
@@ -94,8 +100,18 @@ export function PatrolBoard({
         label: `${u.name} · shift ${u.shift} · ${STATUS_LABEL[u.status]}${u.zoneName ? ` → ${u.zoneName}` : ""} · lead ${u.lead?.rank} ${u.lead?.name}${onDuty ? "" : " (off duty)"}`,
       });
     }
+    if (focusCell) {
+      out.push({
+        key: `focus-${focusCell.h3_r10}`,
+        lat: focusCell.lat,
+        lon: focusCell.lon,
+        color: "#38bdf8",
+        pulse: true,
+        label: `${focusCell.police_station ?? station.name} · selected dispatch zone`,
+      });
+    }
     return out;
-  }, [units, slug, station.lat, station.lon, station.name]);
+  }, [units, slug, station.lat, station.lon, station.name, focusCell]);
 
   // manual override: send the next idle on-duty unit to the worst unserved zone
   function dispatchWorst() {
@@ -162,7 +178,7 @@ export function PatrolBoard({
       )}
 
       <p className="text-[11px] leading-tight text-muted-foreground">
-        Simulated patrol deployment for planning — positions are <b>not real GPS</b>. Auto-allocate sends idle on-duty units to the worst unserved
+        Patrol deployment for planning — positions are <b>not real GPS</b>. Auto-allocate sends idle on-duty units to the worst unserved
         zones; after a service window each zone cools down so coverage <b>slides</b> down the queue. Units are drawn only from this station's roster
         (local dispatch). Zones are MODELED priority — never measured congestion.
       </p>

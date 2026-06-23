@@ -10,6 +10,7 @@ export interface Cell {
   h3_r10: string;
   lat: number;
   lon: number;
+  name?: string | null; // readable place name (junction / street), baked in ml.v3 stage 14
   police_station: string | null;
   intensity: number; // 0..100 hour + learning modulated heat (the heat layer)
   pic_score: number; // 0..100 parking-induced-congestion score (immutable pressure)
@@ -17,6 +18,14 @@ export interface Cell {
   congestion_source: CongestionSource;
   road_class?: string | null;
   count?: number;
+  pic_rank?: number | null;
+  raw_rank?: number | null;
+  bias_rank?: number | null;
+  exposure?: number | null;
+  raw_rate?: number | null;
+  bias_rate?: number | null;
+  sig_hot?: boolean | null;
+  gistar_z?: number | null;
   // served per request by /api/v3/map (full occupied-cell set):
   tier?: Tier | null; // P1..P4 from immutable pic_score (stable structural colour)
   display_score?: number | null; // 0..100 pic_score × modeled hourly congestion × dow (TIME-VARYING)
@@ -29,11 +38,56 @@ export interface Cell {
   e_lambda?: number | null;
   rank_divergence?: number | null; // NB rank_naive − rank_bias (under-observed signal)
   // derived per request:
+  activity_score?: number | null; // 0..100 day/hour selector used for lively top-N maps
   forecast_intensity?: number | null; // 0..100 expected activity when when=today|tomorrow
   operational_priority?: number; // historical + live adjustment, clamped 0..100
   live_adjustment?: number;
   congestion_hour?: number | null; // 0..1 modeled typical congestion at the active hour
   learn_lift?: number | null; // self-learning bend (>0 expanding, <0 cooling; 0 for historical)
+}
+
+// Per-cell PLACE-ANALYSIS detail (GET /api/v3/cell/{h3_r10}). Combines the trained
+// historical layer (ml.v3 stage 14 cell_detail.json) with the live operational
+// layer (recent Mongo tickets + three-number + dispatch state). `historical` is
+// null for a quiet cell with no ticket history.
+export interface MixItem {
+  name: string;
+  count: number;
+}
+export interface CellHistorical {
+  h3_r10: string;
+  n_tickets: number;
+  violation_mix: MixItem[];
+  vehicle_mix: MixItem[];
+  top_streets: MixItem[];
+  hourly_histogram: number[]; // 24 bins (IST hour)
+  monthly_recurrence: Record<string, number>; // YYYY-MM -> count
+  fingerprint: number[][]; // 7×24 weekday(Mon=0)×hour grid
+  exposure: { officers: number; active_days: number };
+  repeat_share: number; // 0..1 share of repeat-vehicle tickets
+}
+export interface CellLive {
+  total: number;
+  open: number;
+  closed: number;
+  recent_30d: number;
+  repeat_share: number | null;
+  last_at: number | null;
+  historical_priority: number;
+  live_adjustment: number;
+  operational_priority: number;
+  dispatch_state: string | null;
+  deployed: boolean;
+  escalated: boolean;
+}
+export interface CellDetail {
+  h3_r10: string;
+  police_station: string | null;
+  month_order: string[];
+  data_window?: string | null;
+  historical: CellHistorical | null;
+  live: CellLive;
+  note?: string;
 }
 
 export interface Kpis {
@@ -378,6 +432,7 @@ export interface RosterPayload {
 
 export interface AllocZone {
   cell: string;
+  name?: string;
   lat: number;
   lon: number;
   tier: "P1" | "P2" | "P3" | "P4";

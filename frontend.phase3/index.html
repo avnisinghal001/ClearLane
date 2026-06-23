@@ -3,16 +3,28 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ClearLane Phase 3 — Whitefield Live PIC</title>
+  <meta name="theme-color" content="#F97316" />
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+  <title>TraFix Phase 3 — Whitefield Live PIC</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
   <header class="topbar">
     <div class="brand">
-      <span class="logo">●</span>
+      <svg class="logo" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="tf" x1="32" y1="0" x2="32" y2="64" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#FB923C"/>
+            <stop offset="1" stop-color="#F97316"/>
+          </linearGradient>
+        </defs>
+        <rect width="64" height="64" rx="16" fill="url(#tf)"/>
+        <path d="M19 34l9 9 17-20" stroke="#fff" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M16 51h32" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-dasharray="2 8" opacity="0.92"/>
+      </svg>
       <div>
-        <h1>ClearLane <span class="phase">Phase 3</span></h1>
+        <h1>Tra<span class="fix">Fix</span> <span class="phase">Phase 3</span></h1>
         <p class="tag">Whitefield live traffic · congestion severity · parking-induced-congestion ranking</p>
       </div>
     </div>

@@ -237,6 +237,7 @@ def _clamp(v, lo=0.0, hi=100.0):
 # Artifact-derived cell indices (built once per process; artifacts are static)
 # --------------------------------------------------------------------------- #
 _IDX: dict | None = None
+_CELL_DETAIL: dict | None = None
 
 
 def _indices() -> dict:
@@ -313,6 +314,46 @@ def _indices() -> dict:
         "congestion_mode": pic.get("congestion_mode", "modeled-only"),
     }
     return _IDX
+
+
+def _cell_detail_artifact() -> dict:
+    """The per-cell DETAIL artifact (ml.v3 stage 14): h3 -> historical distribution
+    breakdown (violation/vehicle mix, hourly, monthly, weekday×hour fingerprint,
+    exposure, repeat_share). Built once per process; static."""
+    global _CELL_DETAIL
+    if _CELL_DETAIL is None:
+        _CELL_DETAIL = db.v3_artifact("cell_detail.json") or {"cells": {}, "month_order": []}
+    return _CELL_DETAIL
+
+
+def _live_cell_tickets(cell):
+    """LIVE recurrence overlay for a cell from the operational Mongo tickets
+    (citizen complaints + police chalans). Recorded enforcement activity, recent —
+    layered on top of the historical model. Returns zeros without Mongo."""
+    blank = {"total": 0, "open": 0, "closed": 0, "recent_30d": 0,
+             "repeat_share": None, "last_at": None}
+    if not db.mongo_enabled():
+        return blank
+    rows = []
+    for coll in ("v3_complaints", "v3_tickets"):
+        rows += list(db.col(coll).find({"cell": cell}))
+    if not rows:
+        return blank
+    now = time.time()
+    cutoff = now - 30 * 86400
+    vehicles = [r.get("vehicle_number") for r in rows if r.get("vehicle_number")]
+    seen = {}
+    for v in vehicles:
+        seen[v] = seen.get(v, 0) + 1
+    repeat = sum(c for c in seen.values() if c > 1)
+    return {
+        "total": len(rows),
+        "open": sum(1 for r in rows if r.get("status") == "open"),
+        "closed": sum(1 for r in rows if r.get("status") == "closed"),
+        "recent_30d": sum(1 for r in rows if (r.get("created_ts") or 0) >= cutoff),
+        "repeat_share": (round(repeat / len(vehicles), 3) if vehicles else None),
+        "last_at": max((r.get("created_ts") or 0) for r in rows) or None,
+    }
 
 
 def _nearest_cell(lat, lon):
@@ -554,6 +595,20 @@ def _cell_jitter(cell):
     return (2.0 * frac - 1.0) * SIM_CELL_JITTER
 
 
+def _cell_time_wave(cell, dow, hour):
+    """Deterministic cell/day/hour wave in ~[0.65, 1.35].
+
+    This is the "alive map" selector: not random, not ticket-hour counts, just a
+    reproducible phase offset so different cells peak at different hours while the
+    day/hour model controls the citywide shape.
+    """
+    digest = hashlib.md5(f"{SIM_SEED}:wave:{dow}:{cell or ''}".encode("utf-8")).hexdigest()
+    phase = int(digest[:2], 16) % 24
+    amp = 0.22 + (int(digest[2:4], 16) / 255.0) * 0.18
+    angle = 2.0 * math.pi * (((int(hour) % 24) - phase) / 24.0)
+    return max(0.65, min(1.35, 1.0 + amp * math.cos(angle)))
+
+
 def _sim_severity(base_sev, cell, hour, dow):
     """congestion_severity = clip(base_modeled_severity × dayhour_shape[D][H] ×
     (1 + jitter(cell)), 0, 1). The day×hour SHAPE differs per day (SIM_DAYHOUR), so
@@ -562,7 +617,8 @@ def _sim_severity(base_sev, cell, hour, dow):
     the SIMULATED, time/day-varying value — labelled `simulated`, never measured."""
     base = base_sev if base_sev is not None else 0.5
     shape = SIM_DAYHOUR.get(dow) or SIM_DAYHOUR["Wed"]
-    return max(0.0, min(1.0, base * shape[int(hour) % 24] * (1.0 + _cell_jitter(cell))))
+    return max(0.0, min(1.0, base * shape[int(hour) % 24] *
+                        (1.0 + _cell_jitter(cell)) * _cell_time_wave(cell, dow, hour)))
 
 
 # --------------------------------------------------------------------------- #
@@ -957,7 +1013,16 @@ def _compute_live_traffic(zones_rows):
             method = "simulated"
         label = _sev_label(sev)
         road = s.get("points") if (s.get("points") and len(s["points"]) >= 2) else None
-        segment = road or [[round(a[0], 6), round(a[1], 6)], [round(b[0], 6), round(b[1], 6)]]
+        if road:
+            segment = road                                       # real Route ADV street geometry
+        else:
+            # No road geometry (Mappls Route ADV unavailable): draw a per-cell ORIENTED
+            # stub so fallback corridors don't all run due-E–W and stack into horizontal
+            # "blind" bars. Deterministic bearing from the H3 id keeps it reproducible.
+            brg = int(hashlib.md5(z["h3_r10"].encode("utf-8")).hexdigest()[:4], 16) % 360
+            pa = _offset_point(z["lat"], z["lon"], LIVE_TRAFFIC_SEG_HALF_M, brg)
+            pb = _offset_point(z["lat"], z["lon"], LIVE_TRAFFIC_SEG_HALF_M, brg + 180.0)
+            segment = [[round(pa[0], 6), round(pa[1], 6)], [round(pb[0], 6), round(pb[1], 6)]]
         out.append({
             **z,
             "congestion_severity": round(sev, 4),
@@ -1300,7 +1365,10 @@ def _rerank_rows(station=None, when="now", hour=None, now=None, limit=60):
     idx = _indices()
     now = now or time.time()
     hour_used = hour if hour is not None else _ist_hour()
-    dow = _ist_dow()                          # the queue is a deploy-now/next tool
+    target_dt = datetime.datetime.now(_IST)
+    if when == "tomorrow":
+        target_dt += datetime.timedelta(days=1)
+    dow = _DOW[target_dt.weekday()]
     w = RERANK_WEIGHTS
     live_map = _live_severity_map()           # {h3: real live severity} (may be empty)
     slug = force.slugify(station) if station else None
@@ -1378,9 +1446,10 @@ def _rerank_rows(station=None, when="now", hour=None, now=None, limit=60):
         on_route = cell in route_stops
         eta_min = round(reach_km / 20.0 * 60.0, 1) if reach_km is not None else None
 
+        cell_name = (_cell_detail_artifact().get("cells", {}).get(cell, {}) or {}).get("name")
         rows.append({
             "id": cell, "h3_r10": cell,
-            "name": (f"{station_name} · {cell[:6]}" if station_name else cell[:9] + "…"),
+            "name": cell_name or (f"{station_name} · {cell[:6]}" if station_name else cell[:9] + "…"),
             "station": station_name, "police_station": station_name,
             "station_slug": force.slugify(station_name or "") or None,
             "lat": lat, "lon": lon,
@@ -1762,6 +1831,8 @@ def v3_map(when: str = Query("now", pattern="^(now|today|tomorrow|custom)$"),
            hour: int | None = Query(None, ge=0, le=23),
            date: str | None = Query(None, description="YYYY-MM-DD (custom mode)"),
            limit: int = Query(8000, ge=1, le=8000),
+           nocache: bool = Query(False, description="bypass the map lens cache for judgement/testing"),
+           debug: bool = Query(False, description="print detailed map scoring summary"),
            authorization: str | None = Header(default=None)):
     """The single composed payload the map renders, hour-aware, across four lenses.
 
@@ -1815,9 +1886,14 @@ def v3_map(when: str = Query("now", pattern="^(now|today|tomorrow|custom)$"),
     # whole-map cache (Mongo): scrubbing to a (day, hour) already computed = 1 read.
     _cache_key = f"map:{when}:{sim_dow}:{hour_used}:{limit}"
     _cache_version, meta = _map_cache_version()
-    _hit = _map_cache_get(_cache_key, _cache_version)
+    _hit = None if nocache else _map_cache_get(_cache_key, _cache_version)
     if _hit is not None:
         _hit["served_from_cache"] = True
+        if debug:
+            top = sorted(_hit.get("cells", []), key=lambda c: -(c.get("activity_score") or c.get("intensity") or 0))[:5]
+            print(f"[v3.map.debug] cache-hit lens={when}:{sim_dow}:{hour_used:02d} "
+                  f"cells={len(_hit.get('cells', []))} top="
+                  f"{[(c.get('h3_r10'), c.get('police_station'), c.get('activity_score')) for c in top]}")
         return ok(_hit)
 
     states = {}
@@ -1899,6 +1975,7 @@ def v3_map(when: str = Query("now", pattern="^(now|today|tomorrow|custom)$"),
         # congestion severity: LIVE Mappls ratio where we have it, else the SIMULATED
         # time/day model over the MODELED base severity. Honest, never measured.
         sim_sev = live_ratio if cell_live else _sim_severity(c.get("congestion_severity"), h, hour_used, sim_dow)
+        activity_score = _clamp(heat * _cell_time_wave(h, sim_dow, hour_used))
         # expected activity for the date-lens (forecast intensity) drives circle SIZE
         # in today/tomorrow, just like v1; `now` sizes by pressure (pic_score).
         # forecast heatmap fill = the SAME day×hour-shaped heat (so scrubbing the
@@ -1907,14 +1984,24 @@ def v3_map(when: str = Query("now", pattern="^(now|today|tomorrow|custom)$"),
 
         cells.append({
             "h3_r10": h, "lat": c["lat"], "lon": c["lon"],
+            "name": c.get("name"),                  # readable place name (ml.v3 stage 14)
             "police_station": c.get("police_station"),
             "road_class": rc,
+            "count": c.get("count") or hotrec.get("count"),
             "tier": _pic_tier(hist),                # P1..P4 (stable structural colour)
             "display_score": round(display_score, 1),   # TIME-VARYING composite (0..100)
+            "activity_score": round(activity_score, 1),  # day/hour selector for lively top-N maps
             "pressure": round(hist, 1),             # immutable pic_score (size + tier)
             "intensity": round(heat, 1),            # hour + learning modulated heat
             "pic_score": c.get("pic_score"),        # immutable historical propensity
             "pic_rank": c.get("pic_rank"),
+            "raw_rank": hotrec.get("rank_naive"),
+            "bias_rank": hotrec.get("rank_bias"),
+            "exposure": hotrec.get("exposure"),
+            "raw_rate": hotrec.get("raw_rate"),
+            "bias_rate": hotrec.get("bias_rate"),
+            "sig_hot": hotrec.get("sig_hot"),
+            "gistar_z": hotrec.get("gistar_z"),
             "congestion_severity": round(sim_sev, 3),   # live ratio or simulated
             "congestion_source": cell_cong_source,       # per-cell: live | simulated
             "congestion_base_source": c.get("congestion_source"),  # modeled/typical base
@@ -1980,7 +2067,20 @@ def v3_map(when: str = Query("now", pattern="^(now|today|tomorrow|custom)$"),
         "generated_at": _now_iso(), "last_calc": meta.get("last_calc"),
         "served_from_cache": False,
     }
-    _map_cache_put(_cache_key, _cache_version, resp)   # cache the whole map for this lens
+    if debug:
+        top = sorted(cells, key=lambda c: -(c.get("activity_score") or c.get("intensity") or 0))[:8]
+        changed = sum(1 for c in cells if (c.get("activity_score") or 0) >= 55)
+        print(f"[v3.map.debug] computed lens={when}:{sim_dow}:{hour_used:02d} "
+              f"date={target_date or 'today'} source={cong_source} live_cells={n_live} "
+              f"learning={learning} adjusted={n_adjusted} emerging={n_emerging} "
+              f"hot_activity_cells={changed}/{len(cells)} nocache={nocache}")
+        print("[v3.map.debug] top_activity=" +
+              " | ".join(f"{c.get('h3_r10')} {c.get('police_station')} "
+                         f"act={c.get('activity_score')} heat={c.get('intensity')} "
+                         f"cong={c.get('congestion_hour')} src={c.get('congestion_source')}"
+                         for c in top))
+    if not nocache:
+        _map_cache_put(_cache_key, _cache_version, resp)   # cache the whole map for this lens
     return ok(resp)
 
 
@@ -2124,6 +2224,7 @@ def v3_dispatch_queue(
         hour: int | None = Query(None, ge=0, le=23),
         limit: int = Query(60, ge=1, le=500),
         live: bool = Query(False, description="force a fresh inline rerank (ignore the hourly cache)"),
+        debug: bool = Query(False, description="print detailed dispatch rerank summary"),
         authorization: str | None = Header(default=None)):
     """M4-reranked dispatch queue for a police station (city-wide when `station` is
     omitted). Each row carries `rerank_score`, the weighted `components`, human
@@ -2158,7 +2259,15 @@ def v3_dispatch_queue(
 
     mstate = (db.col("v3_meta").find_one({"_id": "state"}) if db.mongo_enabled() else None) or {}
     print(f"[v3.dispatch.queue] station={slug or 'city-wide'} cells={len(rows)} "
+          f"when={when} hour={meta.get('hour')} dow={meta.get('dow')} "
           f"source={source} congestion={meta.get('congestion_source')}")
+    if debug:
+        print("[v3.dispatch.debug] top_queue=" +
+              " | ".join(f"{r.get('h3_r10')} {r.get('station')} "
+                         f"rank={r.get('dispatch_rank')} score={r.get('rerank_score')} "
+                         f"live_delay={r.get('component_inputs', {}).get('live_delay')} "
+                         f"src={r.get('congestion_source')}"
+                         for r in rows[:8]))
     return ok({**meta, "source": source, "from_cache": source == "rerank-cache",
                "last_rerank": mstate.get("last_rerank"),
                "auto_interval_hours": RERANK_INTERVAL_H, "queue": rows})
@@ -2772,6 +2881,82 @@ def v3_snapshot():
         "complaints": [_ticket_view(c, "complaint") for c in complaints],
         "tickets": [_ticket_view(t, "chalan") for t in tickets],
     })
+
+
+@router.get("/cell/{h3_r10}")
+def v3_cell_detail(h3_r10: str):
+    """Full PLACE-ANALYSIS for one cell — the data behind the map drawer.
+
+    Combines the TRAINED historical layer (cell_detail.json, ml.v3 stage 14:
+    violation/vehicle mix, hourly + monthly + weekday×hour distributions, distinct
+    officers/active-days, repeat-vehicle share) with the LIVE operational layer
+    (recent Mongo tickets + the three transparent numbers + dispatch state).
+
+    HONESTY: ticket counts/times are recorded ENFORCEMENT activity (officer shifts),
+    NOT a live traffic measurement. `historical` is null for a quiet cell with no
+    ticket history — the UI shows 'not enough data yet'."""
+    _ensure_init()
+    idx = _indices()
+    art = _cell_detail_artifact()
+    hist = (art.get("cells") or {}).get(h3_r10)
+    coords = idx["coords"].get(h3_r10)
+    if hist is None and coords is None:
+        raise HTTPException(404, "Unknown cell.")
+    live = _live_cell_tickets(h3_r10)
+    hist_p, boost, opv = _cell_three_numbers(h3_r10)
+    state = (db.col("v3_cell_state").find_one({"_id": h3_r10})
+             if db.mongo_enabled() else None) or {}
+    return ok({
+        "h3_r10": h3_r10,
+        "police_station": (coords[2] if coords else None),
+        "month_order": art.get("month_order", []),
+        "data_window": art.get("data_window"),
+        "historical": hist,
+        "live": {
+            **live,
+            "historical_priority": round(hist_p, 1),
+            "live_adjustment": round(boost, 1),
+            "operational_priority": round(opv, 1),
+            "dispatch_state": state.get("dispatch_state"),
+            "deployed": state.get("dispatch_state") == "assigned",
+            "escalated": bool(state.get("escalated")),
+        },
+        "note": ("Historical = trained model over recorded tickets (officer shifts, "
+                 "not traffic). Live = recent operational tickets layered on top."),
+    })
+
+
+class DispatchIn(BaseModel):
+    cell: str = Field(max_length=24)
+    officer: int | None = None
+    note: str = Field(default="", max_length=300)
+
+
+@router.post("/operational/dispatch")
+def v3_dispatch_assign(body: DispatchIn, authorization: str | None = Header(default=None)):
+    """Send a unit to a cell NOW (police/government). Marks the cell `assigned`
+    (surfaced as 'deployed now' in the snapshot + drawer) and applies a small,
+    transparent, decaying live boost. Operational only — never edits the ML score."""
+    _require_mongo()
+    _ensure_init()
+    sess = _require_session(authorization)
+    if not _scope_ok(sess, _station_of(body.cell)):
+        raise HTTPException(403, "Out of scope for this cell's station.")
+    now = time.time()
+    with _lock:
+        db.col("v3_officer_feedback").insert_one({
+            "_id": db.next_id("v3_officer_feedback"),
+            "cell": body.cell, "kind": "dispatched", "ticket_id": None,
+            "note": body.note, "officer": body.officer,
+            "by": sess.get("name") or sess.get("scope"), "created_ts": now,
+        })
+        _bump_cell(body.cell, delta=OP_RULES["complaint_unverified"], state="assigned")
+        _bandit_reward(body.cell, 0.5)
+    hist, boost, opv = _cell_three_numbers(body.cell)
+    return ok({"stored": True, "cell": body.cell, "dispatch_state": "assigned",
+               "historical_priority": round(hist, 1),
+               "live_adjustment": round(boost, 1),
+               "operational_priority": round(opv, 1)})
 
 
 # --------------------------------------------------------------------------- #

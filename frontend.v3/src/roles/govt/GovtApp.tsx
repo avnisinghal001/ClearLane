@@ -24,6 +24,7 @@ import { GovtPlaybook } from "./GovtPlaybook";
 import { DispatchQueue } from "@/roles/police/DispatchQueue";
 import { ForceCommand } from "@/roles/police/ForceCommand";
 import { useMapData } from "@/hooks/useMapData";
+import { useMapFocus } from "@/hooks/useMapFocus";
 import { useRoster } from "@/hooks/useRoster";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 import { getCausal, getEvaluation, getKpis, getSim, getStations, getTickets } from "@/lib/api";
@@ -35,11 +36,15 @@ import type { Cell, Kpis, Station, Ticket } from "@/lib/types";
 
 type Tab = "overview" | "map" | "dispatch" | "queue" | "force" | "flow" | "blind" | "stations" | "loop" | "evidence";
 
+function istHourNow(): number {
+  return Math.floor((Date.now() / 3_600_000 + 5.5) % 24);
+}
+
 export function GovtApp() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [tab, setTab] = useState<Tab>("overview");
-  const [time, setTime] = useState<TimeValue>({ when: "now", hour: 18 });
+  const [time, setTime] = useState<TimeValue>(() => ({ when: "now", hour: istHourNow() }));
   const [allDay, setAllDay] = useState(true);
   const { data, refetch } = useMapData(time.when, time.hour, time.date);
 
@@ -50,6 +55,7 @@ export function GovtApp() {
   const [evaluation, setEvaluation] = useState<any>(null);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [selected, setSelected] = useState<Cell | null>(null);
+  const { focus, setFocus } = useMapFocus();
   const [flyTo, setFlyTo] = useState<[number, number] | null>(null);
   const [forceSlug, setForceSlug] = useState<string>("");
   const reportRef = useRef<IncidentReporterHandle>(null);
@@ -133,9 +139,22 @@ export function GovtApp() {
     { key: "evidence", label: "Evidence", icon: <ShieldCheck className="h-5 w-5" /> },
   ];
 
+  // Every redirection (map dot, AI picks, dispatch queue, priority/flow/blind
+  // tables, deep link) lands on the SAME place ripple: zoom in + "waves out" + a
+  // numbers peek. Tapping the ripple opens the detail modal. The point lives in
+  // the URL (?lat&lon&h3) so it is shareable.
   const focusCell = (c: Cell) => {
-    setFlyTo([c.lat, c.lon]);
+    setFocus({ lat: c.lat, lon: c.lon, h3: c.h3_r10 });
     setTab("map");
+  };
+  const focusAt = (lat: number, lon: number, h3?: string) => {
+    setFocus({ lat, lon, h3 });
+    setTab("map");
+  };
+  // Ripple tapped -> open the modal (resolve the full cell by h3, else use as-is).
+  const openFocus = (c: Cell) => {
+    const all = data?.cells ?? [];
+    setSelected(all.find((x) => x.h3_r10 === c.h3_r10) ?? c);
   };
 
   return (
@@ -172,7 +191,10 @@ export function GovtApp() {
             cells={cells}
             source={data?.source ?? "live"}
             flyTo={flyTo}
-            onCellClick={setSelected}
+            focus={focus}
+            modalOpen={Boolean(selected)}
+            onCellClick={focusCell}
+            onFocusOpen={openFocus}
             onLongPress={(ll) => reportRef.current?.openAt(ll)}
             pins={reportPins}
             evidence={evidence}
@@ -184,7 +206,7 @@ export function GovtApp() {
           <div className="absolute left-2 top-2 z-[500] w-[min(20rem,calc(100%-4.5rem))]">
             <TimeControl value={time} onChange={setTime} allDay={allDay} onAllDayChange={setAllDay} />
             <div className="mt-2">
-              <Badge variant={data?.source === "forecast" ? "modeled" : "live"}>{data?.source === "forecast" ? "Forecast" : "Live"}</Badge>
+              <Badge variant={data?.source === "forecast" ? "modeled" : "live"}>{data?.source === "forecast" ? "Forecast" : "Now"}</Badge>
             </div>
           </div>
           {/* government can also report — FAB at 5vh + long-press the map */}
@@ -198,8 +220,8 @@ export function GovtApp() {
             <h2 className="text-xl font-bold">Dispatch AI — city-wide</h2>
             <p className="text-sm text-muted-foreground">The M4 reranker fuses forecast · pressure · under-observed · congestion · reachability into one transparent number.</p>
           </div>
-          <AiNextPicks station={null} onFocus={(lat, lon) => { setFlyTo([lat, lon]); setTab("map"); }} title="AI next picks · city-wide" />
-          <DispatchQueue stationName="" onFocus={(lat, lon) => { setFlyTo([lat, lon]); setTab("map"); }} />
+          <AiNextPicks station={null} when={time.when} hour={time.hour} onFocus={focusAt} title="AI next picks · city-wide" />
+          <DispatchQueue stationName="" when={time.when} hour={time.hour} onFocus={focusAt} />
         </div>
       )}
 
@@ -242,6 +264,9 @@ export function GovtApp() {
               cells={forceCells}
               canManage
               rosterApi={forceRoster}
+              when={time.when}
+              hour={time.hour}
+              onZoneFocus={(c) => focusCell(c)}
             />
           ) : (
             <div className="text-sm text-muted-foreground">Loading stations…</div>
@@ -273,7 +298,7 @@ export function GovtApp() {
             </CardHeader>
             <CardContent className="p-0">
               <div className="h-[360px]">
-                <ClearLaneMap cells={cells} source={data?.source ?? "live"} flyTo={flyTo} onCellClick={setSelected} pins={stationPins} defaultZoom={11} sizeMode="pressure" />
+                <ClearLaneMap cells={cells} source={data?.source ?? "live"} flyTo={flyTo} focus={focus} modalOpen={Boolean(selected)} onCellClick={focusCell} onFocusOpen={openFocus} pins={stationPins} defaultZoom={11} sizeMode="pressure" />
               </div>
             </CardContent>
           </Card>
@@ -317,7 +342,7 @@ export function GovtApp() {
         </div>
       )}
 
-      <CellDrawer cell={selected} cells={cells} side={isMobile ? "bottom" : "right"} onClose={() => setSelected(null)} />
+      <CellDrawer cell={selected} cells={cells} audience="govt" side={isMobile ? "bottom" : "right"} onClose={() => setSelected(null)} />
     </AppShell>
   );
 }
